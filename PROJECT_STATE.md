@@ -2,10 +2,10 @@
 
 ## Status: ACTIVE
 
-## Action Count: 29
+## Action Count: 30
 
 ## Current Phase
-M2: Memory & Control Flow - PR #13 (Branch instructions) ready for review.
+M2: Memory & Control Flow - PR #13 has dylan-approved. Grace review triggered.
 
 ## Milestones
 - [x] M1: Foundation (MVP) - Basic execution ✅ (2026-02-02)
@@ -16,7 +16,7 @@ M2: Memory & Control Flow - PR #13 (Branch instructions) ready for review.
 - [ ] M6: Validation & Benchmarks
 
 ## Last Action
-Bob created PR #13 implementing Branch instructions.
+Dylan approved PR #13. Triggering Grace advisor review (30 actions).
 
 ## Notes
 - Project started: 2026-02-02
