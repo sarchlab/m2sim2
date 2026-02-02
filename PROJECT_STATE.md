@@ -2,7 +2,7 @@
 
 ## Status: ACTIVE
 
-## Action Count: 77
+## Action Count: 78
 
 ## Current Phase
 M3: Timing Model - Validation baseline established, ready for timing implementation
@@ -19,7 +19,7 @@ M3: Timing Model - Validation baseline established, ready for timing implementat
 None
 
 ## Last Action
-Action 77: Alice PM check - PR #46 awaiting review, no backlog to prioritize.
+Action 78: Alice merged PR #46 (instruction timing model) - both cathy-approved + dylan-approved.
 
 ## Notes
 - Project started: 2026-02-02
