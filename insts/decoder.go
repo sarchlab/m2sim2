@@ -20,6 +20,7 @@ const (
 	OpRET
 	OpLDR
 	OpSTR
+	OpSVC
 )
 
 // Format represents an instruction encoding format.
@@ -27,13 +28,14 @@ type Format uint8
 
 // Instruction formats.
 const (
-	FormatUnknown Format = iota
-	FormatDPImm       // Data Processing (Immediate)
-	FormatDPReg       // Data Processing (Register)
-	FormatBranch      // Unconditional Branch (Immediate)
-	FormatBranchCond  // Conditional Branch
-	FormatBranchReg   // Branch to Register
-	FormatLoadStore   // Load/Store (Immediate)
+	FormatUnknown    Format = iota
+	FormatDPImm             // Data Processing (Immediate)
+	FormatDPReg             // Data Processing (Register)
+	FormatBranch            // Unconditional Branch (Immediate)
+	FormatBranchCond        // Conditional Branch
+	FormatBranchReg         // Branch to Register
+	FormatLoadStore         // Load/Store (Immediate)
+	FormatException         // Exception Generation (SVC, HVC, SMC, BRK)
 )
 
 // Cond represents an ARM64 condition code.
@@ -125,6 +127,8 @@ func (d *Decoder) Decode(word uint32) *Instruction {
 		d.decodeBranchCond(word, inst)
 	case d.isBranchReg(word):
 		d.decodeBranchReg(word, inst)
+	case d.isException(word):
+		d.decodeException(word, inst)
 	default:
 		// Unknown instruction
 		_ = op0 // unused, but extracted for future expansion
@@ -145,13 +149,13 @@ func (d *Decoder) isDataProcessingImm(word uint32) bool {
 func (d *Decoder) decodeDataProcessingImm(word uint32, inst *Instruction) {
 	inst.Format = FormatDPImm
 
-	sf := (word >> 31) & 0x1       // bit 31: 1=64-bit, 0=32-bit
-	op := (word >> 30) & 0x1       // bit 30: 0=ADD, 1=SUB
-	s := (word >> 29) & 0x1        // bit 29: 1=set flags
-	sh := (word >> 22) & 0x1       // bit 22: shift
-	imm12 := (word >> 10) & 0xFFF  // bits [21:10]
-	rn := (word >> 5) & 0x1F       // bits [9:5]
-	rd := word & 0x1F              // bits [4:0]
+	sf := (word >> 31) & 0x1      // bit 31: 1=64-bit, 0=32-bit
+	op := (word >> 30) & 0x1      // bit 30: 0=ADD, 1=SUB
+	s := (word >> 29) & 0x1       // bit 29: 1=set flags
+	sh := (word >> 22) & 0x1      // bit 22: shift
+	imm12 := (word >> 10) & 0xFFF // bits [21:10]
+	rn := (word >> 5) & 0x1F      // bits [9:5]
+	rd := word & 0x1F             // bits [4:0]
 
 	inst.Is64Bit = sf == 1
 	inst.SetFlags = s == 1
@@ -184,13 +188,13 @@ func (d *Decoder) isDataProcessingReg(word uint32) bool {
 func (d *Decoder) decodeDataProcessingReg(word uint32, inst *Instruction) {
 	inst.Format = FormatDPReg
 
-	sf := (word >> 31) & 0x1     // bit 31
-	op := (word >> 24) & 0x1F    // bits [28:24]
-	rd := word & 0x1F            // bits [4:0]
-	rn := (word >> 5) & 0x1F     // bits [9:5]
-	imm6 := (word >> 10) & 0x3F  // bits [15:10]
-	rm := (word >> 16) & 0x1F    // bits [20:16]
-	shift := (word >> 22) & 0x3  // bits [23:22]
+	sf := (word >> 31) & 0x1    // bit 31
+	op := (word >> 24) & 0x1F   // bits [28:24]
+	rd := word & 0x1F           // bits [4:0]
+	rn := (word >> 5) & 0x1F    // bits [9:5]
+	imm6 := (word >> 10) & 0x3F // bits [15:10]
+	rm := (word >> 16) & 0x1F   // bits [20:16]
+	shift := (word >> 22) & 0x3 // bits [23:22]
 
 	inst.Is64Bit = sf == 1
 	inst.Rd = uint8(rd)
@@ -245,8 +249,8 @@ func (d *Decoder) isBranchImm(word uint32) bool {
 func (d *Decoder) decodeBranchImm(word uint32, inst *Instruction) {
 	inst.Format = FormatBranch
 
-	op := (word >> 31) & 0x1    // bit 31: 0=B, 1=BL
-	imm26 := word & 0x3FFFFFF   // bits [25:0]
+	op := (word >> 31) & 0x1  // bit 31: 0=B, 1=BL
+	imm26 := word & 0x3FFFFFF // bits [25:0]
 
 	// Sign-extend imm26 to int64 and multiply by 4
 	offset := int64(imm26)
@@ -285,7 +289,7 @@ func (d *Decoder) decodeBranchCond(word uint32, inst *Instruction) {
 	inst.Op = OpBCond
 
 	imm19 := (word >> 5) & 0x7FFFF // bits [23:5]
-	cond := word & 0xF              // bits [3:0]
+	cond := word & 0xF             // bits [3:0]
 
 	// Sign-extend imm19 and multiply by 4
 	offset := int64(imm19)
@@ -341,9 +345,9 @@ func (d *Decoder) decodeBranchReg(word uint32, inst *Instruction) {
 func (d *Decoder) isLoadStoreImm(word uint32) bool {
 	// Check pattern: xx 111 0 01 xx
 	// bits [29:27] == 111, bit 26 == 0, bits [25:24] == 01
-	op1 := (word >> 27) & 0x7  // bits [29:27]
-	op2 := (word >> 26) & 0x1  // bit 26
-	op3 := (word >> 24) & 0x3  // bits [25:24]
+	op1 := (word >> 27) & 0x7 // bits [29:27]
+	op2 := (word >> 26) & 0x1 // bit 26
+	op3 := (word >> 24) & 0x3 // bits [25:24]
 
 	return op1 == 0b111 && op2 == 0 && op3 == 0b01
 }
@@ -386,4 +390,24 @@ func (d *Decoder) decodeLoadStoreImm(word uint32, inst *Instruction) {
 	} else {
 		inst.Op = OpSTR
 	}
+}
+
+// isException checks for exception generation instructions.
+// SVC: bits [31:21] == 0b11010100000, bits [4:0] == 0b00001
+func (d *Decoder) isException(word uint32) bool {
+	hi := (word >> 21) & 0x7FF // bits [31:21]
+	lo := word & 0x1F          // bits [4:0]
+	return hi == 0b11010100000 && lo == 0b00001
+}
+
+// decodeException decodes SVC (supervisor call) instruction.
+// Format: 11010100 000 | imm16 | 00001
+// imm16 is typically 0 for Linux syscalls (SVC #0)
+func (d *Decoder) decodeException(word uint32, inst *Instruction) {
+	inst.Format = FormatException
+	inst.Op = OpSVC
+
+	// Extract imm16 (bits [20:5])
+	imm16 := (word >> 5) & 0xFFFF
+	inst.Imm = uint64(imm16)
 }

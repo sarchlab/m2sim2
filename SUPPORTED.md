@@ -33,6 +33,26 @@ along with known limitations.
 | BLR         | Branch with link to register |
 | RET         | Return from subroutine |
 
+### Exception Generation
+
+| Instruction | Description |
+|-------------|-------------|
+| SVC         | Supervisor call (syscall trigger) |
+
+## Supported Syscalls
+
+The driver package emulates ARM64 Linux syscalls:
+
+| Syscall | Number | Description |
+|---------|--------|-------------|
+| exit    | 93     | Terminate program with exit code |
+| write   | 64     | Write buffer to file descriptor |
+
+### Syscall Convention (ARM64 Linux)
+- Syscall number in X8
+- Arguments in X0-X5
+- Return value in X0
+
 ## Known Limitations
 
 ### Logical Register Operations - N-bit Not Handled
@@ -68,4 +88,5 @@ The following areas lack test coverage:
 
 ## Version History
 
+- **PR #10** - Basic syscall emulation (exit, write) and SVC instruction
 - **PR #7** - Initial ARM64 decoder implementation

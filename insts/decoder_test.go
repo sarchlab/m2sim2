@@ -517,6 +517,38 @@ var _ = Describe("Decoder", func() {
 		})
 	})
 
+	Describe("Exception Generation Instructions", func() {
+		// SVC #0             -> 0xD4000001
+		// Encoding: 11010100 000 | imm16=0 | 00001
+		It("should decode SVC #0", func() {
+			inst := decoder.Decode(0xD4000001)
+
+			Expect(inst.Op).To(Equal(insts.OpSVC))
+			Expect(inst.Format).To(Equal(insts.FormatException))
+			Expect(inst.Imm).To(Equal(uint64(0)))
+		})
+
+		// SVC #1             -> 0xD4000021
+		// Encoding: 11010100 000 | imm16=1 | 00001
+		It("should decode SVC #1", func() {
+			inst := decoder.Decode(0xD4000021)
+
+			Expect(inst.Op).To(Equal(insts.OpSVC))
+			Expect(inst.Format).To(Equal(insts.FormatException))
+			Expect(inst.Imm).To(Equal(uint64(1)))
+		})
+
+		// SVC #0xFFFF        -> 0xD41FFFE1
+		// Encoding: 11010100 000 | imm16=0xFFFF | 00001
+		It("should decode SVC #0xFFFF (max imm16)", func() {
+			inst := decoder.Decode(0xD41FFFE1)
+
+			Expect(inst.Op).To(Equal(insts.OpSVC))
+			Expect(inst.Format).To(Equal(insts.FormatException))
+			Expect(inst.Imm).To(Equal(uint64(0xFFFF)))
+		})
+	})
+
 	Describe("Unknown Instructions", func() {
 		It("should mark unrecognized instructions as unknown", func() {
 			// Arbitrary unimplemented encoding
