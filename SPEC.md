@@ -6,7 +6,7 @@ Build a cycle-accurate Apple M2 CPU simulator using the Akita simulation framewo
 
 ## Success Criteria
 
-- [ ] Execute ARM64 user-space programs correctly (functional emulation)
+- [x] Execute ARM64 user-space programs correctly (functional emulation)
 - [ ] Predict execution time with <2% average error across benchmarks
 - [ ] Modular design: functional and timing simulation are separate
 - [ ] Support benchmarks in μs to ms range
@@ -24,15 +24,15 @@ Basic ARM64 execution capability.
 - [x] Load/Store instructions (LDR, STR)
 - [x] Branch instructions (B, BL, BR, RET, B.cond)
 
-### M2: Memory & Control Flow — IN PROGRESS
+### M2: Memory & Control Flow ✅ COMPLETE
 Complete functional emulation.
 
 **Completion criteria:**
-- [ ] Syscall emulation (exit, write)
-- [ ] Simple memory model (flat address space)
-- [ ] Run simple C programs end-to-end
+- [x] Syscall emulation (exit, write)
+- [x] Simple memory model (flat address space)
+- [x] Run simple C programs end-to-end
 
-### M3: Timing Model
+### M3: Timing Model — IN PROGRESS
 Cycle-accurate timing.
 
 **Completion criteria:**
