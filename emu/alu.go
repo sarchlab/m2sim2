@@ -92,6 +92,18 @@ func (a *ALU) SUB64Imm(rd, rn uint8, imm uint64, setFlags bool) {
 	}
 }
 
+// SUB32Imm performs 32-bit subtraction with immediate: Wd = Wn - imm (zero-extended)
+func (a *ALU) SUB32Imm(rd, rn uint8, imm uint32, setFlags bool) {
+	op1 := uint32(a.regFile.ReadReg(rn))
+	result := op1 - imm
+
+	a.regFile.WriteReg(rd, uint64(result))
+
+	if setFlags {
+		a.setSubFlags32(op1, imm, result)
+	}
+}
+
 // SUB32 performs 32-bit subtraction: Wd = Wn - Wm (zero-extended)
 func (a *ALU) SUB32(rd, rn, rm uint8, setFlags bool) {
 	op1 := uint32(a.regFile.ReadReg(rn))
