@@ -2,10 +2,10 @@
 
 ## Status: ACTIVE
 
-## Action Count: 20
+## Action Count: 21
 
 ## Current Phase
-M1: Foundation - PR #7 has both approvals, ready to merge.
+M1: Foundation - PR #7 merged, Issue #2 closed. ARM64 decoder complete.
 
 ## Milestones
 - [ ] M1: Foundation (MVP) - Basic execution
@@ -16,7 +16,7 @@ M1: Foundation - PR #7 has both approvals, ready to merge.
 - [ ] M6: Validation & Benchmarks
 
 ## Last Action
-Cathy approved PR #7.
+Alice merged PR #7 and closed Issue #2.
 
 ## Notes
 - Project started: 2026-02-02
