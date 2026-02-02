@@ -380,6 +380,143 @@ var _ = Describe("Decoder", func() {
 		})
 	})
 
+	Describe("Load/Store Instructions", func() {
+		// LDR X0, [X1]       -> 0xF9400020
+		// Encoding: 11 111 0 01 01 imm12=0 Rn=1 Rt=0
+		It("should decode LDR X0, [X1]", func() {
+			inst := decoder.Decode(0xF9400020)
+
+			Expect(inst.Op).To(Equal(insts.OpLDR))
+			Expect(inst.Format).To(Equal(insts.FormatLoadStore))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0))) // Rt
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Imm).To(Equal(uint64(0)))
+		})
+
+		// LDR X2, [X3, #8]   -> 0xF9400462
+		// Encoding: 11 111 0 01 01 imm12=1 Rn=3 Rt=2 (imm12 is scaled by 8)
+		It("should decode LDR X2, [X3, #8]", func() {
+			inst := decoder.Decode(0xF9400462)
+
+			Expect(inst.Op).To(Equal(insts.OpLDR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(2)))
+			Expect(inst.Rn).To(Equal(uint8(3)))
+			Expect(inst.Imm).To(Equal(uint64(8)))
+		})
+
+		// LDR X4, [X5, #32760] -> 0xF947FC04 (max offset for 64-bit)
+		// imm12 = 32760/8 = 4095 = 0xFFF
+		It("should decode LDR X4, [X5, #32760]", func() {
+			inst := decoder.Decode(0xF97FFCA4)
+
+			Expect(inst.Op).To(Equal(insts.OpLDR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(4)))
+			Expect(inst.Rn).To(Equal(uint8(5)))
+			Expect(inst.Imm).To(Equal(uint64(32760)))
+		})
+
+		// LDR W0, [X1]       -> 0xB9400020
+		// Encoding: 10 111 0 01 01 imm12=0 Rn=1 Rt=0
+		It("should decode LDR W0, [X1]", func() {
+			inst := decoder.Decode(0xB9400020)
+
+			Expect(inst.Op).To(Equal(insts.OpLDR))
+			Expect(inst.Format).To(Equal(insts.FormatLoadStore))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Imm).To(Equal(uint64(0)))
+		})
+
+		// LDR W2, [X3, #4]   -> 0xB9400462
+		// Encoding: 10 111 0 01 01 imm12=1 Rn=3 Rt=2 (imm12 scaled by 4)
+		It("should decode LDR W2, [X3, #4]", func() {
+			inst := decoder.Decode(0xB9400462)
+
+			Expect(inst.Op).To(Equal(insts.OpLDR))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(2)))
+			Expect(inst.Rn).To(Equal(uint8(3)))
+			Expect(inst.Imm).To(Equal(uint64(4)))
+		})
+
+		// STR X0, [X1]       -> 0xF9000020
+		// Encoding: 11 111 0 01 00 imm12=0 Rn=1 Rt=0
+		It("should decode STR X0, [X1]", func() {
+			inst := decoder.Decode(0xF9000020)
+
+			Expect(inst.Op).To(Equal(insts.OpSTR))
+			Expect(inst.Format).To(Equal(insts.FormatLoadStore))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0))) // Rt (source register for store)
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Imm).To(Equal(uint64(0)))
+		})
+
+		// STR X2, [X3, #16]  -> 0xF9000862
+		// Encoding: 11 111 0 01 00 imm12=2 Rn=3 Rt=2 (imm12 scaled by 8)
+		It("should decode STR X2, [X3, #16]", func() {
+			inst := decoder.Decode(0xF9000862)
+
+			Expect(inst.Op).To(Equal(insts.OpSTR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(2)))
+			Expect(inst.Rn).To(Equal(uint8(3)))
+			Expect(inst.Imm).To(Equal(uint64(16)))
+		})
+
+		// STR W0, [X1]       -> 0xB9000020
+		// Encoding: 10 111 0 01 00 imm12=0 Rn=1 Rt=0
+		It("should decode STR W0, [X1]", func() {
+			inst := decoder.Decode(0xB9000020)
+
+			Expect(inst.Op).To(Equal(insts.OpSTR))
+			Expect(inst.Format).To(Equal(insts.FormatLoadStore))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Imm).To(Equal(uint64(0)))
+		})
+
+		// STR W2, [X3, #8]   -> 0xB9000862
+		// Encoding: 10 111 0 01 00 imm12=2 Rn=3 Rt=2 (imm12 scaled by 4)
+		It("should decode STR W2, [X3, #8]", func() {
+			inst := decoder.Decode(0xB9000862)
+
+			Expect(inst.Op).To(Equal(insts.OpSTR))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(2)))
+			Expect(inst.Rn).To(Equal(uint8(3)))
+			Expect(inst.Imm).To(Equal(uint64(8)))
+		})
+
+		// LDR X0, [SP, #8]   -> 0xF94007E0
+		// Using SP (reg 31) as base
+		It("should decode LDR X0, [SP, #8]", func() {
+			inst := decoder.Decode(0xF94007E0)
+
+			Expect(inst.Op).To(Equal(insts.OpLDR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(31))) // SP
+			Expect(inst.Imm).To(Equal(uint64(8)))
+		})
+
+		// STR X0, [SP, #16]  -> 0xF9000BE0
+		It("should decode STR X0, [SP, #16]", func() {
+			inst := decoder.Decode(0xF9000BE0)
+
+			Expect(inst.Op).To(Equal(insts.OpSTR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(31))) // SP
+			Expect(inst.Imm).To(Equal(uint64(16)))
+		})
+	})
+
 	Describe("Unknown Instructions", func() {
 		It("should mark unrecognized instructions as unknown", func() {
 			// Arbitrary unimplemented encoding

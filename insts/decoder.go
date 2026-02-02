@@ -18,6 +18,8 @@ const (
 	OpBR
 	OpBLR
 	OpRET
+	OpLDR
+	OpSTR
 )
 
 // Format represents an instruction encoding format.
@@ -31,6 +33,7 @@ const (
 	FormatBranch      // Unconditional Branch (Immediate)
 	FormatBranchCond  // Conditional Branch
 	FormatBranchReg   // Branch to Register
+	FormatLoadStore   // Load/Store (Immediate)
 )
 
 // Cond represents an ARM64 condition code.
@@ -110,6 +113,8 @@ func (d *Decoder) Decode(word uint32) *Instruction {
 	op0 := (word >> 25) & 0xF // bits [28:25]
 
 	switch {
+	case d.isLoadStoreImm(word):
+		d.decodeLoadStoreImm(word, inst)
 	case d.isDataProcessingImm(word):
 		d.decodeDataProcessingImm(word, inst)
 	case d.isDataProcessingReg(word):
@@ -326,5 +331,59 @@ func (d *Decoder) decodeBranchReg(word uint32, inst *Instruction) {
 		inst.Op = OpRET
 	default:
 		inst.Op = OpUnknown
+	}
+}
+
+// isLoadStoreImm checks for Load/Store with unsigned immediate offset.
+// LDR/STR (unsigned immediate): bits [31:30] = size, bits [29:27] = 111, bit 26 = 0,
+// bits [25:24] = 01, bit 23:22 = opc
+// 64-bit: size=11 (0xF9), 32-bit: size=10 (0xB9)
+func (d *Decoder) isLoadStoreImm(word uint32) bool {
+	// Check pattern: xx 111 0 01 xx
+	// bits [29:27] == 111, bit 26 == 0, bits [25:24] == 01
+	op1 := (word >> 27) & 0x7  // bits [29:27]
+	op2 := (word >> 26) & 0x1  // bit 26
+	op3 := (word >> 24) & 0x3  // bits [25:24]
+
+	return op1 == 0b111 && op2 == 0 && op3 == 0b01
+}
+
+// decodeLoadStoreImm decodes LDR and STR with unsigned immediate offset.
+// Format: size | 111 | V | 01 | opc | imm12 | Rn | Rt
+// size: 11=64-bit, 10=32-bit
+// V: 0 for integer registers
+// opc: 00=STR, 01=LDR
+func (d *Decoder) decodeLoadStoreImm(word uint32, inst *Instruction) {
+	inst.Format = FormatLoadStore
+
+	size := (word >> 30) & 0x3    // bits [31:30]
+	opc := (word >> 22) & 0x3     // bits [23:22]
+	imm12 := (word >> 10) & 0xFFF // bits [21:10]
+	rn := (word >> 5) & 0x1F      // bits [9:5]
+	rt := word & 0x1F             // bits [4:0]
+
+	inst.Rn = uint8(rn)
+	inst.Rd = uint8(rt) // Rt uses Rd field
+
+	// Determine 64-bit vs 32-bit
+	inst.Is64Bit = size == 0b11
+
+	// Scale immediate by size
+	// 64-bit (size=11): scale by 8
+	// 32-bit (size=10): scale by 4
+	var scale uint64
+	if size == 0b11 {
+		scale = 8
+	} else {
+		scale = 4
+	}
+	inst.Imm = uint64(imm12) * scale
+
+	// Determine LDR vs STR from opc
+	// opc[1:0]: 00=STR, 01=LDR (unsigned offset)
+	if opc&0x1 == 1 {
+		inst.Op = OpLDR
+	} else {
+		inst.Op = OpSTR
 	}
 }

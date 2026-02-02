@@ -37,6 +37,15 @@ This document tracks the ARM64 instructions supported by M2Sim's decoder.
 | BLR         | Branch with link to register | ✅ | ❌ |
 | RET         | Return from subroutine | ✅ | ❌ |
 
+### Load/Store Instructions
+
+| Instruction | Description | Decoder | Emulator |
+|-------------|-------------|---------|----------|
+| LDR (imm, 64-bit) | Load 64-bit register | ✅ | ✅ |
+| LDR (imm, 32-bit) | Load 32-bit register (zero-extend) | ✅ | ✅ |
+| STR (imm, 64-bit) | Store 64-bit register | ✅ | ✅ |
+| STR (imm, 32-bit) | Store 32-bit register | ✅ | ✅ |
+
 ## Condition Codes Supported
 
 | Code | Meaning | Condition |
@@ -64,7 +73,8 @@ This document tracks the ARM64 instructions supported by M2Sim's decoder.
 - **FormatBranch**: Unconditional Branch (Immediate)
 - **FormatBranchCond**: Conditional Branch
 - **FormatBranchReg**: Branch to Register
+- **FormatLoadStore**: Load/Store with Immediate Offset
 
 ---
 
-*Last updated: Issue #2 implementation*
+*Last updated: Issue #8 implementation*
