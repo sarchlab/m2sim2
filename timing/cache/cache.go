@@ -37,12 +37,13 @@ func DefaultL1IConfig() Config {
 // Based on Apple M2 specifications:
 // - 128KB per performance core (8-way, 64B line)
 // - 64KB per efficiency core (4-way, 64B line)
+// - 4-cycle load-to-use latency
 func DefaultL1DConfig() Config {
 	return Config{
 		Size:          128 * 1024, // 128KB
 		Associativity: 8,          // 8-way
 		BlockSize:     64,         // 64B cache line
-		HitLatency:    1,          // 1 cycle
+		HitLatency:    4,          // 4-cycle load-to-use latency (M2)
 		MissLatency:   12,         // ~12 cycles to L2
 	}
 }

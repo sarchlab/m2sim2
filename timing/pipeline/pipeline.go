@@ -362,7 +362,13 @@ func (p *Pipeline) Tick() {
 		// Check for multi-cycle execution latency
 		if p.latencyTable != nil && p.exLatency == 0 {
 			// Starting new instruction - get its latency
-			p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
+			// Note: When D-cache is enabled, memory timing is handled in MEM stage,
+			// so we don't apply LoadLatency here to avoid double-counting.
+			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
+				p.exLatency = 1 // Minimal latency; cache handles actual timing
+			} else {
+				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
+			}
 		}
 
 		// Decrement latency counter

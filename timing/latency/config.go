@@ -45,21 +45,9 @@ type TimingConfig struct {
 	// Default: 1 cycle (handling is external).
 	SyscallLatency uint64 `json:"syscall_latency"`
 
-	// L1HitLatency is the L1 data cache hit latency.
-	// Default: 4 cycles.
-	L1HitLatency uint64 `json:"l1_hit_latency"`
-
-	// L2HitLatency is the L2 cache hit latency.
-	// Default: 12 cycles.
-	L2HitLatency uint64 `json:"l2_hit_latency"`
-
-	// L3HitLatency is the L3 cache hit latency.
-	// Default: 30 cycles.
-	L3HitLatency uint64 `json:"l3_hit_latency"`
-
-	// MemoryLatency is the main memory access latency.
-	// Default: 150 cycles.
-	MemoryLatency uint64 `json:"memory_latency"`
+	// Note: Memory hierarchy latencies (L1/L2/L3/DRAM) are configured in
+	// cache.Config.HitLatency and cache.Config.MissLatency, not here.
+	// This table provides instruction execution latencies only.
 }
 
 // DefaultTimingConfig returns a TimingConfig with M2-based default values.
@@ -74,10 +62,6 @@ func DefaultTimingConfig() *TimingConfig {
 		DivideLatencyMin:        10,
 		DivideLatencyMax:        15,
 		SyscallLatency:          1,
-		L1HitLatency:            4,
-		L2HitLatency:            12,
-		L3HitLatency:            30,
-		MemoryLatency:           150,
 	}
 }
 
@@ -145,9 +129,5 @@ func (c *TimingConfig) Clone() *TimingConfig {
 		DivideLatencyMin:        c.DivideLatencyMin,
 		DivideLatencyMax:        c.DivideLatencyMax,
 		SyscallLatency:          c.SyscallLatency,
-		L1HitLatency:            c.L1HitLatency,
-		L2HitLatency:            c.L2HitLatency,
-		L3HitLatency:            c.L3HitLatency,
-		MemoryLatency:           c.MemoryLatency,
 	}
 }

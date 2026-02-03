@@ -80,16 +80,20 @@ M2Sim models a 5-stage pipeline with:
 
 ## Memory Latencies
 
-**Source:** `timing/latency/config.go`
+**Source:** `timing/cache/cache.go` (cache.Config)
 
-| Parameter | Default Value | Apple M2 Reference | Tunable |
-|-----------|---------------|-------------------|---------|
-| `L1HitLatency` | 4 cycles | ~4 cycles | ✅ Yes |
-| `L2HitLatency` | 12 cycles | ~12-14 cycles | ✅ Yes |
-| `L3HitLatency` | 30 cycles | N/A (M2 has SLC, not L3) | ⚠️ Review |
-| `MemoryLatency` | 150 cycles | ~100-200 cycles (LPDDR5) | ✅ Yes |
+Memory hierarchy latencies are configured in cache configurations, not in the instruction latency table.
 
-**Note:** Apple M2 uses System-Level Cache (SLC) instead of traditional L3. The `L3HitLatency` parameter may need renaming or removal.
+| Parameter | Location | Default Value | Apple M2 Reference | Tunable |
+|-----------|----------|---------------|-------------------|---------|
+| L1D `HitLatency` | `cache.DefaultL1DConfig()` | 4 cycles | ~4 cycles | ✅ Yes |
+| L1D `MissLatency` | `cache.DefaultL1DConfig()` | 12 cycles | ~12 cycles to L2 | ✅ Yes |
+| L1I `HitLatency` | `cache.DefaultL1IConfig()` | 1 cycle | ~1 cycle | ✅ Yes |
+| L1I `MissLatency` | `cache.DefaultL1IConfig()` | 12 cycles | ~12 cycles to L2 | ✅ Yes |
+| L2 `HitLatency` | `cache.DefaultL2Config()` | 12 cycles | ~12-14 cycles | ✅ Yes |
+| L2 `MissLatency` | `cache.DefaultL2Config()` | 200 cycles | ~150-200 cycles (DRAM) | ✅ Yes |
+
+**Note:** The instruction latency table (`timing/latency/config.go`) provides execution latencies only. Memory hierarchy latencies were moved to cache configurations to avoid duplication and double-counting.
 
 ---
 

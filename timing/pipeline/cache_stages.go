@@ -89,11 +89,12 @@ func (s *CachedFetchStage) Reset() {
 type CachedMemoryStage struct {
 	cache       *cache.Cache
 	memory      *emu.Memory
-	pending     bool       // True if waiting for cache miss
+	pending     bool       // True if waiting for cache access (hit or miss)
 	pendingAddr uint64     // Address being waited on
 	pendingPC   uint64     // PC of instruction being waited on
 	latency     uint64     // Remaining latency cycles
 	result      *memResult // Cached result while waiting
+	isHit       bool       // True if pending is for a hit (for stats)
 }
 
 type memResult struct {
@@ -110,6 +111,7 @@ func NewCachedMemoryStage(dcache *cache.Cache, memory *emu.Memory) *CachedMemory
 
 // Access performs memory read or write through D-cache.
 // Returns result and whether the operation is stalling.
+// Both cache hits and misses cause pipeline stalls based on their latencies.
 func (s *CachedMemoryStage) Access(exmem *EXMEMRegister) (MemoryResult, bool) {
 	result := MemoryResult{}
 
@@ -134,13 +136,13 @@ func (s *CachedMemoryStage) Access(exmem *EXMEMRegister) (MemoryResult, bool) {
 		s.result = nil
 	}
 
-	// If still waiting for previous miss at same address
+	// If still waiting for previous access (hit or miss) at same address
 	if s.pending {
 		s.latency--
 		if s.latency > 0 {
 			return result, true // Still stalling
 		}
-		// Miss serviced
+		// Access complete
 		s.pending = false
 		if s.result != nil && exmem.MemRead {
 			result.MemData = s.result.data
@@ -158,23 +160,19 @@ func (s *CachedMemoryStage) Access(exmem *EXMEMRegister) (MemoryResult, bool) {
 		// Load through D-cache
 		cacheResult := s.cache.Read(addr, size)
 
-		if cacheResult.Hit {
-			result.MemData = cacheResult.Data
-			return result, false
-		}
-
-		// Miss: need to wait
+		// Both hits and misses have latency - set up pending state
 		s.pending = true
 		s.pendingPC = exmem.PC
 		s.pendingAddr = addr
-		s.latency = cacheResult.Latency - 1
+		s.latency = cacheResult.Latency - 1 // -1 because this cycle counts
 		s.result = &memResult{data: cacheResult.Data}
+		s.isHit = cacheResult.Hit
 
 		if s.latency > 0 {
-			return result, true // Stall
+			return result, true // Stall for remaining latency
 		}
 
-		// Single-cycle miss
+		// Single-cycle latency (latency=1)
 		s.pending = false
 		result.MemData = cacheResult.Data
 		return result, false
@@ -184,22 +182,19 @@ func (s *CachedMemoryStage) Access(exmem *EXMEMRegister) (MemoryResult, bool) {
 		// Store through D-cache
 		cacheResult := s.cache.Write(addr, size, exmem.StoreValue)
 
-		if cacheResult.Hit {
-			return result, false
-		}
-
-		// Miss: need to wait
+		// Both hits and misses have latency - set up pending state
 		s.pending = true
 		s.pendingPC = exmem.PC
 		s.pendingAddr = addr
 		s.latency = cacheResult.Latency - 1
 		s.result = nil
+		s.isHit = cacheResult.Hit
 
 		if s.latency > 0 {
-			return result, true // Stall
+			return result, true // Stall for remaining latency
 		}
 
-		// Single-cycle miss
+		// Single-cycle latency
 		s.pending = false
 		return result, false
 	}
@@ -212,6 +207,7 @@ func (s *CachedMemoryStage) Reset() {
 	s.pending = false
 	s.latency = 0
 	s.result = nil
+	s.isHit = false
 }
 
 // CacheStats returns the underlying cache statistics.

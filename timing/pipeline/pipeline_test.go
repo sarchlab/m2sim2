@@ -488,10 +488,6 @@ var _ = Describe("Pipeline Integration", func() {
 				DivideLatencyMin:        10,
 				DivideLatencyMax:        15,
 				SyscallLatency:          1,
-				L1HitLatency:            4,
-				L2HitLatency:            12,
-				L3HitLatency:            30,
-				MemoryLatency:           150,
 			}
 			table := latency.NewTableWithConfig(config)
 			pipe = pipeline.NewPipeline(regFile, memory, pipeline.WithLatencyTable(table))
@@ -556,10 +552,6 @@ var _ = Describe("Pipeline Integration", func() {
 				DivideLatencyMin:        10,
 				DivideLatencyMax:        15,
 				SyscallLatency:          1,
-				L1HitLatency:            4,
-				L2HitLatency:            12,
-				L3HitLatency:            30,
-				MemoryLatency:           150,
 			}
 			table := latency.NewTableWithConfig(config)
 			pipe = pipeline.NewPipeline(regFile, memory, pipeline.WithLatencyTable(table))

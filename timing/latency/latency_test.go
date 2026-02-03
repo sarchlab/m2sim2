@@ -198,10 +198,6 @@ var _ = Describe("Latency", func() {
 				DivideLatencyMin:        12,
 				DivideLatencyMax:        20,
 				SyscallLatency:          1,
-				L1HitLatency:            4,
-				L2HitLatency:            12,
-				L3HitLatency:            30,
-				MemoryLatency:           150,
 			}
 			customTable := latency.NewTableWithConfig(config)
 
