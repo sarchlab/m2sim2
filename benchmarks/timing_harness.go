@@ -3,6 +3,7 @@ package benchmarks
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -418,4 +419,92 @@ func EncodeLDR64(rt, rn uint8, imm12 uint16) uint32 {
 	inst |= uint32(rn&0x1F) << 5
 	inst |= uint32(rt & 0x1F)
 	return inst
+}
+
+// BenchmarkReport is the complete output format for benchmark results.
+type BenchmarkReport struct {
+	// Metadata about the benchmark run
+	Metadata ReportMetadata `json:"metadata"`
+
+	// Results is the list of individual benchmark results
+	Results []BenchmarkResult `json:"results"`
+
+	// Summary contains aggregate statistics
+	Summary ReportSummary `json:"summary"`
+}
+
+// ReportMetadata contains information about the benchmark run.
+type ReportMetadata struct {
+	// Timestamp when the benchmark was run
+	Timestamp string `json:"timestamp"`
+
+	// Version of the simulator
+	Version string `json:"version"`
+
+	// Config describes the benchmark configuration
+	Config BenchmarkConfig `json:"config"`
+}
+
+// BenchmarkConfig describes the harness configuration used.
+type BenchmarkConfig struct {
+	ICacheEnabled bool `json:"icache_enabled"`
+	DCacheEnabled bool `json:"dcache_enabled"`
+}
+
+// ReportSummary contains aggregate statistics across all benchmarks.
+type ReportSummary struct {
+	// TotalBenchmarks is the number of benchmarks run
+	TotalBenchmarks int `json:"total_benchmarks"`
+
+	// TotalCycles is the sum of all simulated cycles
+	TotalCycles uint64 `json:"total_cycles"`
+
+	// TotalInstructions is the sum of all instructions retired
+	TotalInstructions uint64 `json:"total_instructions"`
+
+	// AverageCPI is the average cycles per instruction
+	AverageCPI float64 `json:"average_cpi"`
+
+	// TotalWallTime is the total wall clock time for all benchmarks
+	TotalWallTime time.Duration `json:"total_wall_time_ns"`
+}
+
+// PrintJSON outputs benchmark results in JSON format for automated comparison.
+func (h *Harness) PrintJSON(results []BenchmarkResult) error {
+	// Calculate summary statistics
+	var totalCycles, totalInstructions uint64
+	var totalWallTime time.Duration
+	for _, r := range results {
+		totalCycles += r.SimulatedCycles
+		totalInstructions += r.InstructionsRetired
+		totalWallTime += r.WallTime
+	}
+
+	avgCPI := float64(0)
+	if totalInstructions > 0 {
+		avgCPI = float64(totalCycles) / float64(totalInstructions)
+	}
+
+	report := BenchmarkReport{
+		Metadata: ReportMetadata{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Version:   "0.6.0", // M6 milestone
+			Config: BenchmarkConfig{
+				ICacheEnabled: h.config.EnableICache,
+				DCacheEnabled: h.config.EnableDCache,
+			},
+		},
+		Results: results,
+		Summary: ReportSummary{
+			TotalBenchmarks:   len(results),
+			TotalCycles:       totalCycles,
+			TotalInstructions: totalInstructions,
+			AverageCPI:        avgCPI,
+			TotalWallTime:     totalWallTime,
+		},
+	}
+
+	encoder := json.NewEncoder(h.config.Output)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(report)
 }

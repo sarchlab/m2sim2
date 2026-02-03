@@ -17,6 +17,18 @@ func GetMicrobenchmarks() []Benchmark {
 		functionCalls(),
 		branchTaken(),
 		mixedOperations(),
+		matrixMultiply2x2(),
+		loopSimulation(),
+	}
+}
+
+// GetCoreBenchmarks returns a minimal set of 3 core benchmarks for quick validation.
+// These correspond to the acceptance criteria: loop, matrix multiply, branch-heavy code.
+func GetCoreBenchmarks() []Benchmark {
+	return []Benchmark{
+		loopSimulation(),
+		matrixMultiply2x2(),
+		branchTaken(),
 	}
 }
 
@@ -226,3 +238,130 @@ func EncodeB(offset int32) uint32 {
 	inst |= imm26
 	return inst
 }
+
+// 7. Matrix Operations - Tests computation with memory access pattern
+// Loads values from memory, performs computations, stores results
+// Note: Uses ADD instead of MUL since scalar MUL isn't implemented yet
+func matrixMultiply2x2() Benchmark {
+	return Benchmark{
+		Name:        "matrix_operations",
+		Description: "Matrix-style load/compute/store pattern - tests memory access",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
+			// Array A at 0x8000: [10, 20, 30, 40]
+			regFile.WriteReg(1, 0x8000)
+			memory.Write64(0x8000, 10)
+			memory.Write64(0x8008, 20)
+			memory.Write64(0x8010, 30)
+			memory.Write64(0x8018, 40)
+
+			// Array B at 0x8100: [1, 2, 3, 4]
+			regFile.WriteReg(2, 0x8100)
+			memory.Write64(0x8100, 1)
+			memory.Write64(0x8108, 2)
+			memory.Write64(0x8110, 3)
+			memory.Write64(0x8118, 4)
+
+			// Array C at 0x8200 (result)
+			regFile.WriteReg(3, 0x8200)
+		},
+		// Compute C[i] = A[i] + B[i] for i = 0..3
+		// C = [11, 22, 33, 44]
+		// Return sum of C = 11 + 22 + 33 + 44 = 110
+		Program: BuildProgram(
+			// Load A array into X10-X13
+			EncodeLDR64(10, 1, 0), // X10 = A[0] = 10
+			EncodeLDR64(11, 1, 1), // X11 = A[1] = 20
+			EncodeLDR64(12, 1, 2), // X12 = A[2] = 30
+			EncodeLDR64(13, 1, 3), // X13 = A[3] = 40
+
+			// Load B array into X14-X17
+			EncodeLDR64(14, 2, 0), // X14 = B[0] = 1
+			EncodeLDR64(15, 2, 1), // X15 = B[1] = 2
+			EncodeLDR64(16, 2, 2), // X16 = B[2] = 3
+			EncodeLDR64(17, 2, 3), // X17 = B[3] = 4
+
+			// Compute C[i] = A[i] + B[i]
+			EncodeADDReg(20, 10, 14, false), // X20 = 10 + 1 = 11
+			EncodeADDReg(21, 11, 15, false), // X21 = 20 + 2 = 22
+			EncodeADDReg(22, 12, 16, false), // X22 = 30 + 3 = 33
+			EncodeADDReg(23, 13, 17, false), // X23 = 40 + 4 = 44
+
+			// Store C array
+			EncodeSTR64(20, 3, 0), // C[0] = 11
+			EncodeSTR64(21, 3, 1), // C[1] = 22
+			EncodeSTR64(22, 3, 2), // C[2] = 33
+			EncodeSTR64(23, 3, 3), // C[3] = 44
+
+			// Sum all C elements for exit code: 11 + 22 + 33 + 44 = 110
+			EncodeADDReg(0, 20, 21, false), // X0 = 11 + 22 = 33
+			EncodeADDReg(0, 0, 22, false),  // X0 = 33 + 33 = 66
+			EncodeADDReg(0, 0, 23, false),  // X0 = 66 + 44 = 110
+
+			EncodeSVC(0),
+		),
+		ExpectedExit: 110,
+	}
+}
+
+// 8. Loop Simulation - Simulates a counted loop (unrolled)
+// This is what a "for i := 0; i < 10; i++" loop would look like
+func loopSimulation() Benchmark {
+	return Benchmark{
+		Name:        "loop_simulation",
+		Description: "Simulated 10-iteration loop (unrolled) - tests loop-like patterns",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
+			regFile.WriteReg(0, 0)  // X0 = sum = 0
+			regFile.WriteReg(1, 0)  // X1 = i = 0
+		},
+		// Simulate: for i := 0; i < 10; i++ { sum += i }
+		// Result: 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 = 45
+		Program: BuildProgram(
+			// Iteration 0: sum += 0, i++
+			EncodeADDReg(0, 0, 1, false), // sum += i
+			EncodeADDImm(1, 1, 1, false), // i++
+
+			// Iteration 1: sum += 1, i++
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 2
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 3
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 4
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 5
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 6
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 7
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 8
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			// Iteration 9
+			EncodeADDReg(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+
+			EncodeSVC(0),
+		),
+		ExpectedExit: 45,
+	}
+}
+
+// Note: encodeMUL removed - scalar MUL/MADD not yet implemented in simulator

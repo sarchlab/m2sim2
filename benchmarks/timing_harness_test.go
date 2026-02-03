@@ -20,8 +20,8 @@ func TestHarnessRunsAllBenchmarks(t *testing.T) {
 
 	results := harness.RunAll()
 
-	if len(results) != 6 {
-		t.Errorf("expected 6 benchmark results, got %d", len(results))
+	if len(results) != 8 {
+		t.Errorf("expected 8 benchmark results, got %d", len(results))
 	}
 
 	// Verify each benchmark completed
@@ -234,6 +234,67 @@ func TestPrintCSV(t *testing.T) {
 
 	if !strings.Contains(lines[1], "arithmetic_sequential") {
 		t.Error("CSV data should contain benchmark name")
+	}
+}
+
+func TestPrintJSON(t *testing.T) {
+	buf := &bytes.Buffer{}
+	config := DefaultConfig()
+	config.Output = buf
+	config.EnableICache = false
+	config.EnableDCache = false
+
+	harness := NewHarness(config)
+	harness.AddBenchmarks(GetCoreBenchmarks())
+
+	results := harness.RunAll()
+	err := harness.PrintJSON(results)
+
+	if err != nil {
+		t.Fatalf("PrintJSON failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Check JSON structure
+	if !strings.Contains(output, `"metadata"`) {
+		t.Error("JSON should contain metadata")
+	}
+	if !strings.Contains(output, `"results"`) {
+		t.Error("JSON should contain results")
+	}
+	if !strings.Contains(output, `"summary"`) {
+		t.Error("JSON should contain summary")
+	}
+	if !strings.Contains(output, `"simulated_cycles"`) {
+		t.Error("JSON should contain simulated_cycles field")
+	}
+	if !strings.Contains(output, `"loop_simulation"`) {
+		t.Error("JSON should contain loop_simulation benchmark")
+	}
+}
+
+func TestGetCoreBenchmarks(t *testing.T) {
+	benchmarks := GetCoreBenchmarks()
+
+	if len(benchmarks) != 3 {
+		t.Errorf("expected 3 core benchmarks, got %d", len(benchmarks))
+	}
+
+	// Verify we have loop, matrix, and branch benchmarks
+	names := make(map[string]bool)
+	for _, b := range benchmarks {
+		names[b.Name] = true
+	}
+
+	if !names["loop_simulation"] {
+		t.Error("core benchmarks should include loop_simulation")
+	}
+	if !names["matrix_operations"] {
+		t.Error("core benchmarks should include matrix_operations")
+	}
+	if !names["branch_taken"] {
+		t.Error("core benchmarks should include branch_taken")
 	}
 }
 
