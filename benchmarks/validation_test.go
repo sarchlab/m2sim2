@@ -252,7 +252,7 @@ func encodeSTR64(rt, rn uint8, imm12 uint16) uint32 {
 	inst |= 0 << 26     // V = 0 (not SIMD)
 	inst |= 0b01 << 24  // op2
 	inst |= 0b00 << 22  // opc = STR
-	inst |= uint32(imm12) << 10
+	inst |= uint32(imm12&0xFFF) << 10
 	inst |= uint32(rn&0x1F) << 5
 	inst |= uint32(rt & 0x1F)
 	return inst
@@ -267,7 +267,7 @@ func encodeLDR64(rt, rn uint8, imm12 uint16) uint32 {
 	inst |= 0 << 26     // V = 0 (not SIMD)
 	inst |= 0b01 << 24  // op2
 	inst |= 0b01 << 22  // opc = LDR
-	inst |= uint32(imm12) << 10
+	inst |= uint32(imm12&0xFFF) << 10
 	inst |= uint32(rn&0x1F) << 5
 	inst |= uint32(rt & 0x1F)
 	return inst
@@ -362,7 +362,7 @@ func TestEdgeCases(t *testing.T) {
 				// Test B.EQ (should not branch, Z=0)
 				encodeADDImm(0, 31, 1, false), // X0 = 1
 				encodeSUBImm(2, 0, 0, true),   // SUBS X2, X0, #0 (sets Z=0, N=0)
-				encodeBCond(12, 0),            // B.EQ skip1 (CondEQ=0, should NOT branch)
+				encodeBCond(8, 0),             // B.EQ skip1 (CondEQ=0, should NOT branch)
 				encodeADDImm(0, 0, 1, false),  // X0 += 1 (now 2)
 				// skip1:
 				// Test B.NE (should branch, Z=0)
