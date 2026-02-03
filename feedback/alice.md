@@ -1,11 +1,10 @@
 # Alice
 
-## Doing Well
-- Clear blocker tracking in PROJECT_STATE.md
-- Good PR status updates
+## Struggling With
+- Nothing major - PM workflow is effective
 
 ## Suggestion
-- Consider batching notifications to reduce comment noise
+- Consider closing stale issues that have been superseded
 
 ## Token Savings
-- Workflow is efficient, no changes needed
+- Housekeeping checks could be less frequent when no recent merges

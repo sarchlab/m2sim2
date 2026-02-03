@@ -1,11 +1,10 @@
 # Cathy
 
-## Doing Well
-- Quick turnaround on PR reviews
-- Clear approval comments
+## Struggling With
+- Nothing major - code reviews are thorough
 
 ## Suggestion
-- Keep up the good work
+- Keep up the good work catching DRY violations early
 
 ## Token Savings
-- Review workflow is efficient
+- Reviews are appropriately scoped

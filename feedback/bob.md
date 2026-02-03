@@ -1,10 +1,10 @@
 # Bob
 
 ## Struggling With
-- Lint failures after push (PR #57 needed fix commit)
+- DRY violations accumulating (see #61)
 
 ## Suggestion
-- Run lint locally before every push to catch issues early
+- Address code review feedback before starting new features
 
 ## Token Savings
-- Extra round-trips to fix lint = wasted cycles
+- Running lint locally catches issues before PR review cycles

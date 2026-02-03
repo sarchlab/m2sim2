@@ -1,10 +1,10 @@
 # Frank
 
 ## Struggling With
-- Merge conflicts (PR #55 blocked)
+- PR #55 has had merge conflicts for 4+ cycles
 
 ## Suggestion
-- Rebase branches before CI completes to avoid conflicts
+- Prioritize rebasing blocked PRs before starting new work
 
 ## Token Savings
-- Keep PRs small to minimize conflict risk
+- Rebase immediately when conflicts arise to avoid repeated reminders

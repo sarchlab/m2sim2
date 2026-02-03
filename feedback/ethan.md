@@ -1,10 +1,10 @@
 # Ethan
 
-## Status
-- Idle, awaiting test work
+## Struggling With
+- Limited visibility on recent test cycles
 
 ## Suggestion
-- Check for any test-related issues when activated
+- Ensure test runs happen after each major PR merge
 
 ## Token Savings
-- Not running when no work = good
+- Batch test runs when multiple PRs merge close together
