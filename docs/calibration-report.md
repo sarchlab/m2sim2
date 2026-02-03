@@ -1,103 +1,114 @@
 # M2Sim Calibration Report
 
 **Date:** 2026-02-03  
-**Author:** Bob (Coder Agent)
+**Author:** Cathy (QA Agent)  
+**Milestone:** M6 Validation
 
 ## Executive Summary
 
-This report compares M2Sim simulator predictions against native M2 hardware execution to identify accuracy gaps and prioritize future improvements.
+This report documents the baseline M2 hardware measurements and compares them with M2Sim simulator predictions. The <2% accuracy target is the focus of M6.
 
-## Test Results
+**Current Status:** ❌ Accuracy needs improvement (>100% error on some benchmarks)
 
-### Simulator Results (M2Sim Timing Mode)
+## Methodology
 
-| Benchmark             | Cycles | Instructions | CPI   | Exit Code |
-|-----------------------|--------|--------------|-------|-----------|
-| arithmetic_sequential | 24     | 20           | 1.200 | 4         |
-| dependency_chain      | 44     | 20           | 2.200 | 20        |
-| memory_sequential     | 45     | 20           | 2.250 | 32832     |
-| function_calls        | 39     | 15           | 2.600 | 5         |
-| branch_taken          | 29     | 10           | 2.900 | 5         |
-| mixed_operations      | 42     | 18           | 2.333 | 100       |
+We use **linear regression calibration** to measure real M2 instruction latencies. This technique separates process startup overhead (~2-3ms) from actual instruction execution time by running benchmarks with varying instruction counts.
 
-### Native M2 Hardware Results
+**Key insight:** `time = latency × instructions + overhead`
 
-**Note:** Native results are dominated by ~18ms process startup overhead. Absolute cycle counts are not meaningful; focus on relative patterns.
+By varying instruction count and fitting a line, we extract:
+- Slope = instruction latency (ns/instruction)
+- Intercept = process overhead (ms)
+- R² = fit quality (>0.999 = excellent)
 
-| Benchmark             | Avg (ns) | Est. Cycles | Instructions | Notes                    |
-|-----------------------|----------|-------------|--------------|--------------------------|
-| arithmetic_sequential | 18.58ms  | ~63.6M      | 24           | Process overhead dominant|
-| dependency_chain      | 18.52ms  | ~63.4M      | 24           | Process overhead dominant|
-| memory_sequential     | 18.30ms  | ~63.4M      | 25           | Process overhead dominant|
-| function_calls        | 18.67ms  | ~63.5M      | 18           | Process overhead dominant|
-| branch_taken          | 18.45ms  | ~63.4M      | 15           | Process overhead dominant|
-| mixed_operations      | 18.36ms  | ~63.5M      | 45           | Process overhead dominant|
+See `benchmarks/native/METHODOLOGY.md` for full details.
 
-## Analysis
+## M2 Hardware Baseline
 
-### Key Findings
+| Benchmark | Description | Latency (ns/inst) | CPI | IPC | R² |
+|-----------|-------------|-------------------|-----|-----|-----|
+| arithmetic | 20 independent ADDs | 0.0766 | 0.27 | 3.73 | 0.9996 |
+| dependency | 20 dependent ADDs (RAW chain) | 0.2883 | 1.01 | 0.99 | 0.9999 |
+| branch | 5 taken branches | 0.3399 | 1.19 | 0.84 | 0.9997 |
 
-1. **Process Overhead Dominates Native Measurements**
-   - All native benchmarks show ~18ms execution time
-   - This is process startup overhead, not actual benchmark time
-   - The actual benchmark code executes in nanoseconds
-   - For accurate native cycles, Apple Instruments with CPU Counters is required
+**Key Observations:**
+- **arithmetic**: IPC of 3.73 shows M2's superscalar execution (multiple independent ADDs per cycle)
+- **dependency**: IPC of ~1.0 shows serialization from RAW hazards
+- **branch**: Well-predicted branches have low overhead
 
-2. **Simulator Shows Expected CPI Patterns**
-   - arithmetic_sequential: CPI=1.2 (near ideal IPC, independent operations)
-   - dependency_chain: CPI=2.2 (higher due to data dependencies)
-   - memory_sequential: CPI=2.25 (memory latency impact)
-   - branch_taken: CPI=2.9 (branch penalty visible)
-   - function_calls: CPI=2.6 (BL/RET overhead)
+## Simulator Results
 
-3. **Relative Performance Relationships (Simulator)**
-   - dependency_chain > arithmetic_sequential (dependencies add stalls) ✓
-   - branch_taken > dependency_chain (branch penalties) ✓
-   - memory_sequential > arithmetic_sequential (memory latency) ✓
+| Benchmark | Sim Cycles | Sim Instructions | Sim CPI | Sim Latency (ns) |
+|-----------|------------|------------------|---------|------------------|
+| arithmetic | 24 | 20 | 1.20 | 0.343 |
+| dependency | 44 | 20 | 2.20 | 0.629 |
+| branch | 29 | 10 | 2.90 | 0.829 |
 
-### Calibration Gaps Identified
+## Accuracy Comparison
 
-#### Cannot Validate (Due to Process Overhead)
-- Absolute cycle counts
-- Absolute CPI values
-- Real cache miss rates
+| Benchmark | Real Latency | Sim Latency | Error |
+|-----------|--------------|-------------|-------|
+| arithmetic | 0.077 ns | 0.343 ns | **346.6%** |
+| dependency | 0.288 ns | 0.629 ns | **118.1%** |
+| branch | 0.340 ns | 0.829 ns | **143.3%** |
 
-#### Recommendations for Better Calibration
+**Average Error:** 202.7%  
+**Target:** <2%
 
-1. **Use Apple Instruments** (xctrace with CPU Counters template)
-   - Provides true hardware cycle counts
-   - No process overhead interference
-   - See benchmarks/native/README.md for instructions
+## Root Cause Analysis
 
-2. **Longer Running Benchmarks**
-   - Current benchmarks are too short (~20 instructions)
-   - 18ms process overhead >> benchmark execution time
-   - Need benchmarks with millions of iterations
+### Why Arithmetic Error Is Highest (346.6%)
 
-3. **Kernel-Mode Measurements**
-   - Consider syscall-based timing to avoid process overhead
-   - Or use perf events on Linux
+**Real M2:** IPC = 3.73 (executes nearly 4 independent ADDs per cycle)
+**Simulator:** CPI = 1.2 (treats as mostly sequential)
 
-## Feature Prioritization
+The simulator doesn't model M2's wide superscalar execution. Real M2 P-cores can issue 6+ micro-ops per cycle.
 
-Based on simulator CPI patterns, the following M5 features may have impact:
+### Why Dependency Is Better (118.1%)
 
-| Feature            | Current Impact | Priority | Notes                          |
-|--------------------|----------------|----------|--------------------------------|
-| Branch Prediction  | CPI penalty visible (2.9 for branches) | Medium | Already modeled, may need tuning |
-| Out-of-Order       | Not modeled    | High     | Would reduce dependency stalls   |
-| Cache Hierarchy    | Basic L1 modeled| Medium   | L2/L3 needed for real workloads  |
-| SIMD (NEON)        | Not modeled    | TBD      | Need SIMD benchmarks to assess   |
+Dependent instructions serialize naturally, limiting ILP. Both simulator and hardware show ~1 CPI when operations depend on each other.
+
+### Why Branch Error Is Moderate (143.3%)
+
+The simulator models branch prediction but may have:
+- Higher assumed misprediction rate
+- Higher branch resolution latency
+
+## Calibration Priorities
+
+| Issue | Impact | Fix |
+|-------|--------|-----|
+| No superscalar execution | Critical | Model instruction-level parallelism |
+| Branch prediction accuracy | Medium | Tune branch predictor parameters |
+| Pipeline depth assumptions | Medium | Validate pipeline stage latencies |
 
 ## Next Steps
 
-1. [ ] Add longer-running benchmark variants (1M+ iterations)
-2. [ ] Run benchmarks with Apple Instruments CPU Counters
-3. [ ] Create calibration script using xctrace
-4. [ ] Once real cycle data available, tune simulator parameters
+1. **Issue #97**: Accuracy analysis and tuning
+   - Analyze instruction scheduling in simulator
+   - Consider modeling issue width (6+ for M2)
+   - Tune branch predictor parameters
+
+2. **Expand Benchmark Coverage**
+   - Add memory benchmarks (L1/L2/L3 cache)
+   - Add SIMD benchmarks
+   - Add mixed workloads
+
+3. **Performance Counter Validation**
+   - Use xctrace for direct cycle counts
+   - Validate linear regression results
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `benchmarks/native/m2_baseline.json` | Authoritative baseline data |
+| `benchmarks/native/METHODOLOGY.md` | Measurement methodology |
+| `benchmarks/native/calibration_results.json` | Raw calibration output |
+| `benchmarks/native/accuracy_results.json` | Latest accuracy comparison |
 
 ## Conclusion
 
-The current benchmark infrastructure successfully validates **functional correctness** (exit codes match) and shows **reasonable CPI relationships** in the simulator. However, **absolute accuracy calibration** requires hardware performance counters, as process overhead makes timing measurements unusable.
+The simulator's CPI predictions are 2-4x higher than real M2 hardware. The primary cause is that M2's aggressive out-of-order, superscalar execution is not modeled. The simulator appears to model closer to an in-order pipeline.
 
-The simulator's current CPI values (1.2-2.9 range) are realistic for an in-order pipeline with memory stalls and branch penalties. True calibration requires xctrace measurements or significantly longer-running benchmarks.
+Achieving <2% accuracy will require significant changes to the execution model.

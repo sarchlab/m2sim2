@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02-03",
+    "hardware": "Apple M2 (P-core @ 3.5 GHz)",
+    "methodology": "Linear regression calibration",
+    "methodology_doc": "METHODOLOGY.md",
+    "author": "Cathy (QA Agent)"
+  },
+  "baselines": [
+    {
+      "name": "arithmetic",
+      "description": "20 independent ADDs per iteration (ALU throughput)",
+      "instructions_per_iteration": 20,
+      "latency_ns_per_instruction": 0.0766,
+      "cpi_at_3_5_ghz": 0.268,
+      "ipc_at_3_5_ghz": 3.73,
+      "r_squared": 0.9996,
+      "notes": "Tests superscalar execution - M2 can issue multiple independent ADDs per cycle"
+    },
+    {
+      "name": "dependency",
+      "description": "20 dependent ADDs per iteration (RAW hazards)",
+      "instructions_per_iteration": 20,
+      "latency_ns_per_instruction": 0.2883,
+      "cpi_at_3_5_ghz": 1.009,
+      "ipc_at_3_5_ghz": 0.99,
+      "r_squared": 0.9999,
+      "notes": "Tests pipeline forwarding - dependent operations limit ILP"
+    },
+    {
+      "name": "branch",
+      "description": "5 taken branches per iteration (branch predictor)",
+      "instructions_per_iteration": 5,
+      "latency_ns_per_instruction": 0.3399,
+      "cpi_at_3_5_ghz": 1.190,
+      "ipc_at_3_5_ghz": 0.84,
+      "r_squared": 0.9997,
+      "notes": "Tests branch prediction - well-predicted branches have minimal penalty"
+    }
+  ],
+  "target_accuracy": {
+    "max_error_percent": 2.0,
+    "error_formula": "abs(sim - real) / min(sim, real)"
+  },
+  "calibration_data": {
+    "iteration_counts": [1000000, 2000000, 4000000, 8000000, 16000000, 32000000],
+    "runs_per_count": 15,
+    "warmup_runs": 3,
+    "outlier_trim_percent": 20
+  }
+}
