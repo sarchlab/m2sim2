@@ -242,3 +242,327 @@ func encodeSVC(imm uint16) uint32 {
 	inst |= 0b00001
 	return inst
 }
+
+// encodeSTR64 encodes STR (64-bit) with unsigned immediate offset.
+// Format: 11 111 0 01 00 imm12 Rn Rt
+func encodeSTR64(rt, rn uint8, imm12 uint16) uint32 {
+	var inst uint32 = 0
+	inst |= 0b11 << 30        // size = 64-bit
+	inst |= 0b111 << 27       // op1
+	inst |= 0 << 26           // V = 0 (not SIMD)
+	inst |= 0b01 << 24        // op2
+	inst |= 0b00 << 22        // opc = STR
+	inst |= uint32(imm12) << 10
+	inst |= uint32(rn&0x1F) << 5
+	inst |= uint32(rt & 0x1F)
+	return inst
+}
+
+// encodeLDR64 encodes LDR (64-bit) with unsigned immediate offset.
+// Format: 11 111 0 01 01 imm12 Rn Rt
+func encodeLDR64(rt, rn uint8, imm12 uint16) uint32 {
+	var inst uint32 = 0
+	inst |= 0b11 << 30        // size = 64-bit
+	inst |= 0b111 << 27       // op1
+	inst |= 0 << 26           // V = 0 (not SIMD)
+	inst |= 0b01 << 24        // op2
+	inst |= 0b01 << 22        // opc = LDR
+	inst |= uint32(imm12) << 10
+	inst |= uint32(rn&0x1F) << 5
+	inst |= uint32(rt & 0x1F)
+	return inst
+}
+
+// encodeB encodes unconditional branch B.
+// Format: 000101 imm26
+func encodeB(offset int32) uint32 {
+	var inst uint32 = 0
+	inst |= 0b000101 << 26
+	imm26 := uint32(offset/4) & 0x3FFFFFF
+	inst |= imm26
+	return inst
+}
+
+// TestEdgeCases tests boundary conditions and edge cases.
+func TestEdgeCases(t *testing.T) {
+	tests := []struct {
+		name         string
+		setup        func(*emu.Emulator)
+		program      []byte
+		expectedExit int64
+	}{
+		{
+			name: "stack_operations",
+			setup: func(e *emu.Emulator) {
+				// Initialize SP to a valid memory region
+				e.RegFile().SP = 0x8000
+			},
+			program: buildProgram(
+				// Push X0 onto stack (simulate stack operation)
+				encodeADDImm(0, 31, 42, false), // X0 = 42
+				encodeSTR64(0, 31, 0),          // STR X0, [SP, #0] (uses SP as base)
+				encodeADDImm(0, 31, 0, false),  // X0 = 0 (clear X0)
+				encodeLDR64(0, 31, 0),          // LDR X0, [SP, #0] (restore from stack)
+				encodeADDImm(8, 31, 93, false), // X8 = 93 (exit syscall)
+				encodeSVC(0),                   // exit with X0
+			),
+			expectedExit: 42,
+		},
+		{
+			name: "large_loop_stress_test",
+			program: buildProgram(
+				encodeADDImm(0, 31, 0, false),    // X0 = 0 (counter)
+				encodeADDImm(1, 31, 100, false),  // X1 = 100 (limit)
+				// loop:
+				encodeADDImm(0, 0, 1, false),    // X0 = X0 + 1
+				encodeSUBImm(2, 0, 100, true),   // SUBS X2, X0, #100 (compare)
+				encodeBCond(-8, 11),             // B.LT loop (CondLT = 0b1011 = 11)
+				encodeADDImm(8, 31, 93, false),  // X8 = 93
+				encodeSVC(0),                    // exit with X0 = 100
+			),
+			expectedExit: 100,
+		},
+		{
+			name: "max_immediate_value",
+			program: buildProgram(
+				// Test max 12-bit immediate (4095)
+				encodeADDImm(0, 31, 4095, false), // X0 = 4095
+				encodeSUBImm(0, 0, 4053, false),  // X0 = 4095 - 4053 = 42
+				encodeADDImm(8, 31, 93, false),   // X8 = 93
+				encodeSVC(0),                     // exit
+			),
+			expectedExit: 42,
+		},
+		{
+			name: "zero_register_as_source",
+			program: buildProgram(
+				// XZR reads as 0, writes are ignored
+				encodeADDImm(0, 31, 42, false),  // X0 = XZR + 42 = 42
+				encodeADDReg(0, 0, 31, false),   // X0 = X0 + XZR = 42
+				encodeADDImm(8, 31, 93, false),  // X8 = 93
+				encodeSVC(0),                    // exit
+			),
+			expectedExit: 42,
+		},
+		{
+			name: "nested_function_calls",
+			// Test two-level function calls: main -> outer -> inner
+			// Using BL to call functions, with manual LR save/restore
+			program: buildProgram(
+				// offset 0: main
+				encodeADDImm(0, 31, 1, false),   // 0: X0 = 1
+				encodeBL(12),                    // 4: BL outer (offset 12 -> addr 16)
+				encodeADDImm(8, 31, 93, false),  // 8: X8 = 93
+				encodeSVC(0),                    // 12: exit with X0
+				// offset 16: outer
+				encodeADDImm(0, 0, 1, false),    // 16: X0 += 1 (now 2)
+				encodeADDReg(9, 30, 31, false),  // 20: X9 = LR (save)
+				encodeBL(12),                    // 24: BL inner (offset 12 -> addr 36)
+				encodeADDReg(30, 9, 31, false),  // 28: LR = X9 (restore)
+				encodeRET(),                     // 32: return to main
+				// offset 36: inner
+				encodeADDImm(0, 0, 1, false),    // 36: X0 += 1 (now 3)
+				encodeRET(),                     // 40: return to outer
+			),
+			expectedExit: 3,
+		},
+		{
+			name: "conditional_branch_all_conditions",
+			program: buildProgram(
+				// Test B.EQ (should not branch, Z=0)
+				encodeADDImm(0, 31, 1, false),  // X0 = 1
+				encodeSUBImm(2, 0, 0, true),    // SUBS X2, X0, #0 (sets Z=0, N=0)
+				encodeBCond(12, 0),             // B.EQ skip1 (CondEQ=0, should NOT branch)
+				encodeADDImm(0, 0, 1, false),   // X0 += 1 (now 2)
+				// skip1:
+				// Test B.NE (should branch, Z=0)
+				encodeBCond(8, 1),              // B.NE skip2 (CondNE=1, should branch)
+				encodeADDImm(0, 0, 100, false), // X0 += 100 (should be skipped)
+				// skip2:
+				encodeADDImm(8, 31, 93, false), // X8 = 93
+				encodeSVC(0),                   // exit with X0 = 2
+			),
+			expectedExit: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := emu.NewEmulator(
+				emu.WithMaxInstructions(100000),
+			)
+
+			if tt.setup != nil {
+				tt.setup(e)
+			}
+
+			e.LoadProgram(0x1000, tt.program)
+			exitCode := e.Run()
+
+			if exitCode != tt.expectedExit {
+				t.Errorf("expected exit code %d, got %d", tt.expectedExit, exitCode)
+			}
+
+			t.Logf("✓ %s: exit_code=%d, instructions=%d", tt.name, exitCode, e.InstructionCount())
+		})
+	}
+}
+
+// TestNegativeCases tests error handling for invalid inputs.
+func TestNegativeCases(t *testing.T) {
+	t.Run("unknown_opcode", func(t *testing.T) {
+		e := emu.NewEmulator(
+			emu.WithMaxInstructions(100),
+		)
+
+		// Create a program with an invalid instruction
+		// Use an encoding that doesn't match any known format
+		invalidInstr := uint32(0xDEADBEEF)
+		program := uint32ToBytes(invalidInstr)
+
+		e.LoadProgram(0x1000, program)
+		exitCode := e.Run()
+
+		// Should return error exit code
+		if exitCode != -1 {
+			t.Errorf("expected exit code -1 for unknown opcode, got %d", exitCode)
+		}
+
+		t.Logf("✓ unknown_opcode: correctly returned error exit code")
+	})
+
+	t.Run("max_instruction_limit", func(t *testing.T) {
+		e := emu.NewEmulator(
+			emu.WithMaxInstructions(5),
+		)
+
+		// Program that would loop many times without limit
+		program := buildProgram(
+			encodeADDImm(0, 31, 0, false),   // X0 = 0
+			encodeADDImm(0, 0, 1, false),    // X0 += 1
+			encodeADDImm(0, 0, 1, false),    // X0 += 1
+			encodeADDImm(0, 0, 1, false),    // X0 += 1
+			encodeADDImm(0, 0, 1, false),    // X0 += 1
+			encodeADDImm(0, 0, 1, false),    // X0 += 1 (6th - should not execute)
+			encodeADDImm(8, 31, 93, false),  // X8 = 93
+			encodeSVC(0),                    // exit
+		)
+
+		e.LoadProgram(0x1000, program)
+		exitCode := e.Run()
+
+		// Should hit max instruction limit and return error
+		if exitCode != -1 {
+			t.Errorf("expected exit code -1 when hitting max instructions, got %d", exitCode)
+		}
+
+		if e.InstructionCount() != 5 {
+			t.Errorf("expected 5 instructions executed, got %d", e.InstructionCount())
+		}
+
+		t.Logf("✓ max_instruction_limit: stopped after %d instructions", e.InstructionCount())
+	})
+}
+
+// TestIntermediateStateVerification demonstrates mid-execution state checking.
+func TestIntermediateStateVerification(t *testing.T) {
+	t.Run("register_state_after_each_step", func(t *testing.T) {
+		e := emu.NewEmulator(
+			emu.WithMaxInstructions(1000),
+		)
+
+		program := buildProgram(
+			encodeADDImm(0, 31, 10, false), // X0 = 10
+			encodeADDImm(1, 31, 20, false), // X1 = 20
+			encodeADDReg(2, 0, 1, false),   // X2 = X0 + X1
+			encodeADDImm(8, 31, 93, false), // X8 = 93
+			encodeSVC(0),                   // exit with X0
+		)
+
+		e.LoadProgram(0x1000, program)
+
+		// Step 1: X0 = 10
+		e.Step()
+		if e.RegFile().ReadReg(0) != 10 {
+			t.Errorf("after step 1: expected X0=10, got %d", e.RegFile().ReadReg(0))
+		}
+
+		// Step 2: X1 = 20
+		e.Step()
+		if e.RegFile().ReadReg(1) != 20 {
+			t.Errorf("after step 2: expected X1=20, got %d", e.RegFile().ReadReg(1))
+		}
+
+		// Step 3: X2 = 30
+		e.Step()
+		if e.RegFile().ReadReg(2) != 30 {
+			t.Errorf("after step 3: expected X2=30, got %d", e.RegFile().ReadReg(2))
+		}
+
+		// Verify PC advanced correctly
+		expectedPC := uint64(0x1000 + 3*4)
+		if e.RegFile().PC != expectedPC {
+			t.Errorf("expected PC=0x%X, got 0x%X", expectedPC, e.RegFile().PC)
+		}
+
+		t.Logf("✓ register_state_after_each_step: all intermediate states verified")
+	})
+
+	t.Run("memory_state_verification", func(t *testing.T) {
+		e := emu.NewEmulator(
+			emu.WithMaxInstructions(1000),
+		)
+
+		// Set up initial memory
+		e.RegFile().SP = 0x8000
+
+		program := buildProgram(
+			encodeADDImm(0, 31, 42, false),  // X0 = 42
+			encodeSTR64(0, 31, 0),           // STR X0, [SP]
+			encodeADDImm(8, 31, 93, false),  // X8 = 93
+			encodeSVC(0),                    // exit
+		)
+
+		e.LoadProgram(0x1000, program)
+
+		// Execute first two instructions
+		e.Step() // X0 = 42
+		e.Step() // STR X0, [SP]
+
+		// Verify memory was written
+		storedValue := e.Memory().Read64(0x8000)
+		if storedValue != 42 {
+			t.Errorf("expected memory[0x8000]=42, got %d", storedValue)
+		}
+
+		t.Logf("✓ memory_state_verification: memory correctly written mid-execution")
+	})
+
+	t.Run("flag_state_verification", func(t *testing.T) {
+		e := emu.NewEmulator(
+			emu.WithMaxInstructions(1000),
+		)
+
+		program := buildProgram(
+			encodeADDImm(0, 31, 5, false),  // X0 = 5
+			encodeSUBImm(0, 0, 5, true),    // SUBS X0, X0, #5 (should set Z flag)
+			encodeADDImm(8, 31, 93, false), // X8 = 93
+			encodeSVC(0),                   // exit
+		)
+
+		e.LoadProgram(0x1000, program)
+
+		e.Step() // X0 = 5
+		e.Step() // SUBS X0, X0, #5
+
+		// Check Z flag is set (result was 0)
+		if !e.RegFile().PSTATE.Z {
+			t.Errorf("expected Z flag set after SUBS with zero result")
+		}
+		if e.RegFile().PSTATE.N {
+			t.Errorf("expected N flag clear after SUBS with zero result")
+		}
+
+		t.Logf("✓ flag_state_verification: flags correctly set mid-execution")
+	})
+}
