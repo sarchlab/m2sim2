@@ -273,8 +273,6 @@ var _ = Describe("Cache Hierarchy", func() {
 
 		It("should hit L2 after L1 eviction", func() {
 			memory.Write64(0x1000, 0x11111111)
-			memory.Write64(0x2000, 0x22222222)
-			memory.Write64(0x3000, 0x33333333)
 
 			// Fill L1 set causing eviction (L1 is 2KB, 2-way, 64B = 16 sets)
 			// Addresses that map to same set: 0x1000, 0x1400 (1024 apart for 16 sets)
@@ -282,14 +280,19 @@ var _ = Describe("Cache Hierarchy", func() {
 			l1.Read(0x1400, 8) // Fill L1, same set
 			l1.Read(0x1800, 8) // Evict from L1, but data still in L2
 
+			// Record L2 stats before accessing the evicted address
+			l2StatsBefore := l2.Stats()
+
 			// Access evicted address - should miss L1 but data comes from L2
 			result := l1.Read(0x1000, 8)
 			Expect(result.Hit).To(BeFalse()) // L1 miss
 			Expect(result.Data).To(Equal(uint64(0x11111111)))
 
-			// L2 should have had a hit (data was promoted earlier)
-			l2Stats := l2.Stats()
-			Expect(l2Stats.Hits).To(BeNumerically(">", 0))
+			// L2 should have had hits (not misses) for this access
+			// Note: Multiple L2 accesses occur because CacheBacking reads in 8-byte chunks
+			l2StatsAfter := l2.Stats()
+			Expect(l2StatsAfter.Hits - l2StatsBefore.Hits).To(BeNumerically(">", 0))
+			Expect(l2StatsAfter.Misses - l2StatsBefore.Misses).To(Equal(uint64(0)))
 		})
 	})
 
