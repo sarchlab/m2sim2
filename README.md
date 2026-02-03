@@ -2,6 +2,21 @@
 
 A cycle-accurate Apple M2 CPU simulator built on the [Akita](https://github.com/sarchlab/akita) simulation framework.
 
+## Current Status
+
+🟢 **Milestone 3 (Timing Model) Complete** — Now working on M4 (Cache Hierarchy)
+
+| Milestone | Status |
+|-----------|--------|
+| M1: Foundation | ✅ Complete |
+| M2: Memory & Control Flow | ✅ Complete |
+| M3: Timing Model | ✅ Complete |
+| M4: Cache Hierarchy | 🔄 In Progress |
+| M5: Advanced Features | ⏳ Planned |
+| M6: Validation | ⏳ Planned |
+
+See [SPEC.md](SPEC.md) for detailed milestone definitions.
+
 ## Overview
 
 M2Sim provides both functional emulation and timing simulation for ARM64 user-space programs. It can:
@@ -78,12 +93,15 @@ m2sim/
 ├── emu/           # Functional ARM64 emulator
 ├── timing/        # Cycle-accurate timing model
 │   ├── core/      # CPU core timing
-│   ├── cache/     # Cache hierarchy
-│   └── pipeline/  # Pipeline stages
+│   ├── cache/     # L1/L2 cache hierarchy
+│   ├── latency/   # Instruction latency modeling
+│   ├── mem/       # Memory timing model
+│   └── pipeline/  # 5-stage pipeline implementation
 ├── insts/         # ARM64 instruction definitions and decoder
 ├── driver/        # OS service emulation (syscalls)
 ├── loader/        # ELF binary loader
 ├── benchmarks/    # Test programs and validation
+├── samples/       # Example programs
 └── cmd/m2sim/     # Command-line interface
 ```
 
