@@ -53,7 +53,7 @@ Memory system timing.
 Accuracy improvements.
 
 **Completion criteria:**
-- [ ] Branch prediction
+- [x] Branch prediction
 - [ ] Out-of-order execution (if needed)
 - [ ] SIMD basics
 
