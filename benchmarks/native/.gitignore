@@ -23,4 +23,7 @@ mixed_operations_long
 # Generated results
 native_results.json
 simulator_results.json
-*_results.json
+accuracy_results.json
+
+# Generated figures
+accuracy_figure.png

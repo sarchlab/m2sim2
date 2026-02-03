@@ -1,0 +1,105 @@
+{
+  "methodology": "linear_regression",
+  "formula": "time_ms = latency_ns * instruction_count / 1e6 + overhead_ms",
+  "results": [
+    {
+      "benchmark": "arithmetic",
+      "description": "20 independent ADDs per iteration (ALU throughput)",
+      "instruction_latency_ns": 0.07656284449205394,
+      "overhead_ms": 2.469325008116236,
+      "r_squared": 0.9996082808934419,
+      "data_points": [
+        {
+          "instructions": 20000000,
+          "time_ms": 4.517324000415909
+        },
+        {
+          "instructions": 40000000,
+          "time_ms": 5.56333777624079
+        },
+        {
+          "instructions": 80000000,
+          "time_ms": 8.567411999037075
+        },
+        {
+          "instructions": 160000000,
+          "time_ms": 14.21845378030816
+        },
+        {
+          "instructions": 320000000,
+          "time_ms": 26.707722333311622
+        },
+        {
+          "instructions": 640000000,
+          "time_ms": 51.71088421937182
+        }
+      ]
+    },
+    {
+      "benchmark": "dependency",
+      "description": "20 dependent ADDs per iteration (RAW hazards)",
+      "instruction_latency_ns": 0.28843670717886166,
+      "overhead_ms": 1.7321703616967739,
+      "r_squared": 0.9999993949916,
+      "data_points": [
+        {
+          "instructions": 20000000,
+          "time_ms": 7.573050880132036
+        },
+        {
+          "instructions": 40000000,
+          "time_ms": 13.252032552069673
+        },
+        {
+          "instructions": 80000000,
+          "time_ms": 24.73984711105004
+        },
+        {
+          "instructions": 160000000,
+          "time_ms": 47.92057866709203
+        },
+        {
+          "instructions": 320000000,
+          "time_ms": 93.9850464476169
+        },
+        {
+          "instructions": 640000000,
+          "time_ms": 186.3527175575857
+        }
+      ]
+    },
+    {
+      "benchmark": "branch",
+      "description": "5 taken branches per iteration (branch predictor)",
+      "instruction_latency_ns": 0.33987224124902493,
+      "overhead_ms": 2.2372111658238274,
+      "r_squared": 0.9996986765389956,
+      "data_points": [
+        {
+          "instructions": 5000000,
+          "time_ms": 4.474018438486382
+        },
+        {
+          "instructions": 10000000,
+          "time_ms": 5.7627964383249894
+        },
+        {
+          "instructions": 20000000,
+          "time_ms": 8.606444442799935
+        },
+        {
+          "instructions": 40000000,
+          "time_ms": 15.617555447129739
+        },
+        {
+          "instructions": 80000000,
+          "time_ms": 29.219009111531907
+        },
+        {
+          "instructions": 160000000,
+          "time_ms": 56.80319911011288
+        }
+      ]
+    }
+  ]
+}
