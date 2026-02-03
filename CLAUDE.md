@@ -53,6 +53,20 @@ cd samples/basic && go build && ./basic
 
 - Akita v4: `github.com/sarchlab/akita/v4` (simulation engine)
 
+## Reusing Akita Components
+
+**Important**: Akita already provides production-ready implementations of cache and memory controllers. **Do not create new implementations in M2Sim.** Instead, use the existing Akita components:
+
+- **Cache**: Use Akita's cache implementation for L1I, L1D, and L2 caches
+- **Memory Controller**: Use Akita's memory controller for DRAM simulation
+
+If you encounter issues or limitations with Akita's cache or memory components:
+1. **Do not work around it in M2Sim**
+2. **Raise an issue in the Akita repository** with the specific problem
+3. Fix it upstream so all Akita-based simulators benefit
+
+This keeps M2Sim focused on CPU-specific modeling (pipeline, branch prediction, ARM64 semantics) rather than reinventing general-purpose simulation components.
+
 ## ARM64 Instruction Support
 
 Track instruction support status in `insts/SUPPORTED.md`.
