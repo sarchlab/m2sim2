@@ -53,11 +53,8 @@ func main() {
 	}
 }
 
-// runEmulation runs the program in functional emulation mode.
-func runEmulation(prog *loader.Program, programPath string) int64 {
-	memory := emu.NewMemory()
-
-	// Load all segments into memory
+// loadSegments loads program segments into memory.
+func loadSegments(memory *emu.Memory, prog *loader.Program) {
 	for _, seg := range prog.Segments {
 		for i, b := range seg.Data {
 			memory.Write8(seg.VirtAddr+uint64(i), b)
@@ -67,6 +64,14 @@ func runEmulation(prog *loader.Program, programPath string) int64 {
 			memory.Write8(seg.VirtAddr+i, 0)
 		}
 	}
+}
+
+// runEmulation runs the program in functional emulation mode.
+func runEmulation(prog *loader.Program, programPath string) int64 {
+	memory := emu.NewMemory()
+
+	// Load all segments into memory
+	loadSegments(memory, prog)
 
 	// Create emulator with loaded memory
 	emulator := emu.NewEmulator(
@@ -109,15 +114,7 @@ func runTiming(prog *loader.Program, programPath string) int64 {
 	regFile.SP = prog.InitialSP
 
 	// Load all segments into memory
-	for _, seg := range prog.Segments {
-		for i, b := range seg.Data {
-			memory.Write8(seg.VirtAddr+uint64(i), b)
-		}
-		// Zero-fill BSS (memsize > filesize)
-		for i := uint64(len(seg.Data)); i < seg.MemSize; i++ {
-			memory.Write8(seg.VirtAddr+i, 0)
-		}
-	}
+	loadSegments(memory, prog)
 
 	// Create pipeline with timing
 	syscallHandler := emu.NewDefaultSyscallHandler(regFile, memory, os.Stdout, os.Stderr)
