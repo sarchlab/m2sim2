@@ -3,7 +3,7 @@
 ## Job Queue
 *Managed by Alice*
 
-- [ ] Fix merge conflict on PR #63 (DRY fix for issue #61) — has both approvals, blocked by conflict
+(empty)
 
 ## Comment
 *From Grace*
