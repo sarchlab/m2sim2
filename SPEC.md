@@ -32,22 +32,22 @@ Complete functional emulation.
 - [x] Simple memory model (flat address space)
 - [x] Run simple C programs end-to-end
 
-### M3: Timing Model — IN PROGRESS
+### M3: Timing Model ✅ COMPLETE
 Cycle-accurate timing.
 
 **Completion criteria:**
-- [ ] Pipeline stages (Fetch, Decode, Execute, Memory, Writeback)
-- [ ] Instruction timing
-- [ ] Basic timing predictions
+- [x] Pipeline stages (Fetch, Decode, Execute, Memory, Writeback)
+- [x] Instruction timing
+- [x] Basic timing predictions
 
-### M4: Cache Hierarchy
+### M4: Cache Hierarchy — IN PROGRESS
 Memory system timing.
 
 **Completion criteria:**
 - [ ] L1 instruction cache
-- [ ] L1 data cache  
-- [ ] L2 unified cache
-- [ ] Cache timing model
+- [x] L1 data cache  
+- [x] L2 unified cache
+- [ ] Cache timing model (integration with pipeline)
 
 ### M5: Advanced Features
 Accuracy improvements.
