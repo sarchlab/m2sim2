@@ -7,6 +7,14 @@ import (
 	"github.com/sarchlab/m2sim/timing/latency"
 )
 
+const (
+	// minCacheLoadLatency is the minimum execute-stage latency for load
+	// instructions when D-cache is enabled. The actual memory timing is
+	// handled by the cache in the MEM stage, so we use 1 cycle here to
+	// avoid double-counting latency.
+	minCacheLoadLatency = 1
+)
+
 // Statistics holds pipeline performance statistics.
 type Statistics struct {
 	// Cycles is the total number of cycles simulated.
@@ -230,7 +238,18 @@ func (p *Pipeline) RunCycles(cycles uint64) bool {
 }
 
 // Tick executes one pipeline cycle.
-// All stages execute in parallel, with results latched at the end.
+//
+// The method models a classic 5-stage in-order pipeline (IF→ID→EX→MEM→WB)
+// with the following hazard handling:
+//   - Data forwarding from EX/MEM and MEM/WB stages to resolve RAW hazards
+//   - Load-use stalls when a load result is needed immediately
+//   - Branch flushes when a taken branch is detected in EX stage
+//
+// Stages are evaluated in reverse order (WB→MEM→EX→ID→IF) to compute new
+// values before latching them into pipeline registers at cycle end.
+//
+// Note: Branch misprediction currently incurs a 2-cycle penalty (IF and ID
+// stages are flushed). Branch prediction (Issue #70) will reduce this.
 func (p *Pipeline) Tick() {
 	// Don't execute if halted
 	if p.halted {
@@ -287,7 +306,9 @@ func (p *Pipeline) Tick() {
 	// This allows us to compute new values before latching
 
 	// Stage 5: Writeback
-	newMEMWB := p.memwb // Save for forwarding
+	// Save previous MEM/WB for forwarding decisions (needed when EX stage
+	// requires a value that was just computed in MEM but not yet written back)
+	savedMEMWB := p.memwb
 	p.writebackStage.Writeback(&p.memwb)
 	if p.memwb.Valid {
 		p.stats.Instructions++
@@ -365,7 +386,7 @@ func (p *Pipeline) Tick() {
 			// Note: When D-cache is enabled, memory timing is handled in MEM stage,
 			// so we don't apply LoadLatency here to avoid double-counting.
 			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
-				p.exLatency = 1 // Minimal latency; cache handles actual timing
+				p.exLatency = minCacheLoadLatency
 			} else {
 				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
 			}
@@ -383,9 +404,9 @@ func (p *Pipeline) Tick() {
 		} else {
 			// Apply forwarding to get correct operand values
 			rnValue := p.hazardUnit.GetForwardedValue(
-				forwarding.ForwardRn, p.idex.RnValue, &p.exmem, &newMEMWB)
+				forwarding.ForwardRn, p.idex.RnValue, &p.exmem, &savedMEMWB)
 			rmValue := p.hazardUnit.GetForwardedValue(
-				forwarding.ForwardRm, p.idex.RmValue, &p.exmem, &newMEMWB)
+				forwarding.ForwardRm, p.idex.RmValue, &p.exmem, &savedMEMWB)
 
 			execResult := p.executeStage.Execute(&p.idex, rnValue, rmValue)
 
@@ -402,7 +423,7 @@ func (p *Pipeline) Tick() {
 				// Store value comes from Rd register, but may need forwarding
 				rdValue := p.regFile.ReadReg(p.idex.Rd)
 				storeValue = p.hazardUnit.GetForwardedValue(
-					forwarding.ForwardRd, rdValue, &p.exmem, &newMEMWB)
+					forwarding.ForwardRd, rdValue, &p.exmem, &savedMEMWB)
 			}
 
 			nextEXMEM = EXMEMRegister{
