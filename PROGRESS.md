@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 17:29 EST*
+*Last updated: 2026-02-04 17:45 EST*
 
 ## Current Milestone: M6 - Validation
 
@@ -10,21 +10,18 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (17:18):**
-- Grace: Skipped (cycle 184, not a 10th)
-- Alice: Updated task board, assigned CoreMark testing, action count 183→184
-- Eric: Responded to #167 with calibration milestone proposal (C1-C4)
-- Bob: Found emulator bug! PR #166 had decoder but no emulator support
-  - Created #168, fixed with PR #170
-  - Created #169 for next blocker (logical immediate)
-- Cathy: Reviewed and approved PR #170
-- Dana: Merged PR #170 ✅
+**This cycle (17:40):**
+- Grace: Skipped (cycle 185, not a 10th)
+- Alice: Updated task board, assigned #169, action count 184→185
+- Eric: Created calibration milestones C1-C4, assigned #169 to C1
+- Bob: Implemented #169 (logical immediate instructions) → PR #171
+- Cathy: Reviewed PR #171 ✅ — added cathy-approved
+- Dana: Fixed lint issues, waiting for CI
 
 **Progress:**
-- ✅ **PR #170 merged** — emulator support for CSEL, UDIV, MADD, TBZ, CBZ families
+- 🔄 **PR #171 pending** — logical immediate instructions (AND/ORR/EOR/ANDS)
+- ✅ **Calibration milestones created** (C1-C4)
 - ✅ **38 PRs merged** total — excellent velocity!
-- ✅ **0 open PRs** — clean slate again
-- 🔄 CoreMark: 2103 → 2106 instructions (emulator fix helped!)
 
 ### Blockers Status
 
@@ -32,18 +29,26 @@
 - Cross-compiler: `aarch64-elf-gcc 15.2.0` ✅
 - SPEC: `benchspec/CPU` exists ✅
 - PRs #153-159, #166, #170 all merged ✅
-- Emulator instruction support for decoded formats ✅
+- Emulator instruction support ✅
 
 **Current blocker:**
-- #169: Decoder missing logical immediate (AND, ORR, EOR, ANDS with bitmask)
-- Failing instruction: `ands x1, x1, #0xffffffffffff` at PC=0x800B8
+- Waiting for PR #171 to merge
+- Once merged, CoreMark should progress past PC=0x800B8
+
+### Calibration Milestones (NEW)
+
+Per #167 discussion, Eric's proposal approved by Human:
+- **C1: Execution Completeness** — Run CoreMark/Embench to completion
+- **C2: Microbenchmark Accuracy (<30%)** — Tune timing parameters
+- **C3: Intermediate Benchmark Accuracy (<20%)** — Validate overall timing
+- **C4: SPEC Accuracy (stretch)** — Target <25%
 
 ### Next Steps
 
-1. **Implement #169** — logical immediate decoder support
-2. **Continue CoreMark execution** — aim for full completion
-3. **Consider calibration milestones** — per #167 discussion (C1-C4 proposal)
-4. Begin **Embench-IoT phase 2** (#163, #164, #165) after CoreMark validates
+1. **Merge PR #171** — logical immediate decoder support
+2. **Test CoreMark execution** — aim for full completion
+3. **Begin accuracy calibration** — start with C1, C2
+4. Continue **Embench-IoT phase 2** after CoreMark validates
 
 ### Current Accuracy (microbenchmarks)
 
@@ -60,7 +65,7 @@
 
 | Package | Coverage | Notes |
 |---------|----------|-------|
-| **insts** | **96%+** ✅ | 18 new tests in #166 |
+| **insts** | **97%+** ✅ | logical immediate tests added |
 | timing/cache | 89.1% | |
 | benchmarks | 80.8% | |
 | emu | 72.5% | |
@@ -70,14 +75,16 @@
 
 ### Open PRs
 
-None — clean slate! 🎉
+| PR | Title | Status |
+|----|-------|--------|
+| #171 | Logical immediate instructions | `cathy-approved`, CI pending |
 
 ### Open Issues
 
 | Issue | Priority | Status |
 |-------|----------|--------|
-| #169 | High | NEW: Logical immediate decoder (blocker) |
-| #167 | High | Human: Consider calibration milestones |
+| #169 | High | PR #171 pending (blocker) |
+| #167 | High | Milestones created ✅ |
 | #165 | Medium | Embench: matmult-int (phase 2) |
 | #164 | Medium | Embench: crc32 (phase 2) |
 | #163 | Medium | Embench: aha-mont64 (phase 2) |
@@ -90,13 +97,3 @@ None — clean slate! 🎉
 | #122 | Medium | Pipeline refactor |
 | #115 | High | Accuracy gaps |
 | #107 | High | Spec benchmark available |
-
-### Calibration Milestone Proposal (from #167)
-
-Eric proposed restructuring calibration into clearer milestones:
-- **C1: Execution Completeness** — Run CoreMark/Embench to completion
-- **C2: Microbenchmark Accuracy (<30%)** — Tune timing parameters
-- **C3: Intermediate Benchmark Accuracy (<20%)** — Validate overall timing
-- **C4: SPEC Accuracy (stretch)** — Target <25% for complex benchmarks
-
-Awaiting Alice/Human decision on adoption.
