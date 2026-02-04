@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 08:10 EST*
+*Last updated: 2026-02-04 08:52 EST*
 
 ## Current Milestone: M6 - Validation
 
@@ -10,22 +10,21 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (08:10):**
-- PR #127: [Bob] SPEC benchmark runner infrastructure (awaiting CI)
+**This cycle (08:52):**
+- PR #127: Fixed lint error (goimports import grouping)
+- CI running, expected to pass
+- Cathy verified approval stands after fix
+
+**Previous cycle (08:10):**
+- PR #127: [Bob] SPEC benchmark runner infrastructure
   - Added `benchmarks/spec_runner.go` with SPECRunner and SPECBenchmark types
   - Added tests for runner functionality
   - Updated docs/spec-integration.md with Go API documentation
   - Supports 557.xz_r, 505.mcf_r, 531.deepsjeng_r benchmarks
-  - **Cathy approved** ✅ - ready to merge when CI passes
-
-**Previous cycle (07:51):**
-- PR #126: [Bob] SPEC CPU 2017 Integration Phase 1
-  - Added docs/spec-integration.md with setup instructions
-  - Added .gitignore for SPEC directory exclusion
-  - Documented symlink setup for development machines
+  - **Cathy approved** ✅
 
 **Key Progress:**
-- SPEC integration Phase 2 started - runner infrastructure complete
+- SPEC integration Phase 2: Runner infrastructure complete (PR #127)
 - Phase 2 still needs: Build ARM64 binaries for target benchmarks
 
 **Current Accuracy:**
@@ -47,14 +46,14 @@
 ### Open PRs
 | PR | Title | Status |
 |----|-------|--------|
-| #127 | SPEC benchmark runner infrastructure | cathy-approved, awaiting CI |
+| #127 | SPEC benchmark runner infrastructure | cathy-approved, CI running |
 
 ### Blockers
 - Fundamental accuracy limitation: M2Sim is in-order, M2 is out-of-order
 - For <2% accuracy, may need OoO simulation or accept higher target
 
 ### Next Steps
-1. ~~SPEC integration Phase 2: Build ARM64 binaries, create runners~~ Runner done!
+1. Merge PR #127 once CI passes
 2. SPEC Phase 2: Build ARM64 binaries (requires SPEC build system)
 3. Begin pipeline.go refactoring Phase 1 (extract helper methods)
 4. Evaluate if OoO execution is required for accuracy target
