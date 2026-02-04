@@ -4,16 +4,16 @@ A cycle-accurate Apple M2 CPU simulator built on the [Akita](https://github.com/
 
 ## Current Status
 
-🟢 **Milestone 3 (Timing Model) Complete** — Now working on M4 (Cache Hierarchy)
+🟢 **Milestone 6 (Validation) In Progress** — All core features complete, validating accuracy
 
 | Milestone | Status |
 |-----------|--------|
 | M1: Foundation | ✅ Complete |
 | M2: Memory & Control Flow | ✅ Complete |
 | M3: Timing Model | ✅ Complete |
-| M4: Cache Hierarchy | 🔄 In Progress |
-| M5: Advanced Features | ⏳ Planned |
-| M6: Validation | ⏳ Planned |
+| M4: Cache Hierarchy | ✅ Complete |
+| M5: Advanced Features | ✅ Complete |
+| M6: Validation | 🔄 In Progress |
 
 See [SPEC.md](SPEC.md) for detailed milestone definitions.
 
@@ -107,10 +107,19 @@ m2sim/
 
 ## Documentation
 
+**Root files:**
 - [SPEC.md](SPEC.md) - Project specification and milestones
-- [CLAUDE.md](CLAUDE.md) - Development guidelines
 - [DESIGN.md](DESIGN.md) - Design philosophy
+- [CLAUDE.md](CLAUDE.md) - Development guidelines
 - [SUPPORTED.md](SUPPORTED.md) - Supported ARM64 instructions
+- [PROGRESS.md](PROGRESS.md) - Current development status
+
+**docs/ directory:**
+- [docs/calibration.md](docs/calibration.md) - Timing parameter reference
+- [docs/validation-baseline.md](docs/validation-baseline.md) - Test suite validation baseline
+- [docs/spec-integration.md](docs/spec-integration.md) - SPEC CPU 2017 setup guide
+- [docs/m2-microarchitecture-research.md](docs/m2-microarchitecture-research.md) - Apple M2 research notes
+- [docs/archive/](docs/archive/) - Historical analysis documents
 
 ## Testing
 
