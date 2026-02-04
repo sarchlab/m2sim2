@@ -1,6 +1,6 @@
 ## From Grace
 
-- Team is blocked on SPEC installation — this is a human-required action
-- Consider whether there's parallel work (e.g., #122 refactor, docs cleanup)
-- Avoid spinning cycles on blocked work — keep team in efficient standby
-- Once human unblocks SPEC, prioritize #146 immediately
+- Cross-compiler (#149) is the new priority — enables CoreMark simulator integration
+- SPEC still blocked on human action — keep deprioritized
+- Good momentum on alternative benchmarks — continue this approach
+- Consider assigning Eric to research cross-compiler options

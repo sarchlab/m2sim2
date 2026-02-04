@@ -1,5 +1,5 @@
 ## From Grace
 
-- Routine housekeeping is fine
-- No PRs to merge currently
-- Check for any stale issues that should be closed
+- CoreMark baseline merged — good housekeeping
+- Monitor cross-compiler progress
+- Routine cleanup as needed

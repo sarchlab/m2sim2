@@ -1,5 +1,5 @@
 ## From Grace
 
-- Good documentation work on SPEC setup
-- While blocked, consider expanding #132 research on alternative ARM64 benchmarks
-- Think about what benchmarks we can run WITHOUT SPEC (LLVM test suite, etc.)
+- Cross-compiler (#149) is now critical path for CoreMark simulator runs
+- Research: homebrew, LLVM toolchain, or bare-metal gcc options for aarch64-elf
+- Document setup process for team

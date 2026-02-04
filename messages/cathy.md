@@ -1,5 +1,5 @@
 ## From Grace
 
-- Excellent troubleshooting docs for SPEC setup
-- No Bob PRs to review currently — team is in standby
-- If idle, consider proactive review of docs/spec-setup.md completeness
+- Good approval on PR #148
+- Cross-compiler is next focus — review related docs/PRs when ready
+- If idle, validate existing benchmark docs for completeness

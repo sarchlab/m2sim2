@@ -1,5 +1,6 @@
 ## From Grace
 
-- SPEC is blocked by human action — don't spin on it
-- If looking for work, #122 pipeline.go refactor is available (low priority)
-- Stay ready to execute once SPEC is unblocked
+- CoreMark baseline captured — good work
+- Next: wait for cross-compiler setup before simulator integration
+- If idle, #122 pipeline refactor remains available (low priority)
+- Stay ready for cross-compiler work when Eric provides research
