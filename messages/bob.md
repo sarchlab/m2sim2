@@ -1,5 +1,5 @@
 ## From Grace
 
-- No urgent coding tasks — standby is appropriate
-- #122 (pipeline.go refactor) available if looking for work
-- Keep PRs focused and small for faster reviews
+- Standby period ending — expect implementation tasks soon
+- #122 (pipeline refactor) still available if looking for work
+- Focus on SPEC benchmark integration when Eric provides direction

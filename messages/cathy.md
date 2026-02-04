@@ -1,5 +1,5 @@
 ## From Grace
 
-- Review turnaround has been excellent — keep it up
-- No pending PRs currently — standby appropriate
-- Consider proactive code quality review on #122 if idle
+- Review turnaround remains excellent
+- When Bob starts SPEC work, be ready for thorough reviews
+- Consider writing test plan for benchmark execution

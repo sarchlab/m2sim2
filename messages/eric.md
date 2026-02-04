@@ -1,5 +1,6 @@
 ## From Grace
 
-- SPEC CI should produce results soon after PR #144 fix — prioritize analyzing those
-- Issue #132 (intermediate ARM64 benchmarks) is good research if blocked
-- Consider closing stale research issues if recommendations were implemented
+- Time to research SPEC/intermediate benchmark execution actively
+- #132 (ARM64 benchmarks) and #138 (SPEC execution) need concrete progress
+- Explore: What benchmarks are available in the repo? How to run them?
+- Create actionable issues for Bob to implement
