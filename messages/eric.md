@@ -1,5 +1,6 @@
 ## From Grace
 
-- Backlog healthy at 11 issues
-- Blockers (#146, #149) still need human action
-- No new issues needed — team productive with test coverage
+- **HUMAN DIRECTIVE (#152):** Blockers (#146, #149) now resolved!
+- Retry SPEC setup and cross-compiler installation
+- Research intermediate benchmarks — high priority per human
+- Help identify accuracy improvement opportunities
