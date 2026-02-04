@@ -232,6 +232,12 @@ func (e *Emulator) execute(inst *insts.Instruction) StepResult {
 		return StepResult{} // PC already updated
 	case insts.FormatLoadStore:
 		e.executeLoadStore(inst)
+	case insts.FormatPCRel:
+		e.executePCRel(inst)
+	case insts.FormatLoadStoreLit:
+		e.executeLoadStoreLit(inst)
+	case insts.FormatMoveWide:
+		e.executeMoveWide(inst)
 	default:
 		return StepResult{
 			Err: fmt.Errorf("unimplemented format %d at PC=0x%X", inst.Format, e.regFile.PC),
@@ -386,5 +392,70 @@ func (e *Emulator) executeLoadStore(inst *insts.Instruction) {
 				e.lsu.STR32(inst.Rd, inst.Rn, inst.Imm)
 			}
 		}
+	}
+}
+
+// executePCRel executes PC-relative addressing instructions (ADR, ADRP).
+func (e *Emulator) executePCRel(inst *insts.Instruction) {
+	pc := e.regFile.PC
+
+	switch inst.Op {
+	case insts.OpADR:
+		// ADR: Rd = PC + offset
+		result := uint64(int64(pc) + inst.BranchOffset)
+		e.regFile.WriteReg(inst.Rd, result)
+	case insts.OpADRP:
+		// ADRP: Rd = (PC & ~0xFFF) + (offset << 12)
+		// Note: BranchOffset is already shifted by 12 in the decoder
+		pageBase := pc & ^uint64(0xFFF)
+		result := uint64(int64(pageBase) + inst.BranchOffset)
+		e.regFile.WriteReg(inst.Rd, result)
+	}
+}
+
+// executeLoadStoreLit executes PC-relative load literal instructions.
+func (e *Emulator) executeLoadStoreLit(inst *insts.Instruction) {
+	// Calculate target address: PC + offset
+	addr := uint64(int64(e.regFile.PC) + inst.BranchOffset)
+
+	switch inst.Op {
+	case insts.OpLDRLit:
+		if inst.Is64Bit {
+			// Load 64-bit value
+			val := e.memory.Read64(addr)
+			e.regFile.WriteReg(inst.Rd, val)
+		} else {
+			// Load 32-bit value (zero-extended)
+			val := uint64(e.memory.Read32(addr))
+			e.regFile.WriteReg(inst.Rd, val)
+		}
+	}
+}
+
+// executeMoveWide executes move wide immediate instructions (MOVZ, MOVN, MOVK).
+func (e *Emulator) executeMoveWide(inst *insts.Instruction) {
+	imm := inst.Imm
+	shift := uint64(inst.Shift)
+
+	switch inst.Op {
+	case insts.OpMOVZ:
+		// MOVZ: Rd = imm16 << shift, zero other bits
+		result := imm << shift
+		e.regFile.WriteReg(inst.Rd, result)
+	case insts.OpMOVN:
+		// MOVN: Rd = NOT(imm16 << shift)
+		result := ^(imm << shift)
+		if !inst.Is64Bit {
+			// Mask to 32 bits for W registers
+			result &= 0xFFFFFFFF
+		}
+		e.regFile.WriteReg(inst.Rd, result)
+	case insts.OpMOVK:
+		// MOVK: Rd = (Rd & ~(0xFFFF << shift)) | (imm16 << shift)
+		// Keep other bits, replace 16 bits at shift position
+		current := e.regFile.ReadReg(inst.Rd)
+		mask := ^(uint64(0xFFFF) << shift)
+		result := (current & mask) | (imm << shift)
+		e.regFile.WriteReg(inst.Rd, result)
 	}
 }

@@ -726,4 +726,138 @@ var _ = Describe("Decoder", func() {
 			Expect(inst.Op).To(Equal(insts.OpUnknown))
 		})
 	})
+
+	Describe("PC-Relative Addressing (ADR, ADRP)", func() {
+		// ADRP X0, 0x93000 (from CoreMark startup)
+		// Encoding: 1 | immlo | 10000 | immhi | Rd
+		// Example: f0000080 -> ADRP X0, offset
+		It("should decode ADRP X0, #offset", func() {
+			// ADRP X0, with a specific page offset
+			// Encoding: 10010000 00000000 00000000 10000000 = 0x90000080
+			inst := decoder.Decode(0x90000080)
+
+			Expect(inst.Op).To(Equal(insts.OpADRP))
+			Expect(inst.Format).To(Equal(insts.FormatPCRel))
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Is64Bit).To(BeTrue())
+		})
+
+		// ADR X1, #8
+		// Encoding: 0 | immlo | 10000 | immhi | Rd
+		// ADR with small offset
+		It("should decode ADR X1, #offset", func() {
+			// ADR X1, #8 -> 0x10000041
+			inst := decoder.Decode(0x10000041)
+
+			Expect(inst.Op).To(Equal(insts.OpADR))
+			Expect(inst.Format).To(Equal(insts.FormatPCRel))
+			Expect(inst.Rd).To(Equal(uint8(1)))
+			Expect(inst.Is64Bit).To(BeTrue())
+		})
+	})
+
+	Describe("Load Literal (PC-relative)", func() {
+		// LDR X0, label (PC-relative)
+		// Encoding: opc | 011 | V | 00 | imm19 | Rt
+		// 64-bit: opc=01
+		It("should decode LDR X0, label (64-bit literal)", func() {
+			// LDR X0, #offset -> 0x58000000 (with imm19=0)
+			inst := decoder.Decode(0x58000000)
+
+			Expect(inst.Op).To(Equal(insts.OpLDRLit))
+			Expect(inst.Format).To(Equal(insts.FormatLoadStoreLit))
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.IsSIMD).To(BeFalse())
+		})
+
+		// LDR W0, label (32-bit)
+		// opc=00
+		It("should decode LDR W0, label (32-bit literal)", func() {
+			// LDR W0, #offset -> 0x18000000
+			inst := decoder.Decode(0x18000000)
+
+			Expect(inst.Op).To(Equal(insts.OpLDRLit))
+			Expect(inst.Format).To(Equal(insts.FormatLoadStoreLit))
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Is64Bit).To(BeFalse())
+		})
+
+		// LDR with positive offset
+		It("should decode LDR with positive offset", func() {
+			// LDR X5, #16 -> 0x58000085 (imm19 = 4, offset = 16)
+			inst := decoder.Decode(0x58000085)
+
+			Expect(inst.Op).To(Equal(insts.OpLDRLit))
+			Expect(inst.Rd).To(Equal(uint8(5)))
+			Expect(inst.BranchOffset).To(Equal(int64(16)))
+		})
+	})
+
+	Describe("Move Wide Instructions (MOVZ, MOVN, MOVK)", func() {
+		// MOVZ X0, #0x1234
+		// Encoding: sf | opc | 100101 | hw | imm16 | Rd
+		// MOVZ: opc=10, sf=1 for 64-bit
+		It("should decode MOVZ X0, #0x1234", func() {
+			// MOVZ X0, #0x1234 -> 0xD2824680
+			inst := decoder.Decode(0xD2824680)
+
+			Expect(inst.Op).To(Equal(insts.OpMOVZ))
+			Expect(inst.Format).To(Equal(insts.FormatMoveWide))
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Imm).To(Equal(uint64(0x1234)))
+			Expect(inst.Shift).To(Equal(uint8(0)))
+		})
+
+		// MOVZ X1, #0xABCD, LSL #16
+		// hw=1 means shift by 16
+		It("should decode MOVZ X1, #0xABCD, LSL #16", func() {
+			// MOVZ X1, #0xABCD, LSL #16 -> 0xD2B579A1
+			// sf=1, opc=10, hw=01, imm16=0xABCD, Rd=1
+			inst := decoder.Decode(0xD2B579A1)
+
+			Expect(inst.Op).To(Equal(insts.OpMOVZ))
+			Expect(inst.Rd).To(Equal(uint8(1)))
+			Expect(inst.Imm).To(Equal(uint64(0xABCD)))
+			Expect(inst.Shift).To(Equal(uint8(16)))
+		})
+
+		// MOVK X0, #0x5678, LSL #32
+		// opc=11 for MOVK, hw=2
+		It("should decode MOVK X0, #0x5678, LSL #32", func() {
+			// MOVK X0, #0x5678, LSL #32 -> 0xF2CACF00
+			inst := decoder.Decode(0xF2CACF00)
+
+			Expect(inst.Op).To(Equal(insts.OpMOVK))
+			Expect(inst.Format).To(Equal(insts.FormatMoveWide))
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Imm).To(Equal(uint64(0x5678)))
+			Expect(inst.Shift).To(Equal(uint8(32)))
+		})
+
+		// MOVN X2, #0xFF
+		// opc=00 for MOVN
+		It("should decode MOVN X2, #0xFF", func() {
+			// MOVN X2, #0xFF -> 0x92801FE2
+			inst := decoder.Decode(0x92801FE2)
+
+			Expect(inst.Op).To(Equal(insts.OpMOVN))
+			Expect(inst.Format).To(Equal(insts.FormatMoveWide))
+			Expect(inst.Rd).To(Equal(uint8(2)))
+			Expect(inst.Imm).To(Equal(uint64(0xFF)))
+		})
+
+		// MOVZ W0, #100 (32-bit)
+		// sf=0
+		It("should decode MOVZ W0, #100 (32-bit)", func() {
+			// MOVZ W0, #100 -> 0x52800C80
+			inst := decoder.Decode(0x52800C80)
+
+			Expect(inst.Op).To(Equal(insts.OpMOVZ))
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Imm).To(Equal(uint64(100)))
+		})
+	})
 })

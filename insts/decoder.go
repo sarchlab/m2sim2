@@ -21,6 +21,14 @@ const (
 	OpLDR
 	OpSTR
 	OpSVC
+	// PC-relative addressing
+	OpADR       // ADR - PC-relative address
+	OpADRP      // ADRP - PC-relative page address
+	OpLDRLit    // LDR (literal) - PC-relative load
+	// Move wide instructions
+	OpMOVZ      // Move wide with zero
+	OpMOVN      // Move wide with NOT
+	OpMOVK      // Move wide with keep
 	// SIMD opcodes
 	OpVADD  // Vector ADD
 	OpVSUB  // Vector SUB
@@ -45,6 +53,9 @@ const (
 	FormatBranchCond           // Conditional Branch
 	FormatBranchReg            // Branch to Register
 	FormatLoadStore            // Load/Store (Immediate)
+	FormatLoadStoreLit         // Load/Store (PC-relative Literal)
+	FormatPCRel                // PC-relative addressing (ADR, ADRP)
+	FormatMoveWide             // Move wide (MOVZ, MOVN, MOVK)
 	FormatException            // Exception Generation (SVC, HVC, SMC, BRK)
 	FormatSIMDReg              // SIMD Data Processing (Register)
 	FormatSIMDLoadStore        // SIMD Load/Store
@@ -150,8 +161,14 @@ func (d *Decoder) Decode(word uint32) *Instruction {
 		d.decodeSIMDLoadStore(word, inst)
 	case d.isSIMDThreeSame(word):
 		d.decodeSIMDThreeSame(word, inst)
+	case d.isLoadStoreLiteral(word):
+		d.decodeLoadStoreLiteral(word, inst)
 	case d.isLoadStoreImm(word):
 		d.decodeLoadStoreImm(word, inst)
+	case d.isPCRelAddressing(word):
+		d.decodePCRelAddressing(word, inst)
+	case d.isMoveWide(word):
+		d.decodeMoveWide(word, inst)
 	case d.isDataProcessingImm(word):
 		d.decodeDataProcessingImm(word, inst)
 	case d.isDataProcessingReg(word):
@@ -563,6 +580,131 @@ func (d *Decoder) decodeSIMDThreeSame(word uint32, inst *Instruction) {
 	case opcode == 0b11011 && u == 1 && size >= 2: // FMUL (floating-point)
 		inst.Op = OpVFMUL
 		inst.IsFloat = true
+	default:
+		inst.Op = OpUnknown
+	}
+}
+
+// isPCRelAddressing checks for PC-relative addressing instructions (ADR, ADRP).
+// Format: op | immlo | 10000 | immhi | Rd
+// ADR:  op=0 (bit 31)
+// ADRP: op=1 (bit 31)
+// bits [28:24] == 10000
+func (d *Decoder) isPCRelAddressing(word uint32) bool {
+	op := (word >> 24) & 0x1F // bits [28:24]
+	return op == 0b10000
+}
+
+// decodePCRelAddressing decodes ADR and ADRP instructions.
+// Format: op | immlo | 10000 | immhi | Rd
+// ADR:  Rd = PC + sign_extend(immhi:immlo)
+// ADRP: Rd = (PC & ~0xFFF) + sign_extend(immhi:immlo) << 12
+func (d *Decoder) decodePCRelAddressing(word uint32, inst *Instruction) {
+	inst.Format = FormatPCRel
+
+	op := (word >> 31) & 0x1     // bit 31: 0=ADR, 1=ADRP
+	immlo := (word >> 29) & 0x3  // bits [30:29]
+	immhi := (word >> 5) & 0x7FFFF // bits [23:5]
+	rd := word & 0x1F            // bits [4:0]
+
+	inst.Rd = uint8(rd)
+	inst.Is64Bit = true // ADR/ADRP always operate on 64-bit registers
+
+	// Combine immhi:immlo (21-bit signed)
+	imm21 := (immhi << 2) | immlo
+
+	// Sign-extend 21-bit value
+	offset := int64(imm21)
+	if (imm21 >> 20) == 1 {
+		offset |= ^int64(0x1FFFFF) // Sign extend
+	}
+
+	if op == 0 {
+		inst.Op = OpADR
+		// ADR: offset is in bytes
+		inst.BranchOffset = offset
+	} else {
+		inst.Op = OpADRP
+		// ADRP: offset is page-aligned (shifted left by 12)
+		inst.BranchOffset = offset << 12
+	}
+}
+
+// isLoadStoreLiteral checks for load literal (PC-relative) instructions.
+// Format: opc | 011 | V | 00 | imm19 | Rt
+// bits [29:27] == 011, bit 26 == V (0 for GPR), bits [25:24] == 00
+func (d *Decoder) isLoadStoreLiteral(word uint32) bool {
+	op1 := (word >> 27) & 0x7 // bits [29:27]
+	op2 := (word >> 24) & 0x3 // bits [25:24]
+	return op1 == 0b011 && op2 == 0b00
+}
+
+// decodeLoadStoreLiteral decodes LDR (literal) instructions.
+// Format: opc | 011 | V | 00 | imm19 | Rt
+// opc: 00=32-bit, 01=64-bit, 10=LDRSW, 11=PRFM
+// V: 0=GPR, 1=SIMD/FP
+func (d *Decoder) decodeLoadStoreLiteral(word uint32, inst *Instruction) {
+	inst.Format = FormatLoadStoreLit
+	inst.Op = OpLDRLit
+
+	opc := (word >> 30) & 0x3     // bits [31:30]
+	v := (word >> 26) & 0x1       // bit 26: 0=GPR, 1=SIMD
+	imm19 := (word >> 5) & 0x7FFFF // bits [23:5]
+	rt := word & 0x1F             // bits [4:0]
+
+	inst.Rd = uint8(rt)
+	inst.IsSIMD = v == 1
+
+	// Determine size from opc
+	// For GPR: 00=32-bit, 01=64-bit
+	inst.Is64Bit = opc == 0b01
+
+	// Sign-extend imm19 and multiply by 4 (word-aligned)
+	offset := int64(imm19)
+	if (imm19 >> 18) == 1 {
+		offset |= ^int64(0x7FFFF) // Sign extend
+	}
+	offset *= 4
+
+	inst.BranchOffset = offset
+	if offset >= 0 {
+		inst.Imm = uint64(offset)
+	}
+}
+
+// isMoveWide checks for move wide immediate instructions (MOVZ, MOVN, MOVK).
+// Format: sf | opc | 100101 | hw | imm16 | Rd
+// bits [28:23] == 100101
+func (d *Decoder) isMoveWide(word uint32) bool {
+	op := (word >> 23) & 0x3F // bits [28:23]
+	return op == 0b100101
+}
+
+// decodeMoveWide decodes MOVZ, MOVN, and MOVK instructions.
+// Format: sf | opc | 100101 | hw | imm16 | Rd
+// opc: 00=MOVN, 10=MOVZ, 11=MOVK
+// hw: shift amount (0, 16, 32, or 48)
+func (d *Decoder) decodeMoveWide(word uint32, inst *Instruction) {
+	inst.Format = FormatMoveWide
+
+	sf := (word >> 31) & 0x1     // bit 31: 0=32-bit, 1=64-bit
+	opc := (word >> 29) & 0x3    // bits [30:29]
+	hw := (word >> 21) & 0x3     // bits [22:21]: shift amount / 16
+	imm16 := (word >> 5) & 0xFFFF // bits [20:5]
+	rd := word & 0x1F            // bits [4:0]
+
+	inst.Rd = uint8(rd)
+	inst.Is64Bit = sf == 1
+	inst.Imm = uint64(imm16)
+	inst.Shift = uint8(hw * 16) // Shift amount in bits
+
+	switch opc {
+	case 0b00:
+		inst.Op = OpMOVN
+	case 0b10:
+		inst.Op = OpMOVZ
+	case 0b11:
+		inst.Op = OpMOVK
 	default:
 		inst.Op = OpUnknown
 	}
