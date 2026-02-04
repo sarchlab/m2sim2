@@ -73,10 +73,35 @@ SPEC benchmarks have three input sizes:
 | 505.mcf_r | ⏳    | ⏳  | ⏳        |
 | 525.x264_r| ⏳    | ⏳  | ⏳        |
 
+## Benchmark Runner (Go API)
+
+The `benchmarks` package provides Go APIs for working with SPEC benchmarks:
+
+```go
+import "github.com/sarchlab/m2sim/benchmarks"
+
+// List available benchmarks
+benchs := benchmarks.GetSPECBenchmarks()
+
+// Create runner (auto-detects SPEC at benchmarks/spec)
+runner, err := benchmarks.NewSPECRunner("/path/to/m2sim")
+
+// Check which benchmarks are ready
+available := runner.ListAvailableBenchmarks()
+missing := runner.ListMissingBenchmarks()
+
+// Get paths for a specific benchmark
+bench := benchs[0]  // 557.xz_r
+binaryPath := runner.GetBinaryPath(bench)
+workDir := runner.GetWorkingDir(bench)
+```
+
+See `benchmarks/spec_runner.go` for the full API.
+
 ## Next Steps
 
 1. ✅ Document SPEC setup (this file)
 2. ⏳ Build ARM64 binaries for target benchmarks
-3. ⏳ Create benchmark runner scripts
+3. ✅ Create benchmark runner infrastructure (spec_runner.go)
 4. ⏳ Validate execution correctness
 5. ⏳ Collect timing data for M6 validation
