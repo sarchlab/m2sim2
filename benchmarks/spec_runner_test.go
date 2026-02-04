@@ -40,7 +40,7 @@ var _ = Describe("SPEC Runner", func() {
 		})
 
 		AfterEach(func() {
-			os.RemoveAll(tempDir)
+			_ = os.RemoveAll(tempDir)
 		})
 
 		It("should fail if SPEC directory doesn't exist", func() {
@@ -84,7 +84,7 @@ var _ = Describe("SPEC Runner", func() {
 		})
 
 		AfterEach(func() {
-			os.RemoveAll(tempDir)
+			_ = os.RemoveAll(tempDir)
 		})
 
 		It("should validate SPEC setup", func() {
