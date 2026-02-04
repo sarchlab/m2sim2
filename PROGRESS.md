@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 14:55 EST*
+*Last updated: 2026-02-04 15:35 EST*
 
 ## Current Milestone: M6 - Validation
 
@@ -10,30 +10,30 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (14:55):**
-- Grace: Updated guidance — CoreMark cross-compilation is critical path
-- Alice: Assigned Bob to CoreMark ELF build (#147)
-- Eric: Closed #149 (cross-compiler resolved), planned Embench phase 2
-- Bob: Created CoreMark cross-compilation infrastructure → PR #155
-- Cathy: Reviewed and approved PR #155
-- Dana: (current) updating progress
+**This cycle (15:35):**
+- Grace: Skipped (cycle 175, not a 10th)
+- Alice: Assigned Bob to #156 decoder expansion, updated task board
+- Eric: Responded to #154 (ELF vs Mach-O question), Embench phase 2 planned
+- Bob: Implemented decoder expansion → PR #157 (ADRP, ADR, LDR literal, MOVZ/MOVN/MOVK)
+- Cathy: Reviewed and approved PR #157
+- Dana: Merged PR #155, fixed lint in PR #157, updating progress
 
 **Progress:**
-- ✅ Cross-compiler: aarch64-elf-gcc 15.2.0 installed
-- ✅ SPEC: benchspec/CPU exists with all benchmarks
+- ✅ **PR #155 MERGED** — CoreMark cross-compilation infrastructure
+- 🔄 **PR #157** — Decoder expansion (cathy-approved, CI re-running after lint fix)
 - ✅ Intermediate benchmark plan: docs/intermediate-benchmarks-plan.md
-- 🔄 **PR #155** (CoreMark ELF) — approved, CI running
-- ⚠️ **NEW:** Issue #156 (instruction decoder expansion) — blocks ELF execution
+- ✅ #154 answered (ELF vs Mach-O — same ARM64 instructions)
 
 ### Blockers Status
 
 **RESOLVED ✅**
 - Cross-compiler: `aarch64-elf-gcc 15.2.0` installed
 - SPEC: `benchspec/CPU` exists
+- CoreMark infrastructure: PR #155 merged
 
-**NEW BLOCKER ⚠️**
-- **Issue #156:** M2Sim needs ADRP, MOV, LDR literal instruction support
-- CoreMark ELF builds correctly but cannot execute until decoder is expanded
+**PENDING 🔄**
+- **Issue #156:** Decoder expansion in PR #157 (lint fixed, awaiting CI)
+- Once merged, CoreMark ELF should execute
 
 ### Current Accuracy (microbenchmarks)
 
@@ -64,27 +64,28 @@
 
 | PR | Title | Status |
 |----|-------|--------|
-| #155 | CoreMark cross-compilation infrastructure | `cathy-approved`, CI running |
+| #157 | Decoder expansion for ELF execution | `cathy-approved`, CI re-running |
 
 ### Open Issues
 
 | Issue | Priority | Status |
 |-------|----------|--------|
-| #156 | High | Instruction decoder expansion (ADRP, MOV, LDR literal) |
+| #156 | High | Decoder expansion — PR #157 open |
+| #154 | Medium | ELF vs Mach-O question — answered |
 | #152 | — | Human directive (blockers resolved) |
-| #147 | High | CoreMark integration — PR #155 open |
+| #147 | High | CoreMark integration — **PR #155 merged** |
 | #146 | High | SPEC installation ✅ resolved |
 | #145 | Low | Reduce CLAUDE.md |
 | #141 | High | 20% error target — approved |
 | #139 | Low | Multi-core (long-term) |
 | #138 | High | SPEC execution |
-| #132 | High | Intermediate benchmarks — plan created |
+| #132 | High | Intermediate benchmarks — Embench phase 2 planned |
 | #122 | Medium | Pipeline refactor |
 | #115 | High | Accuracy gaps — analyzed |
 | #107 | High | SPEC suite available |
 
 ### 📊 Velocity
 
-- **Total PRs merged:** 33
-- **Open PRs:** 1 (PR #155)
-- **Team status:** Productive, CoreMark infrastructure complete, awaiting merge
+- **Total PRs merged:** 34 (+1 this cycle)
+- **Open PRs:** 1 (PR #157)
+- **Team status:** Productive, decoder expansion nearly complete
