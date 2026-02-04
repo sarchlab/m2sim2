@@ -1,43 +1,40 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 12:14 EST*
+*Last updated: 2026-02-04 12:24 EST*
 
 ## Current Milestone: M6 - Validation
 
 ### Status Summary
 - **M1-M5:** ✅ Complete
-- **M6:** 🚧 In Progress (awaiting SPEC CI results)
+- **M6:** 🚧 In Progress (blocked on SPEC installation)
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (12:14):**
-- Grace: Updated guidance — backlog items available while waiting on SPEC
-- Alice: Team appropriately in standby mode, task board updated
-- Eric: Analyzed accuracy workflow success, recommended closing #134 (resolved by #141)
-- Bob: Standby — no PRs to review
-- Cathy: Standby — no PRs to review
-- Dana: Closed #134 as resolved, routine housekeeping ✅
+**This cycle (12:24):**
+- Grace: Directed team focus to SPEC benchmark execution
+- Alice: Assigned SPEC installation/build tasks
+- Eric: Created docs/spec-setup.md, found SPEC not installed yet, created issue #146
+- Bob: Attempted SPEC install — **BLOCKED** by macOS Gatekeeper (specxz hangs)
+- Cathy: Added troubleshooting section to docs/spec-setup.md
+- Dana: Updated progress report ✅
 
-**Previous cycle (11:48):**
-- Bob: Fixed accuracy workflow → PR #144
-- Cathy: Reviewed and approved PR #144
-- Dana: Merged PR #144, issue #143 closed ✅
+**Blocker:**
+- **SPEC installation blocked** — macOS quarantine prevents specxz from running
+- **Human intervention needed:** Run `xattr -cr /Users/yifan/Documents/spec` to unblock
 
-**Earlier (10:50):**
-- **PR #142 MERGED** ✅ Memory latency tuning
-- **PR #140 MERGED** ✅ Tournament branch predictor
+### Key Findings This Cycle
 
-### Key Decisions
+**SPEC Not Installed:**
+- Distribution exists at `/Users/yifan/Documents/spec`
+- `benchspec/CPU` directory missing — install.sh needs to run
+- Blocked by macOS Gatekeeper quarantine on unsigned tools
 
-**Accuracy Target Approved (Issue #141):**
-- Human approved 20% average error target with caveats:
-  1. Must use intermediate benchmarks (no microbenchmarks)
-  2. Still need to model OoO core features eventually
-- Issue #134 (target discussion) closed as resolved
+**Accuracy CI Working:**
+- Latest report: 39.8% average error (microbenchmarks)
+- **Note:** This is NOT the target metric per #141
+- 20% target applies to INTERMEDIATE benchmarks, not microbenchmarks
 
 ### Current Accuracy (microbenchmarks)
-
-*Note: These are not the final metric per human guidance in #141*
 
 | Benchmark | Sim CPI | M2 CPI | Error |
 |-----------|---------|--------|-------|
@@ -50,7 +47,8 @@
 
 | Issue | Priority | Status |
 |-------|----------|--------|
-| #145 | - | Reduce Claude.md (human task) |
+| #146 | High | **NEW** SPEC installation + ARM64 build |
+| #145 | Low | Reduce Claude.md (human task) |
 | #141 | High | 20% target approved ✅ (caveats documented) |
 | #138 | High | SPEC benchmark execution |
 | #132 | High | Intermediate benchmarks research |
@@ -60,18 +58,16 @@
 | #107 | High | SPEC benchmarks available |
 
 ### Open PRs
-None — clean slate!
+None — clean slate
 
-### Accuracy Work Progress
-- Phase 1: ✅ Branch predictor tuning (PR #140)
-- Phase 2: ✅ Memory latency tuning (PR #142)
-- Phase 3: ✅ Accuracy report workflow fixed (PR #144)
-- Phase 4: ⏳ Awaiting SPEC CI results for accuracy measurement
-
-### Next Steps
-1. Await SPEC CI results (6 AM UTC daily) to measure tuning impact
-2. Apply 20% target with intermediate benchmarks per #141
-3. SPEC benchmark execution (#138) when results guide next steps
+### Next Steps (Once SPEC Unblocked)
+1. Human runs `xattr -cr /Users/yifan/Documents/spec`
+2. Bob runs SPEC installer: `./install.sh -f -u macos-arm64`
+3. Create ARM64 config file
+4. Build target benchmarks (557.xz_r, 505.mcf_r, 531.deepsjeng_r)
+5. Run natively on M2 to capture baseline timing
+6. Create `benchmarks/spec_baseline.csv` with real execution times
+7. Validate simulator accuracy against 20% target
 
 ## Milestones Overview
 
@@ -82,4 +78,4 @@ None — clean slate!
 | M3 | Timing Model | ✅ Complete |
 | M4 | Cache Hierarchy | ✅ Complete |
 | M5 | Advanced Features | ✅ Complete |
-| M6 | Validation | 🚧 In Progress |
+| M6 | Validation | 🚧 In Progress (blocked) |
