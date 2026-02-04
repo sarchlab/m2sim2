@@ -36,6 +36,18 @@ func isUnconditionalBranch(word uint32, pc uint64) (bool, uint64) {
 	return false, 0
 }
 
+// isEliminableBranch checks if an instruction word is an unconditional B (not BL).
+// Returns true if the branch can be eliminated (doesn't write to a register).
+// According to Dougall Johnson's Firestorm documentation, unconditional B
+// instructions never issue to execution units on Apple M2.
+func isEliminableBranch(word uint32) bool {
+	// B instruction: bits [31:26] = 000101 (bit 31 = 0)
+	// BL instruction: bits [31:26] = 100101 (bit 31 = 1)
+	// Only pure B can be eliminated; BL writes to X30 (link register)
+	opcode := (word >> 26) & 0x3F
+	return opcode == 0b000101 // Only pure B, not BL
+}
+
 // Statistics holds pipeline performance statistics.
 type Statistics struct {
 	// Cycles is the total number of cycles simulated.
@@ -58,6 +70,11 @@ type Statistics struct {
 	BranchCorrect uint64
 	// BranchMispredictions is the number of branch mispredictions.
 	BranchMispredictions uint64
+	// EliminatedBranches is the count of unconditional branches (B, not BL)
+	// that were eliminated at fetch time. These branches never enter the
+	// pipeline and consume zero cycles, matching Apple M2's behavior where
+	// unconditional B instructions never issue to execution units.
+	EliminatedBranches uint64
 }
 
 // CPI returns the cycles per instruction.
@@ -586,37 +603,48 @@ func (p *Pipeline) tickSingleIssue() {
 		}
 
 		if ok && !fetchStall {
-			// Early branch resolution: detect unconditional branches (B, BL) and
-			// resolve them immediately without waiting for BTB. This eliminates
-			// misprediction penalties for unconditional branches.
-			isUncondBranch, uncondTarget := isUnconditionalBranch(word, p.pc)
-
-			// Use branch predictor for conditional branches
-			pred := p.branchPredictor.Predict(p.pc)
-
-			// For unconditional branches, override prediction with actual target
-			earlyResolved := false
-			if isUncondBranch {
-				pred.Taken = true
-				pred.Target = uncondTarget
-				pred.TargetKnown = true
-				earlyResolved = true
-			}
-
-			nextIFID = IFIDRegister{
-				Valid:           true,
-				PC:              p.pc,
-				InstructionWord: word,
-				PredictedTaken:  pred.Taken,
-				PredictedTarget: pred.Target,
-				EarlyResolved:   earlyResolved,
-			}
-
-			// Speculative fetch: redirect PC based on prediction/resolution
-			if pred.Taken && pred.TargetKnown {
-				p.pc = pred.Target
+			// Branch elimination: unconditional B (not BL) instructions are
+			// eliminated at fetch time. They never enter the pipeline, matching
+			// Apple M2's behavior where B instructions never issue.
+			if isEliminableBranch(word) {
+				_, uncondTarget := isUnconditionalBranch(word, p.pc)
+				p.pc = uncondTarget
+				p.stats.EliminatedBranches++
+				// Don't create IFID entry - branch is eliminated
+				// nextIFID remains empty (Valid=false)
 			} else {
-				p.pc += 4 // Default: sequential fetch
+				// Early branch resolution: detect unconditional branches (B, BL) and
+				// resolve them immediately without waiting for BTB. This eliminates
+				// misprediction penalties for unconditional branches.
+				isUncondBranch, uncondTarget := isUnconditionalBranch(word, p.pc)
+
+				// Use branch predictor for conditional branches
+				pred := p.branchPredictor.Predict(p.pc)
+
+				// For unconditional branches, override prediction with actual target
+				earlyResolved := false
+				if isUncondBranch {
+					pred.Taken = true
+					pred.Target = uncondTarget
+					pred.TargetKnown = true
+					earlyResolved = true
+				}
+
+				nextIFID = IFIDRegister{
+					Valid:           true,
+					PC:              p.pc,
+					InstructionWord: word,
+					PredictedTaken:  pred.Taken,
+					PredictedTarget: pred.Target,
+					EarlyResolved:   earlyResolved,
+				}
+
+				// Speculative fetch: redirect PC based on prediction/resolution
+				if pred.Taken && pred.TargetKnown {
+					p.pc = pred.Target
+				} else {
+					p.pc += 4 // Default: sequential fetch
+				}
 			}
 		} else if fetchStall {
 			nextIFID = p.ifid
@@ -1113,31 +1141,39 @@ func (p *Pipeline) tickSuperscalar() {
 				word2, ok2 = p.fetchStage.Fetch(p.pc)
 			}
 			if ok2 && !stall2 {
-				// Apply branch prediction to secondary slot
-				isUncondBranch2, uncondTarget2 := isUnconditionalBranch(word2, p.pc)
-				pred2 := p.branchPredictor.Predict(p.pc)
-				earlyResolved2 := false
-				if isUncondBranch2 {
-					pred2.Taken = true
-					pred2.Target = uncondTarget2
-					pred2.TargetKnown = true
-					earlyResolved2 = true
-				}
-
-				nextIFID2 = SecondaryIFIDRegister{
-					Valid:           true,
-					PC:              p.pc,
-					InstructionWord: word2,
-					PredictedTaken:  pred2.Taken,
-					PredictedTarget: pred2.Target,
-					EarlyResolved:   earlyResolved2,
-				}
-
-				// Handle branch speculation for secondary slot
-				if pred2.Taken && pred2.TargetKnown {
-					p.pc = pred2.Target
+				// Branch elimination for secondary slot
+				if isEliminableBranch(word2) {
+					_, uncondTarget2 := isUnconditionalBranch(word2, p.pc)
+					p.pc = uncondTarget2
+					p.stats.EliminatedBranches++
+					// Don't create IFID2 entry
 				} else {
-					p.pc += 4
+					// Apply branch prediction to secondary slot
+					isUncondBranch2, uncondTarget2 := isUnconditionalBranch(word2, p.pc)
+					pred2 := p.branchPredictor.Predict(p.pc)
+					earlyResolved2 := false
+					if isUncondBranch2 {
+						pred2.Taken = true
+						pred2.Target = uncondTarget2
+						pred2.TargetKnown = true
+						earlyResolved2 = true
+					}
+
+					nextIFID2 = SecondaryIFIDRegister{
+						Valid:           true,
+						PC:              p.pc,
+						InstructionWord: word2,
+						PredictedTaken:  pred2.Taken,
+						PredictedTarget: pred2.Target,
+						EarlyResolved:   earlyResolved2,
+					}
+
+					// Handle branch speculation for secondary slot
+					if pred2.Taken && pred2.TargetKnown {
+						p.pc = pred2.Target
+					} else {
+						p.pc += 4
+					}
 				}
 			} else if stall2 {
 				// When fetch stalls, preserve the entire pipeline state
@@ -1163,71 +1199,89 @@ func (p *Pipeline) tickSuperscalar() {
 			}
 
 			if ok && !fetchStall {
-				// Apply branch prediction to primary slot
-				isUncondBranch, uncondTarget := isUnconditionalBranch(word, p.pc)
-				pred := p.branchPredictor.Predict(p.pc)
-				earlyResolved := false
-				if isUncondBranch {
-					pred.Taken = true
-					pred.Target = uncondTarget
-					pred.TargetKnown = true
-					earlyResolved = true
-				}
-
-				nextIFID = IFIDRegister{
-					Valid:           true,
-					PC:              p.pc,
-					InstructionWord: word,
-					PredictedTaken:  pred.Taken,
-					PredictedTarget: pred.Target,
-					EarlyResolved:   earlyResolved,
-				}
-
-				// Handle branch speculation for primary slot
-				if pred.Taken && pred.TargetKnown {
-					// Branch predicted taken - redirect PC
-					p.pc = pred.Target
-					// Don't fetch second instruction when branching
-					p.pc += 0 // PC already set to target
+				// Branch elimination: unconditional B (not BL) instructions are
+				// eliminated at fetch time. They never enter the pipeline.
+				if isEliminableBranch(word) {
+					_, uncondTarget := isUnconditionalBranch(word, p.pc)
+					p.pc = uncondTarget
+					p.stats.EliminatedBranches++
+					// Don't create IFID entry - branch is eliminated
+					// Continue fetching from target in next cycle
 				} else {
-					// No branch or not taken - fetch second instruction
-					var word2 uint32
-					var ok2 bool
-					if p.useICache && p.cachedFetchStage != nil {
-						word2, ok2, _ = p.cachedFetchStage.Fetch(p.pc + 4)
-					} else {
-						word2, ok2 = p.fetchStage.Fetch(p.pc + 4)
+					// Apply branch prediction to primary slot
+					isUncondBranch, uncondTarget := isUnconditionalBranch(word, p.pc)
+					pred := p.branchPredictor.Predict(p.pc)
+					earlyResolved := false
+					if isUncondBranch {
+						pred.Taken = true
+						pred.Target = uncondTarget
+						pred.TargetKnown = true
+						earlyResolved = true
 					}
 
-					if ok2 {
-						// Apply branch prediction to secondary slot
-						isUncondBranch2, uncondTarget2 := isUnconditionalBranch(word2, p.pc+4)
-						pred2 := p.branchPredictor.Predict(p.pc + 4)
-						earlyResolved2 := false
-						if isUncondBranch2 {
-							pred2.Taken = true
-							pred2.Target = uncondTarget2
-							pred2.TargetKnown = true
-							earlyResolved2 = true
-						}
+					nextIFID = IFIDRegister{
+						Valid:           true,
+						PC:              p.pc,
+						InstructionWord: word,
+						PredictedTaken:  pred.Taken,
+						PredictedTarget: pred.Target,
+						EarlyResolved:   earlyResolved,
+					}
 
-						nextIFID2 = SecondaryIFIDRegister{
-							Valid:           true,
-							PC:              p.pc + 4,
-							InstructionWord: word2,
-							PredictedTaken:  pred2.Taken,
-							PredictedTarget: pred2.Target,
-							EarlyResolved:   earlyResolved2,
-						}
-
-						// Handle branch speculation for secondary slot
-						if pred2.Taken && pred2.TargetKnown {
-							p.pc = pred2.Target
-						} else {
-							p.pc += 8 // Advance PC by 2 instructions
-						}
+					// Handle branch speculation for primary slot
+					if pred.Taken && pred.TargetKnown {
+						// Branch predicted taken - redirect PC
+						p.pc = pred.Target
+						// Don't fetch second instruction when branching
+						p.pc += 0 // PC already set to target
 					} else {
-						p.pc += 4
+						// No branch or not taken - fetch second instruction
+						var word2 uint32
+						var ok2 bool
+						if p.useICache && p.cachedFetchStage != nil {
+							word2, ok2, _ = p.cachedFetchStage.Fetch(p.pc + 4)
+						} else {
+							word2, ok2 = p.fetchStage.Fetch(p.pc + 4)
+						}
+
+						if ok2 {
+							// Branch elimination for secondary slot
+							if isEliminableBranch(word2) {
+								_, uncondTarget2 := isUnconditionalBranch(word2, p.pc+4)
+								p.pc = uncondTarget2
+								p.stats.EliminatedBranches++
+								// Don't create IFID2 entry
+							} else {
+								// Apply branch prediction to secondary slot
+								isUncondBranch2, uncondTarget2 := isUnconditionalBranch(word2, p.pc+4)
+								pred2 := p.branchPredictor.Predict(p.pc + 4)
+								earlyResolved2 := false
+								if isUncondBranch2 {
+									pred2.Taken = true
+									pred2.Target = uncondTarget2
+									pred2.TargetKnown = true
+									earlyResolved2 = true
+								}
+
+								nextIFID2 = SecondaryIFIDRegister{
+									Valid:           true,
+									PC:              p.pc + 4,
+									InstructionWord: word2,
+									PredictedTaken:  pred2.Taken,
+									PredictedTarget: pred2.Target,
+									EarlyResolved:   earlyResolved2,
+								}
+
+								// Handle branch speculation for secondary slot
+								if pred2.Taken && pred2.TargetKnown {
+									p.pc = pred2.Target
+								} else {
+									p.pc += 8 // Advance PC by 2 instructions
+								}
+							}
+						} else {
+							p.pc += 4
+						}
 					}
 				}
 			} else if fetchStall {
@@ -1924,6 +1978,17 @@ func (p *Pipeline) tickQuadIssue() {
 
 			if !ok {
 				break
+			}
+
+			// Branch elimination: unconditional B (not BL) instructions are
+			// eliminated at fetch time. They never enter the pipeline.
+			if isEliminableBranch(word) {
+				_, uncondTarget := isUnconditionalBranch(word, fetchPC)
+				fetchPC = uncondTarget
+				p.stats.EliminatedBranches++
+				// Don't create IFID entry - branch is eliminated
+				// Continue fetching from target without advancing slotIdx
+				continue
 			}
 
 			// Apply branch prediction for slot 0 (branches can only execute from primary slot)
@@ -3005,6 +3070,17 @@ func (p *Pipeline) tickSextupleIssue() {
 
 			if !ok {
 				break
+			}
+
+			// Branch elimination: unconditional B (not BL) instructions are
+			// eliminated at fetch time. They never enter the pipeline.
+			if isEliminableBranch(word) {
+				_, uncondTarget := isUnconditionalBranch(word, fetchPC)
+				fetchPC = uncondTarget
+				p.stats.EliminatedBranches++
+				// Don't create IFID entry - branch is eliminated
+				// Continue fetching from target without advancing slotIdx
+				continue
 			}
 
 			if slotIdx == 0 {

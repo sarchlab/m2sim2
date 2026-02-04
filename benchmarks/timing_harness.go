@@ -45,6 +45,10 @@ type BenchmarkResult struct {
 	// PipelineFlushes is the number of pipeline flushes
 	PipelineFlushes uint64 `json:"pipeline_flushes"`
 
+	// EliminatedBranches is the count of unconditional branches (B, not BL)
+	// that were eliminated at fetch time and never entered the pipeline
+	EliminatedBranches uint64 `json:"eliminated_branches"`
+
 	// ICacheHits/Misses (if cache enabled)
 	ICacheHits   uint64 `json:"icache_hits,omitempty"`
 	ICacheMisses uint64 `json:"icache_misses,omitempty"`
@@ -209,6 +213,7 @@ func (h *Harness) runBenchmark(bench Benchmark) BenchmarkResult {
 		MemStalls:           stats.MemStalls,
 		DataHazards:         stats.DataHazards,
 		PipelineFlushes:     stats.Flushes,
+		EliminatedBranches:  stats.EliminatedBranches,
 		ExitCode:            exitCode,
 		WallTime:            wallTime,
 	}
@@ -246,6 +251,9 @@ func (h *Harness) PrintResults(results []BenchmarkResult) {
 		_, _ = fmt.Fprintf(h.config.Output, "  Mem Stalls:           %d\n", r.MemStalls)
 		_, _ = fmt.Fprintf(h.config.Output, "  Data Hazards:         %d\n", r.DataHazards)
 		_, _ = fmt.Fprintf(h.config.Output, "  Pipeline Flushes:     %d\n", r.PipelineFlushes)
+		if r.EliminatedBranches > 0 {
+			_, _ = fmt.Fprintf(h.config.Output, "  Eliminated Branches:  %d\n", r.EliminatedBranches)
+		}
 
 		if r.ICacheHits > 0 || r.ICacheMisses > 0 {
 			_, _ = fmt.Fprintln(h.config.Output, "  --- I-Cache ---")
