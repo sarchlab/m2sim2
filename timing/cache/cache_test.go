@@ -192,11 +192,11 @@ var _ = Describe("Cache", func() {
 
 		It("should create L2 config", func() {
 			config := cache.DefaultL2Config()
-			Expect(config.Size).To(Equal(16 * 1024 * 1024))
+			Expect(config.Size).To(Equal(24 * 1024 * 1024)) // M2 has 24MB shared L2
 			Expect(config.Associativity).To(Equal(16))
 			Expect(config.BlockSize).To(Equal(128))
 			Expect(config.HitLatency).To(Equal(uint64(12)))
-			Expect(config.MissLatency).To(Equal(uint64(200)))
+			Expect(config.MissLatency).To(Equal(uint64(150))) // Unified memory is faster
 		})
 
 		It("should create L2 per-core config", func() {

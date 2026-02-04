@@ -50,17 +50,18 @@ func DefaultL1DConfig() Config {
 
 // DefaultL2Config returns default configuration for unified L2 cache.
 // Based on Apple M2 specifications:
-// - 16MB shared L2 (per-cluster)
+// - 24MB shared L2 (entire chip)
 // - 16-way set associative
 // - 128B cache line
 // - ~12-14 cycle latency
+// - Unified memory architecture has lower latency than typical DRAM
 func DefaultL2Config() Config {
 	return Config{
-		Size:          16 * 1024 * 1024, // 16MB
+		Size:          24 * 1024 * 1024, // 24MB (M2 spec)
 		Associativity: 16,               // 16-way
 		BlockSize:     128,              // 128B cache line
 		HitLatency:    12,               // ~12 cycles
-		MissLatency:   200,              // ~200 cycles to main memory
+		MissLatency:   150,              // ~150 cycles (unified memory is faster than typical DRAM)
 	}
 }
 
@@ -72,7 +73,7 @@ func DefaultL2PerCoreConfig() Config {
 		Associativity: 8,          // 8-way
 		BlockSize:     128,        // 128B cache line
 		HitLatency:    12,         // ~12 cycles
-		MissLatency:   200,        // ~200 cycles to main memory
+		MissLatency:   150,        // ~150 cycles (unified memory)
 	}
 }
 
