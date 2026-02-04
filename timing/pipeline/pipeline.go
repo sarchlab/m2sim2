@@ -1459,25 +1459,65 @@ func (p *Pipeline) tickQuadIssue() {
 				MemToReg:   p.idex.MemToReg,
 			}
 
-			// Check for branch in primary slot
-			if execResult.BranchTaken {
-				p.pc = execResult.BranchTarget
-				p.flushAllIFID()
-				p.flushAllIDEX()
-				p.stats.Flushes++
+			// Branch prediction verification for primary slot
+			if p.idex.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
 
-				// Latch results and return early
-				if !memStall {
-					p.memwb = nextMEMWB
-					p.memwb2 = nextMEMWB2
-					p.memwb3 = nextMEMWB3
-					p.memwb4 = nextMEMWB4
-					p.exmem = nextEXMEM
-					p.exmem2.Clear()
-					p.exmem3.Clear()
-					p.exmem4.Clear()
+				p.stats.BranchPredictions++
+
+				// Use prediction info captured at fetch time
+				predictedTaken := p.idex.PredictedTaken
+				predictedTarget := p.idex.PredictedTarget
+				earlyResolved := p.idex.EarlyResolved
+
+				// Determine if misprediction occurred
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
 				}
-				return
+
+				// Early-resolved unconditional branches should always be correct
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				// Update predictor with actual outcome
+				p.branchPredictor.Update(p.idex.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					// Latch results and return early
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.exmem = nextEXMEM
+						p.exmem2.Clear()
+						p.exmem3.Clear()
+						p.exmem4.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
@@ -1675,19 +1715,22 @@ func (p *Pipeline) tickQuadIssue() {
 	if p.ifid.Valid && !stallResult.StallID && !stallResult.FlushID && !execStall && !memStall {
 		decResult := p.decodeStage.Decode(p.ifid.InstructionWord, p.ifid.PC)
 		nextIDEX = IDEXRegister{
-			Valid:    true,
-			PC:       p.ifid.PC,
-			Inst:     decResult.Inst,
-			RnValue:  decResult.RnValue,
-			RmValue:  decResult.RmValue,
-			Rd:       decResult.Rd,
-			Rn:       decResult.Rn,
-			Rm:       decResult.Rm,
-			MemRead:  decResult.MemRead,
-			MemWrite: decResult.MemWrite,
-			RegWrite: decResult.RegWrite,
-			MemToReg: decResult.MemToReg,
-			IsBranch: decResult.IsBranch,
+			Valid:           true,
+			PC:              p.ifid.PC,
+			Inst:            decResult.Inst,
+			RnValue:         decResult.RnValue,
+			RmValue:         decResult.RmValue,
+			Rd:              decResult.Rd,
+			Rn:              decResult.Rn,
+			Rm:              decResult.Rm,
+			MemRead:         decResult.MemRead,
+			MemWrite:        decResult.MemWrite,
+			RegWrite:        decResult.RegWrite,
+			MemToReg:        decResult.MemToReg,
+			IsBranch:        decResult.IsBranch,
+			PredictedTaken:  p.ifid.PredictedTaken,
+			PredictedTarget: p.ifid.PredictedTarget,
+			EarlyResolved:   p.ifid.EarlyResolved,
 		}
 
 		// Try to issue instructions 2, 3, 4 if they can issue with earlier instructions
@@ -1804,10 +1847,38 @@ func (p *Pipeline) tickQuadIssue() {
 		slotIdx := 0
 
 		// Place pending instructions
+		branchPredictedTaken := false
 		for _, pending := range pendingInsts {
+			// If slot 0 had a predicted-taken branch, discard remaining pending instructions
+			// (they're on the wrong path)
+			if branchPredictedTaken {
+				break
+			}
 			switch slotIdx {
 			case 0:
-				nextIFID = IFIDRegister{Valid: true, PC: pending.PC, InstructionWord: pending.Word}
+				// Apply branch prediction when placing in primary slot
+				isUncondBranch, uncondTarget := isUnconditionalBranch(pending.Word, pending.PC)
+				pred := p.branchPredictor.Predict(pending.PC)
+				earlyResolved := false
+				if isUncondBranch {
+					pred.Taken = true
+					pred.Target = uncondTarget
+					pred.TargetKnown = true
+					earlyResolved = true
+				}
+				nextIFID = IFIDRegister{
+					Valid:           true,
+					PC:              pending.PC,
+					InstructionWord: pending.Word,
+					PredictedTaken:  pred.Taken,
+					PredictedTarget: pred.Target,
+					EarlyResolved:   earlyResolved,
+				}
+				// If branch predicted taken in slot 0, redirect fetch and discard other pending
+				if pred.Taken && pred.TargetKnown {
+					fetchPC = pred.Target
+					branchPredictedTaken = true
+				}
 			case 1:
 				nextIFID2 = SecondaryIFIDRegister{Valid: true, PC: pending.PC, InstructionWord: pending.Word}
 			case 2:
@@ -1837,15 +1908,42 @@ func (p *Pipeline) tickQuadIssue() {
 				break
 			}
 
-			switch slotIdx {
-			case 0:
-				nextIFID = IFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
-			case 1:
-				nextIFID2 = SecondaryIFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
-			case 2:
-				nextIFID3 = TertiaryIFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
-			case 3:
-				nextIFID4 = QuaternaryIFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
+			// Apply branch prediction for slot 0 (branches can only execute from primary slot)
+			if slotIdx == 0 {
+				isUncondBranch, uncondTarget := isUnconditionalBranch(word, fetchPC)
+				pred := p.branchPredictor.Predict(fetchPC)
+				earlyResolved := false
+				if isUncondBranch {
+					pred.Taken = true
+					pred.Target = uncondTarget
+					pred.TargetKnown = true
+					earlyResolved = true
+				}
+
+				nextIFID = IFIDRegister{
+					Valid:           true,
+					PC:              fetchPC,
+					InstructionWord: word,
+					PredictedTaken:  pred.Taken,
+					PredictedTarget: pred.Target,
+					EarlyResolved:   earlyResolved,
+				}
+
+				// If branch predicted taken, redirect fetch to target
+				if pred.Taken && pred.TargetKnown {
+					fetchPC = pred.Target
+					slotIdx++
+					continue
+				}
+			} else {
+				switch slotIdx {
+				case 1:
+					nextIFID2 = SecondaryIFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
+				case 2:
+					nextIFID3 = TertiaryIFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
+				case 3:
+					nextIFID4 = QuaternaryIFIDRegister{Valid: true, PC: fetchPC, InstructionWord: word}
+				}
 			}
 			fetchPC += 4
 			slotIdx++
