@@ -240,6 +240,18 @@ func (e *Emulator) execute(inst *insts.Instruction) StepResult {
 		e.executeLoadStoreLit(inst)
 	case insts.FormatMoveWide:
 		e.executeMoveWide(inst)
+	case insts.FormatCondSelect:
+		e.executeCondSelect(inst)
+	case insts.FormatDataProc2Src:
+		e.executeDataProc2Src(inst)
+	case insts.FormatDataProc3Src:
+		e.executeDataProc3Src(inst)
+	case insts.FormatTestBranch:
+		e.executeTestBranch(inst)
+		return StepResult{} // PC already updated by branch
+	case insts.FormatCompareBranch:
+		e.executeCompareBranch(inst)
+		return StepResult{} // PC already updated by branch
 	default:
 		return StepResult{
 			Err: fmt.Errorf("unimplemented format %d at PC=0x%X", inst.Format, e.regFile.PC),
@@ -571,5 +583,174 @@ func (e *Emulator) executeMoveWide(inst *insts.Instruction) {
 		mask := ^(uint64(0xFFFF) << shift)
 		result := (current & mask) | (imm << shift)
 		e.regFile.WriteReg(inst.Rd, result)
+	}
+}
+
+// executeCondSelect executes conditional select instructions (CSEL, CSINC, CSINV, CSNEG).
+func (e *Emulator) executeCondSelect(inst *insts.Instruction) {
+	// Convert insts.Cond to emu.Cond
+	cond := Cond(inst.Cond)
+
+	// Read source registers
+	rnVal := e.regFile.ReadReg(inst.Rn)
+	rmVal := e.regFile.ReadReg(inst.Rm)
+
+	// Mask to 32 bits for W registers
+	if !inst.Is64Bit {
+		rnVal &= 0xFFFFFFFF
+		rmVal &= 0xFFFFFFFF
+	}
+
+	var result uint64
+	if e.branchUnit.CheckCondition(cond) {
+		// Condition true: select Rn
+		result = rnVal
+	} else {
+		// Condition false: apply operation to Rm
+		switch inst.Op {
+		case insts.OpCSEL:
+			result = rmVal
+		case insts.OpCSINC:
+			result = rmVal + 1
+		case insts.OpCSINV:
+			result = ^rmVal
+		case insts.OpCSNEG:
+			result = -rmVal
+		}
+	}
+
+	// Mask result for 32-bit operations
+	if !inst.Is64Bit {
+		result &= 0xFFFFFFFF
+	}
+
+	e.regFile.WriteReg(inst.Rd, result)
+}
+
+// executeDataProc2Src executes two-source data processing instructions (UDIV, SDIV).
+func (e *Emulator) executeDataProc2Src(inst *insts.Instruction) {
+	rnVal := e.regFile.ReadReg(inst.Rn)
+	rmVal := e.regFile.ReadReg(inst.Rm)
+
+	var result uint64
+
+	switch inst.Op {
+	case insts.OpUDIV:
+		if inst.Is64Bit {
+			if rmVal == 0 {
+				result = 0 // Division by zero returns 0
+			} else {
+				result = rnVal / rmVal
+			}
+		} else {
+			rn32 := uint32(rnVal)
+			rm32 := uint32(rmVal)
+			if rm32 == 0 {
+				result = 0
+			} else {
+				result = uint64(rn32 / rm32)
+			}
+		}
+	case insts.OpSDIV:
+		if inst.Is64Bit {
+			if rmVal == 0 {
+				result = 0
+			} else {
+				result = uint64(int64(rnVal) / int64(rmVal))
+			}
+		} else {
+			rn32 := int32(rnVal)
+			rm32 := int32(rmVal)
+			if rm32 == 0 {
+				result = 0
+			} else {
+				result = uint64(uint32(rn32 / rm32))
+			}
+		}
+	}
+
+	e.regFile.WriteReg(inst.Rd, result)
+}
+
+// executeDataProc3Src executes three-source data processing instructions (MADD, MSUB).
+func (e *Emulator) executeDataProc3Src(inst *insts.Instruction) {
+	rnVal := e.regFile.ReadReg(inst.Rn)
+	rmVal := e.regFile.ReadReg(inst.Rm)
+	raVal := e.regFile.ReadReg(inst.Rt2) // Ra is stored in Rt2 field
+
+	var result uint64
+
+	switch inst.Op {
+	case insts.OpMADD:
+		// MADD: Rd = Ra + (Rn * Rm)
+		if inst.Is64Bit {
+			result = raVal + rnVal*rmVal
+		} else {
+			result = uint64(uint32(raVal) + uint32(rnVal)*uint32(rmVal))
+		}
+	case insts.OpMSUB:
+		// MSUB: Rd = Ra - (Rn * Rm)
+		if inst.Is64Bit {
+			result = raVal - rnVal*rmVal
+		} else {
+			result = uint64(uint32(raVal) - uint32(rnVal)*uint32(rmVal))
+		}
+	}
+
+	e.regFile.WriteReg(inst.Rd, result)
+}
+
+// executeTestBranch executes test and branch instructions (TBZ, TBNZ).
+func (e *Emulator) executeTestBranch(inst *insts.Instruction) {
+	// Read the register to test
+	rtVal := e.regFile.ReadReg(inst.Rd)
+
+	// Get the bit number from Imm
+	bitNum := uint(inst.Imm)
+
+	// Test the specified bit
+	bitValue := (rtVal >> bitNum) & 1
+
+	var takeBranch bool
+	switch inst.Op {
+	case insts.OpTBZ:
+		// TBZ: branch if bit is zero
+		takeBranch = bitValue == 0
+	case insts.OpTBNZ:
+		// TBNZ: branch if bit is not zero
+		takeBranch = bitValue != 0
+	}
+
+	if takeBranch {
+		e.regFile.PC = uint64(int64(e.regFile.PC) + inst.BranchOffset)
+	} else {
+		e.regFile.PC += 4
+	}
+}
+
+// executeCompareBranch executes compare and branch instructions (CBZ, CBNZ).
+func (e *Emulator) executeCompareBranch(inst *insts.Instruction) {
+	// Read the register to compare
+	rtVal := e.regFile.ReadReg(inst.Rd)
+
+	// Mask to 32 bits for W registers
+	if !inst.Is64Bit {
+		rtVal &= 0xFFFFFFFF
+	}
+
+	var takeBranch bool
+	switch inst.Op {
+	case insts.OpCBZ:
+		// CBZ: branch if register is zero
+		takeBranch = rtVal == 0
+	case insts.OpCBNZ:
+		// CBNZ: branch if register is not zero
+		takeBranch = rtVal != 0
+	}
+
+	if takeBranch {
+		e.regFile.PC = uint64(int64(e.regFile.PC) + inst.BranchOffset)
+	} else {
+		e.regFile.PC += 4
 	}
 }
