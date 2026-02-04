@@ -22,13 +22,13 @@ const (
 	OpSTR
 	OpSVC
 	// PC-relative addressing
-	OpADR       // ADR - PC-relative address
-	OpADRP      // ADRP - PC-relative page address
-	OpLDRLit    // LDR (literal) - PC-relative load
+	OpADR    // ADR - PC-relative address
+	OpADRP   // ADRP - PC-relative page address
+	OpLDRLit // LDR (literal) - PC-relative load
 	// Move wide instructions
-	OpMOVZ      // Move wide with zero
-	OpMOVN      // Move wide with NOT
-	OpMOVK      // Move wide with keep
+	OpMOVZ // Move wide with zero
+	OpMOVN // Move wide with NOT
+	OpMOVK // Move wide with keep
 	// SIMD opcodes
 	OpVADD  // Vector ADD
 	OpVSUB  // Vector SUB
@@ -602,10 +602,10 @@ func (d *Decoder) isPCRelAddressing(word uint32) bool {
 func (d *Decoder) decodePCRelAddressing(word uint32, inst *Instruction) {
 	inst.Format = FormatPCRel
 
-	op := (word >> 31) & 0x1     // bit 31: 0=ADR, 1=ADRP
-	immlo := (word >> 29) & 0x3  // bits [30:29]
+	op := (word >> 31) & 0x1       // bit 31: 0=ADR, 1=ADRP
+	immlo := (word >> 29) & 0x3    // bits [30:29]
 	immhi := (word >> 5) & 0x7FFFF // bits [23:5]
-	rd := word & 0x1F            // bits [4:0]
+	rd := word & 0x1F              // bits [4:0]
 
 	inst.Rd = uint8(rd)
 	inst.Is64Bit = true // ADR/ADRP always operate on 64-bit registers
@@ -647,10 +647,10 @@ func (d *Decoder) decodeLoadStoreLiteral(word uint32, inst *Instruction) {
 	inst.Format = FormatLoadStoreLit
 	inst.Op = OpLDRLit
 
-	opc := (word >> 30) & 0x3     // bits [31:30]
-	v := (word >> 26) & 0x1       // bit 26: 0=GPR, 1=SIMD
+	opc := (word >> 30) & 0x3      // bits [31:30]
+	v := (word >> 26) & 0x1        // bit 26: 0=GPR, 1=SIMD
 	imm19 := (word >> 5) & 0x7FFFF // bits [23:5]
-	rt := word & 0x1F             // bits [4:0]
+	rt := word & 0x1F              // bits [4:0]
 
 	inst.Rd = uint8(rt)
 	inst.IsSIMD = v == 1
@@ -687,11 +687,11 @@ func (d *Decoder) isMoveWide(word uint32) bool {
 func (d *Decoder) decodeMoveWide(word uint32, inst *Instruction) {
 	inst.Format = FormatMoveWide
 
-	sf := (word >> 31) & 0x1     // bit 31: 0=32-bit, 1=64-bit
-	opc := (word >> 29) & 0x3    // bits [30:29]
-	hw := (word >> 21) & 0x3     // bits [22:21]: shift amount / 16
+	sf := (word >> 31) & 0x1      // bit 31: 0=32-bit, 1=64-bit
+	opc := (word >> 29) & 0x3     // bits [30:29]
+	hw := (word >> 21) & 0x3      // bits [22:21]: shift amount / 16
 	imm16 := (word >> 5) & 0xFFFF // bits [20:5]
-	rd := word & 0x1F            // bits [4:0]
+	rd := word & 0x1F             // bits [4:0]
 
 	inst.Rd = uint8(rd)
 	inst.Is64Bit = sf == 1
