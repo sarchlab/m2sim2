@@ -3310,3 +3310,11 @@ func (p *Pipeline) UseICache() bool {
 func (p *Pipeline) UseDCache() bool {
 	return p.useDCache
 }
+
+// BranchPredictorStats returns branch predictor statistics.
+func (p *Pipeline) BranchPredictorStats() BranchPredictorStats {
+	if p.branchPredictor != nil {
+		return p.branchPredictor.Stats()
+	}
+	return BranchPredictorStats{}
+}

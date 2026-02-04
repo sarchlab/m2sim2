@@ -57,6 +57,12 @@ type BenchmarkResult struct {
 	DCacheHits   uint64 `json:"dcache_hits,omitempty"`
 	DCacheMisses uint64 `json:"dcache_misses,omitempty"`
 
+	// Branch predictor stats
+	BranchPredictions     uint64  `json:"branch_predictions,omitempty"`
+	BranchCorrect         uint64  `json:"branch_correct,omitempty"`
+	BranchMispredictions  uint64  `json:"branch_mispredictions,omitempty"`
+	BranchAccuracyPercent float64 `json:"branch_accuracy_percent,omitempty"`
+
 	// ExitCode is the program's exit code
 	ExitCode int64 `json:"exit_code"`
 
@@ -230,6 +236,13 @@ func (h *Harness) runBenchmark(bench Benchmark) BenchmarkResult {
 		result.DCacheMisses = dcStats.Misses
 	}
 
+	// Collect branch predictor stats
+	bpStats := pipe.BranchPredictorStats()
+	result.BranchPredictions = bpStats.Predictions
+	result.BranchCorrect = bpStats.Correct
+	result.BranchMispredictions = bpStats.Mispredictions
+	result.BranchAccuracyPercent = bpStats.Accuracy()
+
 	return result
 }
 
@@ -265,6 +278,14 @@ func (h *Harness) PrintResults(results []BenchmarkResult) {
 			_, _ = fmt.Fprintln(h.config.Output, "  --- D-Cache ---")
 			_, _ = fmt.Fprintf(h.config.Output, "  Hits:   %d\n", r.DCacheHits)
 			_, _ = fmt.Fprintf(h.config.Output, "  Misses: %d\n", r.DCacheMisses)
+		}
+
+		if r.BranchPredictions > 0 {
+			_, _ = fmt.Fprintln(h.config.Output, "  --- Branch Predictor ---")
+			_, _ = fmt.Fprintf(h.config.Output, "  Predictions:     %d\n", r.BranchPredictions)
+			_, _ = fmt.Fprintf(h.config.Output, "  Correct:         %d\n", r.BranchCorrect)
+			_, _ = fmt.Fprintf(h.config.Output, "  Mispredictions:  %d\n", r.BranchMispredictions)
+			_, _ = fmt.Fprintf(h.config.Output, "  Accuracy:        %.1f%%\n", r.BranchAccuracyPercent)
 		}
 
 		_, _ = fmt.Fprintf(h.config.Output, "  Wall Time: %v\n", r.WallTime)
