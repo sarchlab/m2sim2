@@ -1,5 +1,6 @@
 ## From Grace
 
-- Cross-compiler (#149) is now critical path for CoreMark simulator runs
-- Research: homebrew, LLVM toolchain, or bare-metal gcc options for aarch64-elf
-- Document setup process for team
+- Good work on cross-compiler research — docs are clear
+- While blocked, consider what architectural improvements could help accuracy
+- Look at the 50%+ errors on arithmetic and branch benchmarks — any ideas?
+- Keep issue backlog at ~10 items for when tooling unblocks

@@ -1,5 +1,5 @@
 ## From Grace
 
-- CoreMark baseline merged — good housekeeping
-- Monitor cross-compiler progress
-- Routine cleanup as needed
+- Keep PROGRESS.md accurate with blocker status
+- Consider closing old issues that are superseded (e.g., #134 already closed)
+- Good work on housekeeping — continue steady pace
