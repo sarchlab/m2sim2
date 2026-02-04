@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 10:50 EST*
+*Last updated: 2026-02-04 10:58 EST*
 
 ## Current Milestone: M6 - Validation
 
@@ -10,23 +10,30 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (10:50):**
+**This cycle (10:58):**
+- Grace: Updated team guidance
+- Alice: Assigned accuracy re-measurement tasks
+- Eric: Analyzed accuracy — microbenchmarks unchanged, need SPEC for tuning impact
+- Bob: Confirmed microbenchmarks at 0.400/1.200/1.800 CPI
+- Cathy: No PRs to review, #129 appears resolved
+- Dana: Housekeeping complete
+
+**Previous cycle (10:50):**
 - **PR #142 MERGED** ✅ Memory latency tuning
   - L2 cache size: 16MB → 24MB (matches M2 spec)
   - Memory latency: 200 → 150 cycles (unified memory architecture)
   - Issue #136 closed
 
-**Previous cycle (10:36):**
+**Earlier (10:36):**
 - **PR #140 MERGED** ✅ Tournament branch predictor
   - Upgraded from simple bimodal to tournament predictor
   - Issue #135 closed
 
-**Research updates:**
-- Eric analyzed memory latency parameters on #136
-- Identified L2 size mismatch and unified memory opportunity
-- #141 pending human approval for 20% accuracy target
+### Key Insight
+Memory latency tuning (PR #142) won't show in microbenchmarks — they don't exercise large working sets.
+Real accuracy impact requires SPEC benchmarks (CI runs daily at 6 AM UTC).
 
-**Current Accuracy:**
+**Current Accuracy (microbenchmarks):**
 | Benchmark | Sim CPI | M2 CPI | Error |
 |-----------|---------|--------|-------|
 | arithmetic_sequential | 0.400 | 0.268 | 49.3% |
@@ -34,7 +41,7 @@
 | branch_taken | 1.800 | 1.190 | 51.3% |
 | **Average** | | | **39.8%** |
 
-*Note: Accuracy to be re-measured after memory latency tuning.*
+*Note: Fundamental gap — M2Sim is in-order, M2 is out-of-order.*
 
 ### Open Issues
 
@@ -45,18 +52,18 @@
 | #134 | High | Accuracy target discussion |
 | #132 | High | Intermediate benchmarks research |
 | #139 | Low | Multi-core execution (long-term) |
-| #129 | Low | README update |
+| #129 | Low | README update (appears completed) |
 | #122 | Low | Pipeline.go refactoring |
 | #115 | Medium | M6 - Investigate accuracy gaps |
 | #107 | High | SPEC benchmarks available |
 
 ### Open PRs
-None - all approved PRs merged!
+None — all approved PRs merged!
 
 ### Accuracy Work Progress
 - Phase 1: ✅ Branch predictor tuning (PR #140)
 - Phase 2: ✅ Memory latency tuning (PR #142)
-- Phase 3: 🔜 Re-measure accuracy after tuning
+- Phase 3: ⏳ Awaiting SPEC CI results for true accuracy measurement
 
 ### Blockers
 - Fundamental accuracy limitation: M2Sim is in-order, M2 is out-of-order
@@ -64,10 +71,9 @@ None - all approved PRs merged!
 - #141 awaiting human approval for 20% target
 
 ### Next Steps
-1. Re-run benchmarks to measure accuracy after memory latency tuning
+1. Wait for SPEC CI results to measure tuning impact
 2. Finalize accuracy target decision (#134, #141)
-3. Investigate remaining accuracy gaps (#115)
-4. README update (#129)
+3. SPEC benchmark execution (#138) when ready
 
 ## Milestones Overview
 
