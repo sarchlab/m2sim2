@@ -196,7 +196,7 @@ func (e *Emulator) Run() int64 {
 		}
 		if result.Err != nil {
 			// Print error for debugging
-			fmt.Fprintf(e.stderr, "Emulation error: %v\n", result.Err)
+			_, _ = fmt.Fprintf(e.stderr, "Emulation error: %v\n", result.Err)
 			return -1
 		}
 	}

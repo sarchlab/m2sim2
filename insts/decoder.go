@@ -1084,21 +1084,15 @@ func (d *Decoder) decodeLoadStoreRegIndexed(word uint32, inst *Instruction) {
 	}
 }
 
-// isConditionalSelect checks for conditional select instructions (CSEL, CSINC, CSINV, CSNEG).
 // isCondCmp checks for conditional compare instructions (CCMP, CCMN).
 // Format: sf | op | 1 | 11010010 | Rm/imm5 | cond | 1/0 | o2 | Rn | o3 | nzcv
-// bits [29:21] = 0x1A4 or 0x1A5 (register or immediate)
+// bits [29:25] = x1101, bits [24:21] = 0010
 func (d *Decoder) isCondCmp(word uint32) bool {
-	op := (word >> 21) & 0x1FF // bits [29:21]
-	// 0b111010010 = 0x1D2 for immediate, 0b011010010 = 0x0D2 for register
-	// Actually: bits [29:25] = 11101 and bits [24:21] match pattern
+	// bits [29:25] = x1101 and bits [24:21] = 0010 for CCMP/CCMN
 	bits2925 := (word >> 25) & 0x1F
 	bits2421 := (word >> 21) & 0xF
 	bit10 := (word >> 10) & 0x1
 	bit4 := (word >> 4) & 0x1
-	_ = op
-	// CCMP/CCMN: sf op 1 11010010 (reg) or sf op 1 11010010 (imm)
-	// bits [29:25] = x1101, bits [24:21] = 0010, bit[10], bit[4] = 0
 	return bits2925&0xF == 0b1101 && bits2421 == 0b0010 && bit10 == 0 && bit4 == 0
 }
 
