@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 14:20 EST*
+*Last updated: 2026-02-04 14:30 EST*
 
 ## Current Milestone: M6 - Validation
 
@@ -10,19 +10,20 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (14:20):**
-- Grace: Updated guidance — focus on test coverage while blocked
-- Alice: Assigned Bob tests for `tickSuperscalar()` and `tickQuadIssue()`
-- Eric: Confirmed backlog healthy (12 issues), monitoring blockers
-- Bob: Created PR #150 with comprehensive superscalar tests
-- Cathy: Reviewed and approved PR #150
-- Dana: Merging PR #150, updating progress report
+**This cycle (14:30):**
+- Grace: Updated guidance — continue test coverage focus
+- Alice: Assigned Bob decoder tests
+- Eric: Confirmed backlog healthy (11 issues)
+- Bob: Created PR #151 with SIMD decoder tests
+- Cathy: Reviewed and approved PR #151
+- Dana: Updating progress, PR #151 awaiting CI
 
 **Progress:**
 - ✅ CoreMark baseline captured: 35,120.58 iterations/sec on real M2
 - ✅ Alternative benchmark research complete
 - ✅ Cross-compiler research complete (docs/cross-compiler-setup.md)
-- ✅ **NEW:** Superscalar tests added (PR #150) — covers dual/quad/sextuple-issue
+- ✅ Superscalar tests merged (PR #150)
+- 🔄 **NEW:** SIMD decoder tests (PR #151) — coverage 67.6% → 96.6%
 - ⏳ Cross-compiler installation needed (human action)
 - 🚧 SPEC still blocked (human action needed)
 
@@ -53,9 +54,9 @@
 
 | Package | Coverage | Notes |
 |---------|----------|-------|
-| timing/pipeline | 25.6% → improving | Superscalar tests added (PR #150) |
+| timing/pipeline | 25.6%+ | Superscalar tests added (PR #150) |
 | timing/core | 60.0% | |
-| insts | 67.6% | |
+| **insts** | **96.6%** ✅ | SIMD tests added (PR #151) — was 67.6% |
 | emu | 72.5% | |
 | timing/latency | 71.8% | |
 | benchmarks | 80.8% | |
@@ -63,10 +64,11 @@
 | loader | 93.3% | |
 | driver | 100% ✅ | |
 
-**Coverage Gap Status:**
-- `tickSuperscalar()`, `tickQuadIssue()`, `tickSextupleIssue()` — **now covered** (PR #150)
-- Bob added 387 lines of tests covering all superscalar modes
-- 183 pipeline tests now pass
+### Open PRs
+
+| PR | Title | Status |
+|----|-------|--------|
+| #151 | [Bob] Add SIMD decoder tests | cathy-approved, CI pending |
 
 ### Open Issues
 
@@ -78,15 +80,3 @@
 | #141 | High | 20% error target — approved |
 | #132 | High | Intermediate benchmarks research |
 | #122 | Medium | Pipeline refactor — deferred for test coverage work |
-
-### Open PRs
-
-| PR | Title | Status |
-|----|-------|--------|
-| #150 | [Bob] Add superscalar execution tests | cathy-approved, CI pending |
-
-### Next Steps
-1. **Dana:** Merge PR #150 when CI passes
-2. **Human:** Install cross-compiler: `brew install aarch64-elf-gcc`
-3. **Bob:** Cross-compile CoreMark, run in M2Sim, compare accuracy
-4. **Human:** Unblock SPEC with `xattr -cr /Users/yifan/Documents/spec`
