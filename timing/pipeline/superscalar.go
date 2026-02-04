@@ -69,8 +69,13 @@ func canDualIssue(first, second *IDEXRegister) bool {
 		if second.Rn == first.Rd && first.Rd != 31 {
 			return false
 		}
-		if second.Rm == first.Rd && first.Rd != 31 {
-			return false
+		// Only check Rm for register-format instructions.
+		// Immediate-format instructions (like ADD Xd, Xn, #imm) don't use Rm,
+		// but Rm defaults to 0, causing false RAW hazards when first.Rd == 0.
+		if second.Inst != nil && second.Inst.Format == insts.FormatDPReg {
+			if second.Rm == first.Rd && first.Rd != 31 {
+				return false
+			}
 		}
 		// For stores, the value register might also conflict
 		if second.MemWrite && second.Inst != nil && second.Inst.Rd == first.Rd {

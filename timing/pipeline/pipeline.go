@@ -533,33 +533,7 @@ func (p *Pipeline) tickSingleIssue() {
 	// Branch mispredictions cause flushes, correct predictions don't.
 	stallResult := p.hazardUnit.ComputeStalls(loadUseHazard || execStall || memStall, branchMispredicted)
 
-	// Stage 2: Decode
-	var nextIDEX IDEXRegister
-	if p.ifid.Valid && !stallResult.StallID && !stallResult.FlushID && !execStall {
-		decResult := p.decodeStage.Decode(p.ifid.InstructionWord, p.ifid.PC)
-		nextIDEX = IDEXRegister{
-			Valid:           true,
-			PC:              p.ifid.PC,
-			Inst:            decResult.Inst,
-			RnValue:         decResult.RnValue,
-			RmValue:         decResult.RmValue,
-			Rd:              decResult.Rd,
-			Rn:              decResult.Rn,
-			Rm:              decResult.Rm,
-			MemRead:         decResult.MemRead,
-			MemWrite:        decResult.MemWrite,
-			RegWrite:        decResult.RegWrite,
-			MemToReg:        decResult.MemToReg,
-			IsBranch:        decResult.IsBranch,
-			PredictedTaken:  p.ifid.PredictedTaken,
-			PredictedTarget: p.ifid.PredictedTarget,
-			EarlyResolved:   p.ifid.EarlyResolved,
-		}
-	} else if (stallResult.StallID || execStall || memStall) && !stallResult.FlushID {
-		nextIDEX = p.idex
-	}
-
-	// Stage 1: Fetch
+	// Stage 1: Fetch (need to process fetch first to check for fetch stalls)
 	var nextIFID IFIDRegister
 	fetchStall := false
 	if !stallResult.StallIF && !stallResult.FlushIF && !memStall {
@@ -616,6 +590,34 @@ func (p *Pipeline) tickSingleIssue() {
 		p.stats.Stalls++
 	}
 
+	// Stage 2: Decode
+	// Note: When fetch stalls, we must NOT decode because ifid is preserved
+	// for next cycle. If we decode now, the instruction would be executed twice.
+	var nextIDEX IDEXRegister
+	if p.ifid.Valid && !stallResult.StallID && !stallResult.FlushID && !execStall && !fetchStall {
+		decResult := p.decodeStage.Decode(p.ifid.InstructionWord, p.ifid.PC)
+		nextIDEX = IDEXRegister{
+			Valid:           true,
+			PC:              p.ifid.PC,
+			Inst:            decResult.Inst,
+			RnValue:         decResult.RnValue,
+			RmValue:         decResult.RmValue,
+			Rd:              decResult.Rd,
+			Rn:              decResult.Rn,
+			Rm:              decResult.Rm,
+			MemRead:         decResult.MemRead,
+			MemWrite:        decResult.MemWrite,
+			RegWrite:        decResult.RegWrite,
+			MemToReg:        decResult.MemToReg,
+			IsBranch:        decResult.IsBranch,
+			PredictedTaken:  p.ifid.PredictedTaken,
+			PredictedTarget: p.ifid.PredictedTarget,
+			EarlyResolved:   p.ifid.EarlyResolved,
+		}
+	} else if (stallResult.StallID || execStall || memStall || fetchStall) && !stallResult.FlushID {
+		nextIDEX = p.idex
+	}
+
 	// Handle branch misprediction: update PC and flush pipeline
 	// Note: Only mispredictions cause flushes. Correct predictions don't need flushing.
 	if branchMispredicted {
@@ -625,20 +627,22 @@ func (p *Pipeline) tickSingleIssue() {
 		p.stats.Flushes++
 	}
 
-	if !memStall {
+	if !memStall && !fetchStall {
 		p.memwb = nextMEMWB
 	} else {
 		p.memwb.Clear()
 	}
-	if !execStall && !memStall {
+	if !execStall && !memStall && !fetchStall {
 		p.exmem = nextEXMEM
 	}
-	if stallResult.InsertBubbleEX && !execStall && !memStall {
+	if stallResult.InsertBubbleEX && !execStall && !memStall && !fetchStall {
 		p.idex.Clear()
-	} else if !memStall {
+	} else if !memStall && !fetchStall {
 		p.idex = nextIDEX
 	}
-	p.ifid = nextIFID
+	if !fetchStall {
+		p.ifid = nextIFID
+	}
 }
 
 // tickSuperscalar executes one cycle with dual-issue support.
@@ -762,6 +766,25 @@ func (p *Pipeline) tickSuperscalar() {
 			rmValue := p.hazardUnit.GetForwardedValue(
 				forwarding.ForwardRm, p.idex.RmValue, &p.exmem, &savedMEMWB)
 
+			// Forward from secondary pipeline stages (exmem2, memwb2) to primary slot
+			// When pairs dual-issue, primary slot may need values from previous secondary execution
+			if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 {
+				if p.idex.Rn == p.memwb2.Rd {
+					rnValue = p.memwb2.ALUResult
+				}
+				if p.idex.Rm == p.memwb2.Rd {
+					rmValue = p.memwb2.ALUResult
+				}
+			}
+			if p.exmem2.Valid && p.exmem2.RegWrite && p.exmem2.Rd != 31 {
+				if p.idex.Rn == p.exmem2.Rd {
+					rnValue = p.exmem2.ALUResult
+				}
+				if p.idex.Rm == p.exmem2.Rd {
+					rmValue = p.exmem2.ALUResult
+				}
+			}
+
 			execResult := p.executeStage.Execute(&p.idex, rnValue, rmValue)
 
 			storeValue := execResult.StoreValue
@@ -810,10 +833,10 @@ func (p *Pipeline) tickSuperscalar() {
 		// Convert to IDEXRegister for hazard detection
 		idex2 := p.idex2.toIDEX()
 
-		// Detect forwarding for secondary slot
+		// Detect forwarding for secondary slot from primary pipeline stages
 		forwarding2 := p.hazardUnit.DetectForwarding(&idex2, &p.exmem, &p.memwb)
 
-		// Also check forwarding from primary execute result
+		// Also check forwarding from primary execute result (same cycle)
 		if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
 			if p.idex2.Rn == nextEXMEM.Rd {
 				forwarding2.ForwardRn = ForwardFromEXMEM
@@ -833,10 +856,41 @@ func (p *Pipeline) tickSuperscalar() {
 
 		if p.exLatency2 == 0 {
 			// Get operand values with forwarding
+			// Priority (most recent first): nextEXMEM > exmem/exmem2 > memwb/memwb2 > register
 			rnValue := p.idex2.RnValue
 			rmValue := p.idex2.RmValue
 
-			// Apply forwarding from primary execute stage if needed
+			// Bug fix: Forward from secondary pipeline stages (exmem2, memwb2)
+			// This is needed when consecutive secondary-slot instructions have dependencies.
+			// Example: add x1, x1, #1 (→exmem2) followed by add x1, x1, #1 needs x1 from exmem2.
+
+			// First check memwb2 (oldest secondary pipeline stage)
+			if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 {
+				if p.idex2.Rn == p.memwb2.Rd {
+					rnValue = p.memwb2.ALUResult
+				}
+				if p.idex2.Rm == p.memwb2.Rd {
+					rmValue = p.memwb2.ALUResult
+				}
+			}
+
+			// Then check primary memwb (same age as memwb2, but different register)
+			rnValue = p.hazardUnit.GetForwardedValue(
+				forwarding2.ForwardRn, rnValue, &p.exmem, &savedMEMWB)
+			rmValue = p.hazardUnit.GetForwardedValue(
+				forwarding2.ForwardRm, rmValue, &p.exmem, &savedMEMWB)
+
+			// Then check exmem2 (newer than memwb2, same priority as exmem)
+			if p.exmem2.Valid && p.exmem2.RegWrite && p.exmem2.Rd != 31 {
+				if p.idex2.Rn == p.exmem2.Rd {
+					rnValue = p.exmem2.ALUResult
+				}
+				if p.idex2.Rm == p.exmem2.Rd {
+					rmValue = p.exmem2.ALUResult
+				}
+			}
+
+			// Finally check nextEXMEM (current cycle - highest priority)
 			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
 				if p.idex2.Rn == nextEXMEM.Rd {
 					rnValue = nextEXMEM.ALUResult
@@ -844,11 +898,6 @@ func (p *Pipeline) tickSuperscalar() {
 				if p.idex2.Rm == nextEXMEM.Rd {
 					rmValue = nextEXMEM.ALUResult
 				}
-			} else {
-				rnValue = p.hazardUnit.GetForwardedValue(
-					forwarding2.ForwardRn, p.idex2.RnValue, &p.exmem, &savedMEMWB)
-				rmValue = p.hazardUnit.GetForwardedValue(
-					forwarding2.ForwardRm, p.idex2.RmValue, &p.exmem, &savedMEMWB)
 			}
 
 			execResult := p.executeStage.Execute(&idex2, rnValue, rmValue)
@@ -967,18 +1016,31 @@ func (p *Pipeline) tickSuperscalar() {
 			// Fetch a new second instruction
 			var word2 uint32
 			var ok2 bool
+			var stall2 bool
 			if p.useICache && p.cachedFetchStage != nil {
-				word2, ok2, _ = p.cachedFetchStage.Fetch(p.pc)
+				word2, ok2, stall2 = p.cachedFetchStage.Fetch(p.pc)
+				if stall2 {
+					fetchStall = true
+					p.stats.Stalls++
+				}
 			} else {
 				word2, ok2 = p.fetchStage.Fetch(p.pc)
 			}
-			if ok2 {
+			if ok2 && !stall2 {
 				nextIFID2 = SecondaryIFIDRegister{
 					Valid:           true,
 					PC:              p.pc,
 					InstructionWord: word2,
 				}
 				p.pc += 4
+			} else if stall2 {
+				// When fetch stalls, preserve the entire pipeline state
+				nextIFID = p.ifid
+				nextIFID2 = p.ifid2
+				nextIDEX = p.idex
+				nextIDEX2 = p.idex2
+				nextEXMEM = p.exmem
+				nextEXMEM2 = p.exmem2
 			}
 		} else {
 			// Normal dual-fetch: fetch two new instructions
@@ -1023,6 +1085,13 @@ func (p *Pipeline) tickSuperscalar() {
 			} else if fetchStall {
 				nextIFID = p.ifid
 				nextIFID2 = p.ifid2
+				// When fetch stalls, we must stall the entire pipeline to prevent
+				// instructions from being executed twice. If we decoded/executed,
+				// the instructions would be executed again when the stall clears.
+				nextIDEX = p.idex
+				nextIDEX2 = p.idex2
+				nextEXMEM = p.exmem
+				nextEXMEM2 = p.exmem2
 			}
 		}
 	} else if (stallResult.StallIF || memStall || execStall) && !stallResult.FlushIF {
@@ -1032,7 +1101,7 @@ func (p *Pipeline) tickSuperscalar() {
 	}
 
 	// Latch all pipeline registers
-	if !memStall {
+	if !memStall && !fetchStall {
 		p.memwb = nextMEMWB
 		p.memwb2 = nextMEMWB2
 	} else {
