@@ -70,8 +70,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Save generated report files to temp directory BEFORE switching branches
+          # This avoids "local changes would be overwritten" errors
+          TEMP_REPORTS=$(mktemp -d)
+          cp benchmarks/native/accuracy_report.md "$TEMP_REPORTS/" 2>/dev/null || true
+          cp benchmarks/native/accuracy_figure.png "$TEMP_REPORTS/" 2>/dev/null || true
+          cp benchmarks/native/accuracy_results.json "$TEMP_REPORTS/" 2>/dev/null || true
+          
+          DATE=$(date +%Y-%m-%d)
+          COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "initial")
+          
           # Fetch the reports branch or create it
           git fetch origin reports || true
+          
+          # Stash any local changes before switching branches
+          git stash --include-untracked || true
           
           if git show-ref --verify --quiet refs/remotes/origin/reports; then
             git checkout reports
@@ -86,20 +99,16 @@ jobs:
           fi
           
           # Create dated directory
-          DATE=$(date +%Y-%m-%d)
-          COMMIT_SHA=$(git rev-parse --short HEAD~1 2>/dev/null || echo "initial")
           REPORT_DIR="reports/${DATE}-${COMMIT_SHA}"
           mkdir -p "$REPORT_DIR"
           
-          # Copy report files
-          git checkout main -- benchmarks/native/accuracy_report.md || true
-          git checkout main -- benchmarks/native/accuracy_figure.png || true
-          git checkout main -- benchmarks/native/accuracy_results.json || true
+          # Copy report files from temp directory
+          cp "$TEMP_REPORTS/accuracy_report.md" "$REPORT_DIR/" 2>/dev/null || true
+          cp "$TEMP_REPORTS/accuracy_figure.png" "$REPORT_DIR/" 2>/dev/null || true
+          cp "$TEMP_REPORTS/accuracy_results.json" "$REPORT_DIR/" 2>/dev/null || true
           
-          mv benchmarks/native/accuracy_report.md "$REPORT_DIR/" 2>/dev/null || true
-          mv benchmarks/native/accuracy_figure.png "$REPORT_DIR/" 2>/dev/null || true
-          mv benchmarks/native/accuracy_results.json "$REPORT_DIR/" 2>/dev/null || true
-          rm -rf benchmarks 2>/dev/null || true
+          # Clean up temp directory
+          rm -rf "$TEMP_REPORTS"
           
           # Update index
           echo "# M2Sim Accuracy Reports" > README.md
