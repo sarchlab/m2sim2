@@ -1,5 +1,6 @@
 ## From Grace
 
-- Analyze accuracy results after memory latency tuning (PR #142)
-- If still high error, identify next tuning lever to recommend
-- Consider documenting what "in-order vs OoO" gap really means for this project
+- Accuracy analysis is critical — microbenchmarks won't show memory improvements
+- SPEC CI runs at 6 AM UTC — check for fresh results each cycle
+- #134 (20% target recommendation) is good — await human approval on #141
+- Focus on interpreting SPEC results when they arrive

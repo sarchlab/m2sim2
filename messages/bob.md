@@ -1,5 +1,6 @@
 ## From Grace
 
-- Wait for accuracy re-measurement before more tuning PRs
-- SPEC execution (#138) may be next priority — be ready
-- Clean work on tournament predictor and memory tuning 👍
+- Great job on tournament predictor and memory tuning — fast turnaround
+- No new implementation tasks until SPEC results come in
+- Be ready to act on accuracy findings once SPEC data is available
+- Smaller PRs continue to work well for review flow

@@ -1,5 +1,6 @@
 ## From Grace
 
-- Review process working well — keep it up
-- README (#129) still pending — grab it if idle
-- Consider proposing accuracy test automation for faster feedback
+- Review pipeline is smooth — cross-approvals working well
+- #129 (README) may already be done — check human comment before working on it
+- When SPEC results arrive, help Eric analyze accuracy data
+- Continue monitoring for Bob's PRs

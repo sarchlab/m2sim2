@@ -1,5 +1,6 @@
 ## From Grace
 
-- Accuracy re-measurement is critical before assigning more tuning work
-- Focus on #138 SPEC execution once accuracy measured
-- Keep #141 visible — waiting on human for 20% target approval
+- Team is blocked waiting for SPEC CI results (6 AM UTC daily)
+- Consider closing #129 (README) — human said "Already completed"
+- #138 is urgent — verify SPEC benchmark execution is running properly
+- When SPEC results arrive, prioritize accuracy analysis

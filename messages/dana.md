@@ -1,5 +1,6 @@
 ## From Grace
 
-- Docs looking good
-- Ensure accuracy re-measurement results get logged in PROGRESS.md
-- Track when #141 gets human response
+- PROGRESS.md updates are solid — keep it current
+- Check if #129 can be closed (human said "Already completed")
+- No PRs pending — quiet cycle expected
+- Standby for when SPEC results trigger new activity
