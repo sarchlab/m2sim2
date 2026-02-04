@@ -74,13 +74,34 @@ func (s *DecodeStage) Decode(word uint32, pc uint64) DecodeResult {
 
 	// Determine control signals based on instruction type
 	result.RegWrite = s.isRegWriteInst(inst)
-	result.MemRead = inst.Op == insts.OpLDR
-	result.MemWrite = inst.Op == insts.OpSTR
-	result.MemToReg = inst.Op == insts.OpLDR
+	result.MemRead = s.isLoadOp(inst.Op)
+	result.MemWrite = s.isStoreOp(inst.Op)
+	result.MemToReg = s.isLoadOp(inst.Op)
 	result.IsBranch = s.isBranchInst(inst)
 	result.IsSyscall = inst.Op == insts.OpSVC
 
 	return result
+}
+
+// isLoadOp returns true if the opcode is a load operation.
+func (s *DecodeStage) isLoadOp(op insts.Op) bool {
+	switch op {
+	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ:
+		return true
+	default:
+		return false
+	}
+}
+
+// isStoreOp returns true if the opcode is a store operation.
+func (s *DecodeStage) isStoreOp(op insts.Op) bool {
+	switch op {
+	case insts.OpSTR, insts.OpSTP, insts.OpSTRB, insts.OpSTRH, insts.OpSTRQ:
+		return true
+	default:
+		return false
+	}
 }
 
 // isRegWriteInst determines if the instruction writes to a register.
@@ -93,7 +114,8 @@ func (s *DecodeStage) isRegWriteInst(inst *insts.Instruction) bool {
 	switch inst.Op {
 	case insts.OpADD, insts.OpSUB, insts.OpAND, insts.OpORR, insts.OpEOR:
 		return true
-	case insts.OpLDR:
+	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ:
 		return true
 	case insts.OpBL, insts.OpBLR:
 		return true // BL/BLR write to X30
@@ -152,14 +174,31 @@ func (s *ExecuteStage) Execute(idex *IDEXRegister, rnValue, rmValue uint64) Exec
 		result.ALUResult = s.executeORR(inst, rnValue, rmValue)
 	case insts.OpEOR:
 		result.ALUResult = s.executeEOR(inst, rnValue, rmValue)
-	case insts.OpLDR, insts.OpSTR:
+	case insts.OpLDR, insts.OpSTR, insts.OpLDP, insts.OpSTP,
+		insts.OpLDRB, insts.OpSTRB, insts.OpLDRSB,
+		insts.OpLDRH, insts.OpSTRH, insts.OpLDRSH:
 		// Address calculation: base + offset
 		// If base register is 31, use SP instead
 		baseAddr := rnValue
 		if inst.Rn == 31 {
 			baseAddr = s.regFile.SP
 		}
-		result.ALUResult = baseAddr + inst.Imm
+		// Handle indexed addressing modes
+		switch inst.IndexMode {
+		case insts.IndexPre:
+			// Pre-index: address = base + signed offset
+			result.ALUResult = uint64(int64(baseAddr) + inst.SignedImm)
+		case insts.IndexPost:
+			// Post-index: address = base (writeback happens later)
+			result.ALUResult = baseAddr
+		default:
+			// Unsigned offset or signed offset for LDP/STP
+			if inst.Format == insts.FormatLoadStorePair {
+				result.ALUResult = uint64(int64(baseAddr) + inst.SignedImm)
+			} else {
+				result.ALUResult = baseAddr + inst.Imm
+			}
+		}
 		result.StoreValue = rmValue // For STR, the value to store
 	case insts.OpB:
 		// Unconditional branch

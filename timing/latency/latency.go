@@ -41,10 +41,11 @@ func (t *Table) GetLatency(inst *insts.Instruction) uint64 {
 	case insts.OpB, insts.OpBL, insts.OpBCond, insts.OpBR, insts.OpBLR, insts.OpRET:
 		return t.config.BranchLatency
 
-	case insts.OpLDR:
+	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit:
 		return t.config.LoadLatency
 
-	case insts.OpSTR:
+	case insts.OpSTR, insts.OpSTP, insts.OpSTRB, insts.OpSTRH:
 		return t.config.StoreLatency
 
 	case insts.OpSVC:
@@ -97,7 +98,9 @@ func (t *Table) IsMemoryOp(inst *insts.Instruction) bool {
 		return false
 	}
 	switch inst.Op {
-	case insts.OpLDR, insts.OpSTR, insts.OpLDRQ, insts.OpSTRQ:
+	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ,
+		insts.OpSTR, insts.OpSTP, insts.OpSTRB, insts.OpSTRH, insts.OpSTRQ:
 		return true
 	default:
 		return false
@@ -109,7 +112,13 @@ func (t *Table) IsLoadOp(inst *insts.Instruction) bool {
 	if inst == nil {
 		return false
 	}
-	return inst.Op == insts.OpLDR || inst.Op == insts.OpLDRQ
+	switch inst.Op {
+	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ:
+		return true
+	default:
+		return false
+	}
 }
 
 // IsStoreOp returns true if the instruction is a store operation.
@@ -117,7 +126,12 @@ func (t *Table) IsStoreOp(inst *insts.Instruction) bool {
 	if inst == nil {
 		return false
 	}
-	return inst.Op == insts.OpSTR || inst.Op == insts.OpSTRQ
+	switch inst.Op {
+	case insts.OpSTR, insts.OpSTP, insts.OpSTRB, insts.OpSTRH, insts.OpSTRQ:
+		return true
+	default:
+		return false
+	}
 }
 
 // IsBranchOp returns true if the instruction is a branch operation.

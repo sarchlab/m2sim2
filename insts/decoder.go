@@ -29,6 +29,16 @@ const (
 	OpMOVZ // Move wide with zero
 	OpMOVN // Move wide with NOT
 	OpMOVK // Move wide with keep
+	// Load/Store pair
+	OpLDP // Load pair of registers
+	OpSTP // Store pair of registers
+	// Byte/halfword load/store
+	OpLDRB  // Load register byte (zero-extend)
+	OpSTRB  // Store register byte
+	OpLDRSB // Load register signed byte
+	OpLDRH  // Load register halfword (zero-extend)
+	OpSTRH  // Store register halfword
+	OpLDRSH // Load register signed halfword
 	// SIMD opcodes
 	OpVADD  // Vector ADD
 	OpVSUB  // Vector SUB
@@ -54,6 +64,7 @@ const (
 	FormatBranchReg            // Branch to Register
 	FormatLoadStore            // Load/Store (Immediate)
 	FormatLoadStoreLit         // Load/Store (PC-relative Literal)
+	FormatLoadStorePair        // Load/Store Pair (LDP/STP)
 	FormatPCRel                // PC-relative addressing (ADR, ADRP)
 	FormatMoveWide             // Move wide (MOVZ, MOVN, MOVK)
 	FormatException            // Exception Generation (SVC, HVC, SMC, BRK)
@@ -109,6 +120,16 @@ const (
 	Arr2D                         // 2 doubles (128-bit)
 )
 
+// IndexMode represents the addressing mode for indexed load/store.
+type IndexMode uint8
+
+const (
+	IndexNone    IndexMode = iota // No indexing (unsigned offset)
+	IndexPost                     // Post-index: [Rn], #imm
+	IndexPre                      // Pre-index: [Rn, #imm]!
+	IndexSigned                   // Signed offset (for load/store pair)
+)
+
 // Instruction represents a decoded ARM64 instruction.
 type Instruction struct {
 	Op     Op     // Operation code
@@ -132,6 +153,11 @@ type Instruction struct {
 	// Shift for register operand
 	ShiftType   ShiftType // Type of shift applied to Rm
 	ShiftAmount uint8     // Shift amount for Rm
+
+	// Load/Store indexed fields
+	IndexMode IndexMode // Addressing mode (none, pre, post)
+	SignedImm int64     // Signed immediate for indexed addressing
+	Rt2       uint8     // Second register for load/store pair
 
 	// SIMD fields
 	IsSIMD      bool            // true if this is a SIMD instruction
@@ -161,8 +187,12 @@ func (d *Decoder) Decode(word uint32) *Instruction {
 		d.decodeSIMDLoadStore(word, inst)
 	case d.isSIMDThreeSame(word):
 		d.decodeSIMDThreeSame(word, inst)
+	case d.isLoadStorePair(word):
+		d.decodeLoadStorePair(word, inst)
 	case d.isLoadStoreLiteral(word):
 		d.decodeLoadStoreLiteral(word, inst)
+	case d.isLoadStoreRegIndexed(word):
+		d.decodeLoadStoreRegIndexed(word, inst)
 	case d.isLoadStoreImm(word):
 		d.decodeLoadStoreImm(word, inst)
 	case d.isPCRelAddressing(word):
@@ -736,4 +766,173 @@ func (d *Decoder) getSIMDArrangement(isQ bool, size uint32) SIMDArrangement {
 		}
 	}
 	return Arr16B // Default
+}
+
+// isLoadStorePair checks for load/store pair instructions (LDP/STP).
+// Format: opc | 101 | V | mode | L | imm7 | Rt2 | Rn | Rt
+// bits [29:27] == 101, and mode[25:23] must be 001, 010, or 011
+func (d *Decoder) isLoadStorePair(word uint32) bool {
+	op := (word >> 27) & 0x7   // bits [29:27]
+	mode := (word >> 23) & 0x7 // bits [25:23]
+	// mode must be 001 (post-index), 010 (signed offset), or 011 (pre-index)
+	// This distinguishes from data processing register instructions
+	return op == 0b101 && (mode == 0b001 || mode == 0b010 || mode == 0b011)
+}
+
+// decodeLoadStorePair decodes LDP and STP instructions.
+// Format: opc | 101 | V | mode | L | imm7 | Rt2 | Rn | Rt
+// opc[31:30]: 00=32-bit, 10=64-bit
+// V[26]: 0=GPR, 1=SIMD
+// mode[25:23]: 001=post-index, 010=signed offset, 011=pre-index
+// L[22]: 0=STP, 1=LDP
+// imm7[21:15]: signed offset, scaled by register size
+func (d *Decoder) decodeLoadStorePair(word uint32, inst *Instruction) {
+	inst.Format = FormatLoadStorePair
+
+	opc := (word >> 30) & 0x3    // bits [31:30]
+	v := (word >> 26) & 0x1      // bit 26: 0=GPR, 1=SIMD
+	mode := (word >> 23) & 0x7   // bits [25:23]
+	l := (word >> 22) & 0x1      // bit 22: 0=STP, 1=LDP
+	imm7 := (word >> 15) & 0x7F  // bits [21:15]
+	rt2 := (word >> 10) & 0x1F   // bits [14:10]
+	rn := (word >> 5) & 0x1F     // bits [9:5]
+	rt := word & 0x1F            // bits [4:0]
+
+	inst.Rn = uint8(rn)
+	inst.Rd = uint8(rt)   // Rt uses Rd field
+	inst.Rt2 = uint8(rt2) // Second register
+
+	inst.IsSIMD = v == 1
+
+	// Determine 64-bit vs 32-bit from opc
+	// For GPR: opc=00 means 32-bit, opc=10 means 64-bit
+	inst.Is64Bit = opc == 0b10
+
+	// Determine addressing mode
+	switch mode {
+	case 0b001:
+		inst.IndexMode = IndexPost
+	case 0b010:
+		inst.IndexMode = IndexSigned
+	case 0b011:
+		inst.IndexMode = IndexPre
+	default:
+		inst.IndexMode = IndexNone
+	}
+
+	// Sign-extend imm7 and scale by register size
+	offset := int64(imm7)
+	if (imm7 >> 6) == 1 {
+		offset |= ^int64(0x7F) // Sign extend
+	}
+	// Scale: 4 for 32-bit, 8 for 64-bit
+	if inst.Is64Bit {
+		offset *= 8
+	} else {
+		offset *= 4
+	}
+	inst.SignedImm = offset
+
+	// Determine LDP vs STP
+	if l == 1 {
+		inst.Op = OpLDP
+	} else {
+		inst.Op = OpSTP
+	}
+}
+
+// isLoadStoreRegIndexed checks for load/store register with pre/post-indexed addressing.
+// Format: size | 111 | V | 00 | opc | 0 | imm9 | mode | Rn | Rt
+// bits [29:27] == 111, bit 26 == V, bits [25:24] == 00, bit 21 == 0
+// mode[11:10]: 00=unscaled, 01=post-index, 10=unprivileged, 11=pre-index
+func (d *Decoder) isLoadStoreRegIndexed(word uint32) bool {
+	op1 := (word >> 27) & 0x7  // bits [29:27]
+	op2 := (word >> 24) & 0x3  // bits [25:24]
+	bit21 := (word >> 21) & 0x1 // bit 21
+	return op1 == 0b111 && op2 == 0b00 && bit21 == 0
+}
+
+// decodeLoadStoreRegIndexed decodes LDR/STR with pre/post-indexed addressing.
+// Format: size | 111 | V | 00 | opc | 0 | imm9 | mode | Rn | Rt
+// size[31:30]: 00=byte, 01=halfword, 10=32-bit, 11=64-bit
+// V[26]: 0=GPR
+// opc[23:22]: varies by size
+// imm9[20:12]: signed 9-bit immediate
+// mode[11:10]: 01=post-index, 11=pre-index
+func (d *Decoder) decodeLoadStoreRegIndexed(word uint32, inst *Instruction) {
+	inst.Format = FormatLoadStore
+
+	size := (word >> 30) & 0x3     // bits [31:30]
+	v := (word >> 26) & 0x1        // bit 26: 0=GPR
+	opc := (word >> 22) & 0x3      // bits [23:22]
+	imm9 := (word >> 12) & 0x1FF   // bits [20:12]
+	mode := (word >> 10) & 0x3     // bits [11:10]
+	rn := (word >> 5) & 0x1F       // bits [9:5]
+	rt := word & 0x1F              // bits [4:0]
+
+	inst.Rn = uint8(rn)
+	inst.Rd = uint8(rt)
+	inst.IsSIMD = v == 1
+
+	// Determine addressing mode
+	switch mode {
+	case 0b01:
+		inst.IndexMode = IndexPost
+	case 0b11:
+		inst.IndexMode = IndexPre
+	default:
+		inst.IndexMode = IndexNone // Unscaled or unprivileged
+	}
+
+	// Sign-extend imm9
+	offset := int64(imm9)
+	if (imm9 >> 8) == 1 {
+		offset |= ^int64(0x1FF) // Sign extend
+	}
+	inst.SignedImm = offset
+
+	// Determine operation based on size and opc
+	// size=11 (64-bit), opc=00=STR, opc=01=LDR
+	// size=10 (32-bit), opc=00=STR, opc=01=LDR
+	// size=01 (16-bit), opc=00=STRH, opc=01=LDRH, opc=10=LDRSW(16), opc=11=LDRSH
+	// size=00 (8-bit), opc=00=STRB, opc=01=LDRB, opc=10=LDRSB(64), opc=11=LDRSB(32)
+	
+	switch size {
+	case 0b11: // 64-bit
+		inst.Is64Bit = true
+		if opc&0x1 == 1 {
+			inst.Op = OpLDR
+		} else {
+			inst.Op = OpSTR
+		}
+	case 0b10: // 32-bit
+		inst.Is64Bit = false
+		if opc&0x1 == 1 {
+			inst.Op = OpLDR
+		} else {
+			inst.Op = OpSTR
+		}
+	case 0b01: // 16-bit (halfword)
+		inst.Is64Bit = false
+		switch opc {
+		case 0b00:
+			inst.Op = OpSTRH
+		case 0b01:
+			inst.Op = OpLDRH
+		case 0b10, 0b11:
+			inst.Op = OpLDRSH
+			inst.Is64Bit = opc == 0b10 // 10=extend to 64-bit
+		}
+	case 0b00: // 8-bit (byte)
+		inst.Is64Bit = false
+		switch opc {
+		case 0b00:
+			inst.Op = OpSTRB
+		case 0b01:
+			inst.Op = OpLDRB
+		case 0b10, 0b11:
+			inst.Op = OpLDRSB
+			inst.Is64Bit = opc == 0b10 // 10=extend to 64-bit
+		}
+	}
 }

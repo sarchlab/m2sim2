@@ -232,6 +232,8 @@ func (e *Emulator) execute(inst *insts.Instruction) StepResult {
 		return StepResult{} // PC already updated
 	case insts.FormatLoadStore:
 		e.executeLoadStore(inst)
+	case insts.FormatLoadStorePair:
+		e.executeLoadStorePair(inst)
 	case insts.FormatPCRel:
 		e.executePCRel(inst)
 	case insts.FormatLoadStoreLit:
@@ -363,34 +365,146 @@ func (e *Emulator) executeLoadStore(inst *insts.Instruction) {
 	// Check if base register is SP (register 31 in load/store context means SP)
 	useSP := inst.Rn == 31
 
+	// Calculate address based on indexing mode
+	var base uint64
+	if useSP {
+		base = e.regFile.SP
+	} else {
+		base = e.regFile.ReadReg(inst.Rn)
+	}
+
+	var addr uint64
+	switch inst.IndexMode {
+	case insts.IndexPre:
+		// Pre-index: address = base + offset, then writeback
+		addr = uint64(int64(base) + inst.SignedImm)
+	case insts.IndexPost:
+		// Post-index: address = base, then writeback base + offset
+		addr = base
+	default:
+		// Unsigned offset (no writeback)
+		addr = base + inst.Imm
+	}
+
+	// Execute the load/store operation
 	switch inst.Op {
 	case insts.OpLDR:
 		if inst.Is64Bit {
-			if useSP {
-				e.lsu.LDR64SP(inst.Rd, inst.Imm)
-			} else {
-				e.lsu.LDR64(inst.Rd, inst.Rn, inst.Imm)
-			}
+			value := e.memory.Read64(addr)
+			e.regFile.WriteReg(inst.Rd, value)
 		} else {
-			if useSP {
-				e.lsu.LDR32SP(inst.Rd, inst.Imm)
-			} else {
-				e.lsu.LDR32(inst.Rd, inst.Rn, inst.Imm)
-			}
+			value := e.memory.Read32(addr)
+			e.regFile.WriteReg(inst.Rd, uint64(value))
 		}
 	case insts.OpSTR:
 		if inst.Is64Bit {
-			if useSP {
-				e.lsu.STR64SP(inst.Rd, inst.Imm)
-			} else {
-				e.lsu.STR64(inst.Rd, inst.Rn, inst.Imm)
-			}
+			value := e.regFile.ReadReg(inst.Rd)
+			e.memory.Write64(addr, value)
 		} else {
-			if useSP {
-				e.lsu.STR32SP(inst.Rd, inst.Imm)
-			} else {
-				e.lsu.STR32(inst.Rd, inst.Rn, inst.Imm)
-			}
+			value := uint32(e.regFile.ReadReg(inst.Rd))
+			e.memory.Write32(addr, value)
+		}
+	case insts.OpLDRB:
+		e.lsu.LDRB(inst.Rd, addr)
+	case insts.OpSTRB:
+		e.lsu.STRB(inst.Rd, addr)
+	case insts.OpLDRSB:
+		if inst.Is64Bit {
+			e.lsu.LDRSB64(inst.Rd, addr)
+		} else {
+			e.lsu.LDRSB32(inst.Rd, addr)
+		}
+	case insts.OpLDRH:
+		e.lsu.LDRH(inst.Rd, addr)
+	case insts.OpSTRH:
+		e.lsu.STRH(inst.Rd, addr)
+	case insts.OpLDRSH:
+		if inst.Is64Bit {
+			e.lsu.LDRSH64(inst.Rd, addr)
+		} else {
+			e.lsu.LDRSH32(inst.Rd, addr)
+		}
+	}
+
+	// Handle writeback for pre/post-indexed modes
+	if inst.IndexMode == insts.IndexPre || inst.IndexMode == insts.IndexPost {
+		newBase := uint64(int64(base) + inst.SignedImm)
+		if useSP {
+			e.regFile.SP = newBase
+		} else {
+			e.regFile.WriteReg(inst.Rn, newBase)
+		}
+	}
+}
+
+// executeLoadStorePair executes LDP and STP instructions.
+func (e *Emulator) executeLoadStorePair(inst *insts.Instruction) {
+	// Check if base register is SP
+	useSP := inst.Rn == 31
+
+	var base uint64
+	if useSP {
+		base = e.regFile.SP
+	} else {
+		base = e.regFile.ReadReg(inst.Rn)
+	}
+
+	// Calculate address based on indexing mode
+	var addr uint64
+	switch inst.IndexMode {
+	case insts.IndexPre:
+		// Pre-index: address = base + offset, then writeback
+		addr = uint64(int64(base) + inst.SignedImm)
+	case insts.IndexPost:
+		// Post-index: address = base, then writeback base + offset
+		addr = base
+	default:
+		// Signed offset (no writeback)
+		addr = uint64(int64(base) + inst.SignedImm)
+	}
+
+	// Determine element size
+	var elemSize uint64 = 4 // 32-bit
+	if inst.Is64Bit {
+		elemSize = 8 // 64-bit
+	}
+
+	switch inst.Op {
+	case insts.OpLDP:
+		// Load pair
+		if inst.Is64Bit {
+			val1 := e.memory.Read64(addr)
+			val2 := e.memory.Read64(addr + elemSize)
+			e.regFile.WriteReg(inst.Rd, val1)
+			e.regFile.WriteReg(inst.Rt2, val2)
+		} else {
+			val1 := e.memory.Read32(addr)
+			val2 := e.memory.Read32(addr + elemSize)
+			e.regFile.WriteReg(inst.Rd, uint64(val1))
+			e.regFile.WriteReg(inst.Rt2, uint64(val2))
+		}
+	case insts.OpSTP:
+		// Store pair
+		if inst.Is64Bit {
+			val1 := e.regFile.ReadReg(inst.Rd)
+			val2 := e.regFile.ReadReg(inst.Rt2)
+			e.memory.Write64(addr, val1)
+			e.memory.Write64(addr+elemSize, val2)
+		} else {
+			val1 := uint32(e.regFile.ReadReg(inst.Rd))
+			val2 := uint32(e.regFile.ReadReg(inst.Rt2))
+			e.memory.Write32(addr, val1)
+			e.memory.Write32(addr+elemSize, val2)
+		}
+	}
+
+	// Handle writeback for pre/post-indexed modes
+	if inst.IndexMode == insts.IndexPre || inst.IndexMode == insts.IndexPost {
+		newBase := uint64(int64(base) + inst.SignedImm)
+		if useSP {
+			e.regFile.SP = newBase
+		} else {
+			e.regFile.WriteReg(inst.Rn, newBase)
 		}
 	}
 }

@@ -76,3 +76,59 @@ func (lsu *LoadStoreUnit) STR32SP(rd uint8, offset uint64) {
 	value := uint32(lsu.regFile.ReadReg(rd))
 	lsu.memory.Write32(addr, value)
 }
+
+// LDRB loads a byte with zero extension: Xd = zero_extend(mem[addr])
+func (lsu *LoadStoreUnit) LDRB(rd uint8, addr uint64) {
+	value := lsu.memory.Read8(addr)
+	lsu.regFile.WriteReg(rd, uint64(value))
+}
+
+// STRB stores a byte: mem[addr] = Xd[7:0]
+func (lsu *LoadStoreUnit) STRB(rd uint8, addr uint64) {
+	value := uint8(lsu.regFile.ReadReg(rd))
+	lsu.memory.Write8(addr, value)
+}
+
+// LDRSB loads a signed byte with sign extension to 64-bit
+func (lsu *LoadStoreUnit) LDRSB64(rd uint8, addr uint64) {
+	value := lsu.memory.Read8(addr)
+	// Sign extend from 8 to 64 bits
+	signExtended := int64(int8(value))
+	lsu.regFile.WriteReg(rd, uint64(signExtended))
+}
+
+// LDRSB32 loads a signed byte with sign extension to 32-bit
+func (lsu *LoadStoreUnit) LDRSB32(rd uint8, addr uint64) {
+	value := lsu.memory.Read8(addr)
+	// Sign extend from 8 to 32 bits (upper 32 bits cleared)
+	signExtended := int32(int8(value))
+	lsu.regFile.WriteReg(rd, uint64(uint32(signExtended)))
+}
+
+// LDRH loads a halfword with zero extension: Xd = zero_extend(mem[addr])
+func (lsu *LoadStoreUnit) LDRH(rd uint8, addr uint64) {
+	value := lsu.memory.Read16(addr)
+	lsu.regFile.WriteReg(rd, uint64(value))
+}
+
+// STRH stores a halfword: mem[addr] = Xd[15:0]
+func (lsu *LoadStoreUnit) STRH(rd uint8, addr uint64) {
+	value := uint16(lsu.regFile.ReadReg(rd))
+	lsu.memory.Write16(addr, value)
+}
+
+// LDRSH64 loads a signed halfword with sign extension to 64-bit
+func (lsu *LoadStoreUnit) LDRSH64(rd uint8, addr uint64) {
+	value := lsu.memory.Read16(addr)
+	// Sign extend from 16 to 64 bits
+	signExtended := int64(int16(value))
+	lsu.regFile.WriteReg(rd, uint64(signExtended))
+}
+
+// LDRSH32 loads a signed halfword with sign extension to 32-bit
+func (lsu *LoadStoreUnit) LDRSH32(rd uint8, addr uint64) {
+	value := lsu.memory.Read16(addr)
+	// Sign extend from 16 to 32 bits (upper 32 bits cleared)
+	signExtended := int32(int16(value))
+	lsu.regFile.WriteReg(rd, uint64(uint32(signExtended)))
+}
