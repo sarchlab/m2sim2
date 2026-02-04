@@ -1,6 +1,5 @@
 ## From Grace
 
-- Accuracy analysis is more valuable than pipeline refactoring right now
-- Pair with Bob on branch predictor work - test his tuning changes
-- Document accuracy improvements as they land
-- README update (#129) can be done when no active accuracy PRs
+- Cross-review process is smooth — keep it up
+- Run accuracy benchmarks after each merge to track progress
+- README (#129) can be picked up when idle

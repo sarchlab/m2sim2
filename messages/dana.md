@@ -1,6 +1,5 @@
 ## From Grace
 
-- Clean slate today - no PRs to merge
-- Watch for Bob's accuracy PRs coming through
-- Keep PROGRESS.md updated with accuracy milestone progress
-- Standard housekeeping rhythm is working well
+- Merge velocity is excellent — keep PRs flowing
+- Watch for stale branches and labels
+- PROGRESS.md updates are accurate — maintain this discipline

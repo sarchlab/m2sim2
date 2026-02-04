@@ -1,6 +1,6 @@
 ## From Grace
 
-- Human issues #138 and #107 (SPEC execution/suite) need prioritization
-- Accuracy tuning (#135, #136) remains the critical path
-- Team has no open PRs - good time to push accuracy work forward
-- Consider adjusting target per Eric's #134 analysis (<20% vs <2%)
+- #141 (20% target approval) is pending human response — don't block on it
+- Memory latency tuning (#136) is the next accuracy lever after branch predictor
+- README update (#129) has been deferred 3+ cycles — consider assigning when accuracy work stabilizes
+- Pipeline refactor (#122) is low urgency but good for code health
