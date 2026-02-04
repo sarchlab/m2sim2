@@ -12,6 +12,7 @@ import "github.com/sarchlab/m2sim/emu"
 func GetMicrobenchmarks() []Benchmark {
 	return []Benchmark{
 		arithmeticSequential(),
+		arithmetic6Wide(),
 		dependencyChain(),
 		memorySequential(),
 		functionCalls(),
@@ -62,6 +63,51 @@ func arithmeticSequential() Benchmark {
 			EncodeADDImm(2, 2, 1, false),
 			EncodeADDImm(3, 3, 1, false),
 			EncodeADDImm(4, 4, 1, false),
+			EncodeSVC(0),
+		),
+		ExpectedExit: 4, // X0 = 0 + 4*1 = 4
+	}
+}
+
+// 1b. Arithmetic 6-Wide - Tests full 6-wide superscalar throughput
+// Uses 6 different registers to avoid RAW hazards between consecutive groups
+func arithmetic6Wide() Benchmark {
+	return Benchmark{
+		Name:        "arithmetic_6wide",
+		Description: "24 independent ADDs using 6 registers - tests full 6-wide issue",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
+		},
+		Program: BuildProgram(
+			// 24 ADDs using 6 registers (X0-X5) - allows full 6-wide issue
+			// Group 1: instructions 0-5 (all independent, can issue together)
+			EncodeADDImm(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+			EncodeADDImm(2, 2, 1, false),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(4, 4, 1, false),
+			EncodeADDImm(5, 5, 1, false),
+			// Group 2: instructions 6-11 (RAW hazards with group 1, but forwarding allows issue)
+			EncodeADDImm(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+			EncodeADDImm(2, 2, 1, false),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(4, 4, 1, false),
+			EncodeADDImm(5, 5, 1, false),
+			// Group 3
+			EncodeADDImm(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+			EncodeADDImm(2, 2, 1, false),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(4, 4, 1, false),
+			EncodeADDImm(5, 5, 1, false),
+			// Group 4
+			EncodeADDImm(0, 0, 1, false),
+			EncodeADDImm(1, 1, 1, false),
+			EncodeADDImm(2, 2, 1, false),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(4, 4, 1, false),
+			EncodeADDImm(5, 5, 1, false),
 			EncodeSVC(0),
 		),
 		ExpectedExit: 4, // X0 = 0 + 4*1 = 4

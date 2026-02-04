@@ -20,8 +20,8 @@ func TestHarnessRunsAllBenchmarks(t *testing.T) {
 
 	results := harness.RunAll()
 
-	if len(results) != 8 {
-		t.Errorf("expected 8 benchmark results, got %d", len(results))
+	if len(results) != 9 {
+		t.Errorf("expected 9 benchmark results, got %d", len(results))
 	}
 
 	// Verify each benchmark completed
