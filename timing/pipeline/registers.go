@@ -13,6 +13,15 @@ type IFIDRegister struct {
 
 	// InstructionWord is the raw 32-bit instruction word.
 	InstructionWord uint32
+
+	// PredictedTaken indicates if the branch predictor predicted taken.
+	PredictedTaken bool
+
+	// PredictedTarget is the predicted branch target (from BTB or early resolution).
+	PredictedTarget uint64
+
+	// EarlyResolved indicates if this was an unconditional branch resolved at fetch time.
+	EarlyResolved bool
 }
 
 // Clear resets the IF/ID register to empty state.
@@ -20,6 +29,9 @@ func (r *IFIDRegister) Clear() {
 	r.Valid = false
 	r.PC = 0
 	r.InstructionWord = 0
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // IDEXRegister holds state between Decode and Execute stages.
@@ -48,6 +60,11 @@ type IDEXRegister struct {
 	RegWrite bool // True if instruction writes to register
 	MemToReg bool // True if result comes from memory (load)
 	IsBranch bool // True for branch instructions
+
+	// Branch prediction info (propagated from IF/ID).
+	PredictedTaken  bool   // Whether predicted taken
+	PredictedTarget uint64 // Predicted target address
+	EarlyResolved   bool   // Whether resolved at fetch time (unconditional branch)
 }
 
 // Clear resets the ID/EX register to empty state.
@@ -65,6 +82,9 @@ func (r *IDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // EXMEMRegister holds state between Execute and Memory stages.

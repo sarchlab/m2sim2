@@ -15,6 +15,27 @@ const (
 	minCacheLoadLatency = 1
 )
 
+// isUnconditionalBranch checks if an instruction word is an unconditional branch (B or BL).
+// Returns true and the target PC if it is, false otherwise.
+func isUnconditionalBranch(word uint32, pc uint64) (bool, uint64) {
+	// B instruction: bits [31:26] = 000101
+	// BL instruction: bits [31:26] = 100101
+	opcode := (word >> 26) & 0x3F
+	if opcode == 0b000101 || opcode == 0b100101 {
+		// Extract signed 26-bit immediate (offset in words)
+		imm26 := int64(word & 0x3FFFFFF)
+		// Sign extend the 26-bit immediate
+		if (imm26 & 0x2000000) != 0 {
+			// Negative offset: sign extend from bit 25
+			imm26 |= ^int64(0x3FFFFFF)
+		}
+		// Multiply by 4 to get byte offset
+		target := uint64(int64(pc) + imm26*4)
+		return true, target
+	}
+	return false, 0
+}
+
 // Statistics holds pipeline performance statistics.
 type Statistics struct {
 	// Cycles is the total number of cycles simulated.
@@ -23,7 +44,7 @@ type Statistics struct {
 	Instructions uint64
 	// Stalls is the number of stall cycles.
 	Stalls uint64
-	// Flushes is the number of pipeline flushes (due to branches).
+	// Flushes is the number of pipeline flushes (due to branch mispredictions).
 	Flushes uint64
 	// ExecStalls is the number of stalls due to multi-cycle execution.
 	ExecStalls uint64
@@ -31,6 +52,12 @@ type Statistics struct {
 	MemStalls uint64
 	// DataHazards is the number of RAW data hazards detected.
 	DataHazards uint64
+	// BranchPredictions is the total number of branch predictions made.
+	BranchPredictions uint64
+	// BranchCorrect is the number of correct branch predictions.
+	BranchCorrect uint64
+	// BranchMispredictions is the number of branch mispredictions.
+	BranchMispredictions uint64
 }
 
 // CPI returns the cycles per instruction.
@@ -127,6 +154,9 @@ type Pipeline struct {
 	// Hazard detection
 	hazardUnit *HazardUnit
 
+	// Branch prediction
+	branchPredictor *BranchPredictor
+
 	// Instruction timing
 	latencyTable *latency.Table
 	exLatency    uint64 // Remaining cycles for execute stage
@@ -166,6 +196,7 @@ func NewPipeline(regFile *emu.RegFile, memory *emu.Memory, opts ...PipelineOptio
 		memoryStage:       NewMemoryStage(memory),
 		writebackStage:    NewWritebackStage(regFile),
 		hazardUnit:        NewHazardUnit(),
+		branchPredictor:   NewBranchPredictor(DefaultBranchPredictorConfig()),
 		regFile:           regFile,
 		memory:            memory,
 		halted:            false,
@@ -257,10 +288,14 @@ func (p *Pipeline) RunCycles(cycles uint64) bool {
 // Hazard handling:
 //   - Data forwarding from EX/MEM and MEM/WB stages to resolve RAW hazards
 //   - Load-use stalls when a load result is needed immediately
-//   - Branch flushes when a taken branch is detected in EX stage
+//   - Branch prediction with 2-bit saturating counters and BTB
+//   - Branch misprediction flushes IF and ID stages (2-cycle penalty)
 //
 // Stages are evaluated in reverse order (WB→MEM→EX→ID→IF) to compute new
 // values before latching them into pipeline registers at cycle end.
+//
+// Branch prediction reduces penalties for correctly predicted branches to zero.
+// Unconditional branches are predicted correctly after first encounter (BTB hit).
 func (p *Pipeline) Tick() {
 	// Don't execute if halted
 	if p.halted {
@@ -324,7 +359,8 @@ func (p *Pipeline) tickSingleIssue() {
 		}
 	}
 
-	branchTaken := false
+	// Branch prediction tracking
+	branchMispredicted := false
 	var branchTarget uint64
 
 	// Stage 5: Writeback
@@ -414,9 +450,58 @@ func (p *Pipeline) tickSingleIssue() {
 
 			execResult := p.executeStage.Execute(&p.idex, rnValue, rmValue)
 
-			if execResult.BranchTaken {
-				branchTaken = true
-				branchTarget = execResult.BranchTarget
+			// Handle branch prediction verification
+			if p.idex.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				// Use the prediction info that was captured at fetch time (stored in IDEX).
+				// This correctly reflects what PC was used for the next fetch.
+				predictedTaken := p.idex.PredictedTaken
+				predictedTarget := p.idex.PredictedTarget
+				earlyResolved := p.idex.EarlyResolved
+
+				// Determine if misprediction occurred
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						// Predicted not taken, but was taken
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						// Predicted taken but to wrong target
+						wasMispredicted = true
+					}
+					// Note: If earlyResolved is true and we reach here, the prediction
+					// was correct (unconditional branch correctly resolved at fetch).
+				} else {
+					if predictedTaken {
+						// Predicted taken, but was not taken
+						wasMispredicted = true
+					}
+				}
+
+				// For early-resolved unconditional branches, we should always be correct
+				// (they are always taken and we computed the exact target at fetch).
+				if earlyResolved && actualTaken {
+					wasMispredicted = false // Double-check: early resolution is always correct
+				}
+
+				// Update predictor with actual outcome (for BTB training)
+				p.branchPredictor.Update(p.idex.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchMispredicted = true
+					branchTarget = actualTarget
+					if !actualTaken {
+						branchTarget = p.idex.PC + 4 // Continue to next instruction
+					}
+				} else {
+					p.stats.BranchCorrect++
+					// Correct prediction - no flush needed!
+				}
 			}
 
 			storeValue := execResult.StoreValue
@@ -445,26 +530,30 @@ func (p *Pipeline) tickSingleIssue() {
 	// Memory stalls should also stall upstream stages
 	// Note: Only load-use hazards require stalls. ALU-to-ALU dependencies
 	// are resolved through forwarding without stalling the pipeline.
-	stallResult := p.hazardUnit.ComputeStalls(loadUseHazard || execStall || memStall, branchTaken)
+	// Branch mispredictions cause flushes, correct predictions don't.
+	stallResult := p.hazardUnit.ComputeStalls(loadUseHazard || execStall || memStall, branchMispredicted)
 
 	// Stage 2: Decode
 	var nextIDEX IDEXRegister
 	if p.ifid.Valid && !stallResult.StallID && !stallResult.FlushID && !execStall {
 		decResult := p.decodeStage.Decode(p.ifid.InstructionWord, p.ifid.PC)
 		nextIDEX = IDEXRegister{
-			Valid:    true,
-			PC:       p.ifid.PC,
-			Inst:     decResult.Inst,
-			RnValue:  decResult.RnValue,
-			RmValue:  decResult.RmValue,
-			Rd:       decResult.Rd,
-			Rn:       decResult.Rn,
-			Rm:       decResult.Rm,
-			MemRead:  decResult.MemRead,
-			MemWrite: decResult.MemWrite,
-			RegWrite: decResult.RegWrite,
-			MemToReg: decResult.MemToReg,
-			IsBranch: decResult.IsBranch,
+			Valid:           true,
+			PC:              p.ifid.PC,
+			Inst:            decResult.Inst,
+			RnValue:         decResult.RnValue,
+			RmValue:         decResult.RmValue,
+			Rd:              decResult.Rd,
+			Rn:              decResult.Rn,
+			Rm:              decResult.Rm,
+			MemRead:         decResult.MemRead,
+			MemWrite:        decResult.MemWrite,
+			RegWrite:        decResult.RegWrite,
+			MemToReg:        decResult.MemToReg,
+			IsBranch:        decResult.IsBranch,
+			PredictedTaken:  p.ifid.PredictedTaken,
+			PredictedTarget: p.ifid.PredictedTarget,
+			EarlyResolved:   p.ifid.EarlyResolved,
 		}
 	} else if (stallResult.StallID || execStall || memStall) && !stallResult.FlushID {
 		nextIDEX = p.idex
@@ -487,12 +576,38 @@ func (p *Pipeline) tickSingleIssue() {
 		}
 
 		if ok && !fetchStall {
+			// Early branch resolution: detect unconditional branches (B, BL) and
+			// resolve them immediately without waiting for BTB. This eliminates
+			// misprediction penalties for unconditional branches.
+			isUncondBranch, uncondTarget := isUnconditionalBranch(word, p.pc)
+
+			// Use branch predictor for conditional branches
+			pred := p.branchPredictor.Predict(p.pc)
+
+			// For unconditional branches, override prediction with actual target
+			earlyResolved := false
+			if isUncondBranch {
+				pred.Taken = true
+				pred.Target = uncondTarget
+				pred.TargetKnown = true
+				earlyResolved = true
+			}
+
 			nextIFID = IFIDRegister{
 				Valid:           true,
 				PC:              p.pc,
 				InstructionWord: word,
+				PredictedTaken:  pred.Taken,
+				PredictedTarget: pred.Target,
+				EarlyResolved:   earlyResolved,
 			}
-			p.pc += 4
+
+			// Speculative fetch: redirect PC based on prediction/resolution
+			if pred.Taken && pred.TargetKnown {
+				p.pc = pred.Target
+			} else {
+				p.pc += 4 // Default: sequential fetch
+			}
 		} else if fetchStall {
 			nextIFID = p.ifid
 		}
@@ -501,7 +616,9 @@ func (p *Pipeline) tickSingleIssue() {
 		p.stats.Stalls++
 	}
 
-	if branchTaken {
+	// Handle branch misprediction: update PC and flush pipeline
+	// Note: Only mispredictions cause flushes. Correct predictions don't need flushing.
+	if branchMispredicted {
 		p.pc = branchTarget
 		nextIFID.Clear()
 		nextIDEX.Clear()
@@ -954,6 +1071,9 @@ func (p *Pipeline) Reset() {
 	p.exLatency2 = 0
 	p.memPending = false
 	p.memPendingPC = 0
+	if p.branchPredictor != nil {
+		p.branchPredictor.Reset()
+	}
 }
 
 // LatencyTable returns the current latency table, or nil if not set.
