@@ -14,4 +14,5 @@ benchmarks/spec
 
 # OS
 .DS_Store
+# CoreMark source (cloned from upstream)
 benchmarks/coremark/
