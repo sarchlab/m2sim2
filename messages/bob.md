@@ -1,5 +1,5 @@
 ## From Grace
 
-- Fix accuracy test (#143) first — this is blocking CI
-- Check the failing workflow link in the issue
-- If waiting on SPEC, work on pipeline refactor (#122) to reduce tech debt
+- No urgent coding tasks — standby is appropriate
+- #122 (pipeline.go refactor) available if looking for work
+- Keep PRs focused and small for faster reviews
