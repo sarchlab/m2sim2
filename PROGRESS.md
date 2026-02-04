@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 15:35 EST*
+*Last updated: 2026-02-04 15:59 EST*
 
 ## Current Milestone: M6 - Validation
 
@@ -10,30 +10,34 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (15:35):**
-- Grace: Skipped (cycle 175, not a 10th)
-- Alice: Assigned Bob to #156 decoder expansion, updated task board
-- Eric: Responded to #154 (ELF vs Mach-O question), Embench phase 2 planned
-- Bob: Implemented decoder expansion → PR #157 (ADRP, ADR, LDR literal, MOVZ/MOVN/MOVK)
-- Cathy: Reviewed and approved PR #157
-- Dana: Merged PR #155, fixed lint in PR #157, updating progress
+**This cycle (15:59):**
+- Grace: Skipped (cycle 177, not a 10th)
+- Alice: Updated task board, action count 177→178
+- Eric: Confirmed Embench phase 2 planned, backlog healthy
+- Bob: Waiting for PR #157 merge to test CoreMark
+- Cathy: Reviewed #122 scope, deferred for dedicated sprint
+- Dana: **MERGED PR #157** (decoder expansion) ✅
 
 **Progress:**
+- ✅ **PR #157 MERGED** — Decoder expansion (ADRP, ADR, LDR literal, MOVZ/MOVN/MOVK)
 - ✅ **PR #155 MERGED** — CoreMark cross-compilation infrastructure
-- 🔄 **PR #157** — Decoder expansion (cathy-approved, CI re-running after lint fix)
+- ✅ **35 PRs merged total** — excellent velocity
 - ✅ Intermediate benchmark plan: docs/intermediate-benchmarks-plan.md
-- ✅ #154 answered (ELF vs Mach-O — same ARM64 instructions)
 
 ### Blockers Status
 
-**RESOLVED ✅**
-- Cross-compiler: `aarch64-elf-gcc 15.2.0` installed
-- SPEC: `benchspec/CPU` exists
-- CoreMark infrastructure: PR #155 merged
+**ALL RESOLVED ✅**
+- Cross-compiler: `aarch64-elf-gcc 15.2.0` installed ✅
+- SPEC: `benchspec/CPU` exists ✅
+- PR #153 (accuracy analysis) merged ✅
+- PR #155 (CoreMark infrastructure) merged ✅
+- PR #157 (decoder expansion) merged ✅
 
-**PENDING 🔄**
-- **Issue #156:** Decoder expansion in PR #157 (lint fixed, awaiting CI)
-- Once merged, CoreMark ELF should execute
+### Next Steps
+
+1. **Test CoreMark ELF execution** — Bob's next task
+2. Validate end-to-end workflow: compile → simulate → accuracy
+3. Begin Embench-IoT phase 2 after CoreMark validates
 
 ### Current Accuracy (microbenchmarks)
 
@@ -58,34 +62,25 @@
 | emu | 72.5% | |
 | timing/latency | 71.8% | |
 | timing/core | 60.0% | |
-| timing/pipeline | 25.6% | #122 refactor next |
+| timing/pipeline | 25.6% | #122 refactor pending |
 
 ### Open PRs
 
-| PR | Title | Status |
-|----|-------|--------|
-| #157 | Decoder expansion for ELF execution | `cathy-approved`, CI re-running |
+None — clean slate! 🎉
 
 ### Open Issues
 
 | Issue | Priority | Status |
 |-------|----------|--------|
-| #156 | High | Decoder expansion — PR #157 open |
+| #156 | High | Decoder expansion — **CLOSED** (PR #157 merged) |
 | #154 | Medium | ELF vs Mach-O question — answered |
 | #152 | — | Human directive (blockers resolved) |
-| #147 | High | CoreMark integration — **PR #155 merged** |
 | #146 | High | SPEC installation ✅ resolved |
 | #145 | Low | Reduce CLAUDE.md |
 | #141 | High | 20% error target — approved |
 | #139 | Low | Multi-core (long-term) |
-| #138 | High | SPEC execution |
-| #132 | High | Intermediate benchmarks — Embench phase 2 planned |
-| #122 | Medium | Pipeline refactor |
-| #115 | High | Accuracy gaps — analyzed |
+| #138 | High | Spec benchmark execution |
+| #132 | High | Intermediate benchmarks — in progress |
+| #122 | Medium | Pipeline refactor (deferred) |
+| #115 | High/Med | Accuracy gaps investigation |
 | #107 | High | SPEC suite available |
-
-### 📊 Velocity
-
-- **Total PRs merged:** 34 (+1 this cycle)
-- **Open PRs:** 1 (PR #157)
-- **Team status:** Productive, decoder expansion nearly complete
