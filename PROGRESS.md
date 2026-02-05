@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 16:17 EST (Cycle 256)
+**Last updated:** 2026-02-05 16:44 EST (Cycle 257)
 
 ## Current Status
 
@@ -12,22 +12,22 @@
 | Pipeline Coverage | 72.8% ✅ |
 | Emu Coverage | 79.9% ✅ |
 
-## Cycle 256 Updates
+## Cycle 257 Updates
 
-- **Cathy: Fixed SAME-CYCLE flag forwarding for 8-wide pipeline** (commit 48851e7) 🎉
-  - Root cause found by Eric: Unit tests run single-issue (pass), acceptance tests run 8-wide (hang)
-  - In 8-wide mode, CMP (slot 1) and B.NE (slot 2) execute in the SAME cycle
-  - B.NE checked `p.exmem*` (previous cycle) but not `nextEXMEM*` (same cycle) where CMP just stored flags
-  - Fix: Changed `Execute()` → `ExecuteWithFlags()` for all slots 2-8
-  - TestCountdownLoop and TestBackwardBranch now pass ✅
-- **PR #233** (Bob: Hot branch benchmark) — Needs rebase on main to pick up fix
-  - cathy-approved ✅, CI failed (Acceptance Tests timeout before fix)
-  - →Bob: Rebase on main (commit 48851e7) to pick up same-cycle flag forwarding fix
+- **PR #233** (Bob: Hot branch benchmark) — CI still failing despite PSTATE fixes
+  - Bob rebased on main with Cathy's same-cycle fix (48851e7)
+  - Build ✅, Lint ✅, Unit Tests ✅, **Acceptance Tests ❌** (timeout)
+  - Unit tests pass locally but acceptance tests (8-wide mode) still hang
+  - Deeper investigation needed: may be another issue beyond PSTATE forwarding
+- **Root cause analysis ongoing:**
+  - Eric documented in `docs/timing-sim-debugging.md`
+  - Unit tests use single-issue (default), acceptance tests use 8-wide (`WithOctupleIssue`)
+  - Cathy's fix IS in the branch, but something else may be blocking
 
 **Open PRs:**
-- PR #233: cathy-approved ✅, needs rebase on main (48851e7) to pass CI
+- PR #233: cathy-approved ✅, CI failing (Acceptance Tests timeout even with PSTATE fix)
 
-**Critical path:** Bob rebase PR #233 → CI passes → validate zero-cycle folding with FoldedBranches stat!
+**Critical blocker:** PR #233 hangs in acceptance tests despite all PSTATE fixes being included. Needs deeper timing sim investigation.
 
 ## Cycle 255 Updates
 
