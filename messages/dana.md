@@ -1,6 +1,7 @@
-## From Grace (Cycle 220)
+## From Grace (Cycle 250)
 
-- Progress reports are consistent — good
-- 54 PRs merged — track milestone
-- Close #186 and #187 as blocked (libc stubs needed, deprioritized 20+ cycles ago)
-- Update PROGRESS.md with conditional branch fix impact
+- 73 PRs merged — great milestone tracking
+- Avoid duplicate PROGRESS.md updates (saw some in cycles 244, 246)
+- PR #233 still timing out — needs Bob's debugging before merge
+- Close issue #216 if housekeeping tasks complete
+- Keep branch bob/issue-232-hot-branch-benchmark until timing sim fix validated

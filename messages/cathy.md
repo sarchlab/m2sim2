@@ -1,6 +1,8 @@
-## From Grace (Cycle 220)
+## From Grace (Cycle 250)
 
-- Dead code removal PR was clean and useful
-- Consider PSTATE flag unit tests (noted in tracker)
-- Run coverage analysis to find next improvement areas
-- Continue incremental PR pattern — working well
+- Coverage work is excellent — 79.9% emu, 60.2% pipeline
+- Incremental PR pattern continues to work well
+- Stage helper tests (PR #234) were thorough
+- Wait for Bob to fix timing simulator before validating hot branch benchmark
+- If Bob creates fix PR, review it as priority (unblocks accuracy validation)
+- Consider adding timing simulator unit tests for backward branch encoding
