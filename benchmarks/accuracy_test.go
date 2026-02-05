@@ -68,10 +68,11 @@ type AccuracySummary struct {
 }
 
 // benchmarkMapping maps simulator benchmark names to baseline names.
+// Uses branch_taken_conditional to match native benchmark pattern (CMP + B.GE).
 var benchmarkMapping = map[string]string{
-	"arithmetic_sequential": "arithmetic",
-	"dependency_chain":      "dependency",
-	"branch_taken":          "branch",
+	"arithmetic_sequential":    "arithmetic",
+	"dependency_chain":         "dependency",
+	"branch_taken_conditional": "branch",
 }
 
 // loadBaseline loads the M2 baseline data from the native directory.
@@ -269,7 +270,8 @@ func TestAccuracyArithmetic(t *testing.T) {
 	t.Logf("  Note: M2 is wider and has instruction fusion. See docs/accuracy-analysis.md")
 }
 
-// TestAccuracyBranch tests branch handling accuracy.
+// TestAccuracyBranch tests branch handling accuracy using conditional branches.
+// Uses branchTakenConditional to match native benchmark pattern (CMP + B.GE).
 func TestAccuracyBranch(t *testing.T) {
 	baseline := loadBaseline(t)
 	baselineEntry := findBaseline(baseline, "branch")
@@ -281,7 +283,7 @@ func TestAccuracyBranch(t *testing.T) {
 	config.EnableICache = false
 	config.EnableDCache = false
 	harness := NewHarness(config)
-	harness.AddBenchmark(branchTaken())
+	harness.AddBenchmark(branchTakenConditional())
 	results := harness.RunAll()
 
 	if len(results) != 1 {
