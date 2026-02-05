@@ -1,22 +1,22 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 08:37 EST (Cycle 238)
+**Last updated:** 2026-02-05 08:47 EST (Cycle 239)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
 | Total PRs Merged | 67 |
-| Open PRs | 0 |
+| Open PRs | 1 |
 | Open Issues | 14 |
 | Pipeline Coverage | 77.0% |
 
-## Cycle 238 Updates
+## Cycle 239 Updates
 
-- **PR #226 merged** ✅ (Cathy syscall handler tests) — coverage maintained at 70.6%
-- **Emu coverage target achieved!** 70.6% ✅ (target 70%+)
-- **Branch predictor tuning** is next priority per Eric's analysis
-- **8-wide validated:** arithmetic_8wide CPI 0.250 (4.0 IPC) — only 6.7% error!
+- **PR #227 open** (Bob: Increase BTB size 512→2048) — awaiting cathy-approved
+- **Eric created** `docs/branch-predictor-research.md` — comprehensive analysis
+- **Branch predictor tuning** confirmed as priority via Eric's research
+- **Key insight:** Zero-cycle predicted-taken branches is the highest-impact fix
 
 ## Key Achievements
 
@@ -46,19 +46,21 @@
 
 | Factor | M2 Real | M2Sim | Impact |
 |--------|---------|-------|--------|
-| Mispredict penalty | ~14 cycles | ~5 cycles | Branch timing |
-| BTB size | Large | 512 | Prediction capacity |
+| Predicted-taken branch | ~0 cycles (folded) | 1+ cycles (execute) | **Major** |
+| BTB hit handling | 0 cycles | 1 cycle decode | **Major** |
+| BTB size | Large | 512 | Moderate |
 
-**Why branch tuning first:**
-1. Branch_taken_conditional has highest error (34.5%) — the bottleneck
-2. Arithmetic is already at 6.7% — no improvement needed
-3. Dependency chain at 18.9% — limited by in-order model
-4. Branch tuning: medium effort, high impact
+**Eric's research findings (Cycle 239):**
+- The problem is NOT prediction accuracy — it's execution latency
+- M2 achieves low branch CPI through **zero-cycle branch execution** for BTB hits
+- BTB size increase (512→2048) is a quick secondary win
 
-**Bob's research (Cycle 237-238):**
-- Increase BTB size 512→2048 (low effort, 5-10% impact)
-- Zero-cycle predicted-taken branches (medium effort, 10-20% impact)
-- Add branch stats logging for tuning
+**Recommendations for Bob:**
+| Priority | Optimization | Impact | Effort |
+|----------|--------------|--------|--------|
+| 1 | **Zero-cycle predicted-taken branches** | 34.5%→~20% | Medium |
+| 2 | Increase BTB 512→2048 (PR #227) | ~5% | Low |
+| 3 | Add branch stats logging | Diagnostic | Low |
 
 ## Coverage Analysis
 
