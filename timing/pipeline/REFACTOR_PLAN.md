@@ -55,8 +55,48 @@ go test ./timing/pipeline/... -cover
 ## Progress Log
 
 **2026-02-04:** Plan created. Starting Phase 1.
+
 **2026-02-04 21:50:** Added WritebackSlot interface and implementations.
   - Interface in stages.go
   - MEMWBRegister implementation in registers.go
   - Secondary/Tertiary/Quaternary/Quinary/Senary implementations in superscalar.go
   - Coverage: 75.9% (maintained)
+
+**2026-02-04 23:45:** Phase 2 analysis (Cathy)
+  - Identified 14 inline writeback patterns across tick functions:
+    - tickSuperscalar: memwb2 (lines 721-730)
+    - tickQuadIssue: memwb2, memwb3, memwb4 (lines 1340-1376)
+    - tickSextupleIssue: memwb2-6 (lines 2221-2280)
+  - **Finding:** Secondary slots only handle ALU ops (memory goes through primary slot only)
+  - **Issue found:** Secondary slots don't count XZR-writes as retired, but primary slot does
+    - Primary: `if p.memwb.Valid { p.stats.Instructions++ }`
+    - Secondary: `if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 { ... }`
+  - WritebackSlot returns true for all valid instructions (including rd=31)
+  - **Next step:** Carefully replace inline code with WritebackSlot, verify instruction counts match
+
+## Replacement Pattern
+
+Current inline code:
+```go
+// Writeback secondary slot
+if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 {
+    var value uint64
+    if p.memwb2.MemToReg {
+        value = p.memwb2.MemData
+    } else {
+        value = p.memwb2.ALUResult
+    }
+    p.regFile.WriteReg(p.memwb2.Rd, value)
+    p.stats.Instructions++
+}
+```
+
+Target replacement:
+```go
+// Writeback secondary slot
+if p.writebackStage.WritebackSlot(&p.memwb2) {
+    p.stats.Instructions++
+}
+```
+
+**Note:** This also fixes the XZR counting bug — instructions writing to XZR will now be counted.
