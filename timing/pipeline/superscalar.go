@@ -332,19 +332,22 @@ type TertiaryIFIDRegister struct {
 
 // TertiaryIDEXRegister holds the third decoded instruction for 4-wide issue.
 type TertiaryIDEXRegister struct {
-	Valid    bool
-	PC       uint64
-	Inst     *insts.Instruction
-	RnValue  uint64
-	RmValue  uint64
-	Rd       uint8
-	Rn       uint8
-	Rm       uint8
-	MemRead  bool
-	MemWrite bool
-	RegWrite bool
-	MemToReg bool
-	IsBranch bool
+	Valid           bool
+	PC              uint64
+	Inst            *insts.Instruction
+	RnValue         uint64
+	RmValue         uint64
+	Rd              uint8
+	Rn              uint8
+	Rm              uint8
+	MemRead         bool
+	MemWrite        bool
+	RegWrite        bool
+	MemToReg        bool
+	IsBranch        bool
+	PredictedTaken  bool
+	PredictedTarget uint64
+	EarlyResolved   bool
 }
 
 // TertiaryEXMEMRegister holds the third execute result for 4-wide issue.
@@ -402,6 +405,9 @@ func (r *TertiaryIDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // Clear resets the tertiary EX/MEM register.
@@ -460,19 +466,22 @@ func (r *TertiaryMEMWBRegister) Clear() {
 
 func (r *TertiaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
-		Valid:    r.Valid,
-		PC:       r.PC,
-		Inst:     r.Inst,
-		RnValue:  r.RnValue,
-		RmValue:  r.RmValue,
-		Rd:       r.Rd,
-		Rn:       r.Rn,
-		Rm:       r.Rm,
-		MemRead:  r.MemRead,
-		MemWrite: r.MemWrite,
-		RegWrite: r.RegWrite,
-		MemToReg: r.MemToReg,
-		IsBranch: r.IsBranch,
+		Valid:           r.Valid,
+		PC:              r.PC,
+		Inst:            r.Inst,
+		RnValue:         r.RnValue,
+		RmValue:         r.RmValue,
+		Rd:              r.Rd,
+		Rn:              r.Rn,
+		Rm:              r.Rm,
+		MemRead:         r.MemRead,
+		MemWrite:        r.MemWrite,
+		RegWrite:        r.RegWrite,
+		MemToReg:        r.MemToReg,
+		IsBranch:        r.IsBranch,
+		PredictedTaken:  r.PredictedTaken,
+		PredictedTarget: r.PredictedTarget,
+		EarlyResolved:   r.EarlyResolved,
 	}
 }
 
@@ -491,6 +500,9 @@ func (r *TertiaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.RegWrite = idex.RegWrite
 	r.MemToReg = idex.MemToReg
 	r.IsBranch = idex.IsBranch
+	r.PredictedTaken = idex.PredictedTaken
+	r.PredictedTarget = idex.PredictedTarget
+	r.EarlyResolved = idex.EarlyResolved
 }
 
 // QuaternaryIFIDRegister holds the fourth fetched instruction for 4-wide issue.
@@ -502,19 +514,22 @@ type QuaternaryIFIDRegister struct {
 
 // QuaternaryIDEXRegister holds the fourth decoded instruction for 4-wide issue.
 type QuaternaryIDEXRegister struct {
-	Valid    bool
-	PC       uint64
-	Inst     *insts.Instruction
-	RnValue  uint64
-	RmValue  uint64
-	Rd       uint8
-	Rn       uint8
-	Rm       uint8
-	MemRead  bool
-	MemWrite bool
-	RegWrite bool
-	MemToReg bool
-	IsBranch bool
+	Valid           bool
+	PC              uint64
+	Inst            *insts.Instruction
+	RnValue         uint64
+	RmValue         uint64
+	Rd              uint8
+	Rn              uint8
+	Rm              uint8
+	MemRead         bool
+	MemWrite        bool
+	RegWrite        bool
+	MemToReg        bool
+	IsBranch        bool
+	PredictedTaken  bool
+	PredictedTarget uint64
+	EarlyResolved   bool
 }
 
 // QuaternaryEXMEMRegister holds the fourth execute result for 4-wide issue.
@@ -572,6 +587,9 @@ func (r *QuaternaryIDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // Clear resets the quaternary EX/MEM register.
@@ -630,19 +648,22 @@ func (r *QuaternaryMEMWBRegister) Clear() {
 
 func (r *QuaternaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
-		Valid:    r.Valid,
-		PC:       r.PC,
-		Inst:     r.Inst,
-		RnValue:  r.RnValue,
-		RmValue:  r.RmValue,
-		Rd:       r.Rd,
-		Rn:       r.Rn,
-		Rm:       r.Rm,
-		MemRead:  r.MemRead,
-		MemWrite: r.MemWrite,
-		RegWrite: r.RegWrite,
-		MemToReg: r.MemToReg,
-		IsBranch: r.IsBranch,
+		Valid:           r.Valid,
+		PC:              r.PC,
+		Inst:            r.Inst,
+		RnValue:         r.RnValue,
+		RmValue:         r.RmValue,
+		Rd:              r.Rd,
+		Rn:              r.Rn,
+		Rm:              r.Rm,
+		MemRead:         r.MemRead,
+		MemWrite:        r.MemWrite,
+		RegWrite:        r.RegWrite,
+		MemToReg:        r.MemToReg,
+		IsBranch:        r.IsBranch,
+		PredictedTaken:  r.PredictedTaken,
+		PredictedTarget: r.PredictedTarget,
+		EarlyResolved:   r.EarlyResolved,
 	}
 }
 
@@ -661,6 +682,9 @@ func (r *QuaternaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.RegWrite = idex.RegWrite
 	r.MemToReg = idex.MemToReg
 	r.IsBranch = idex.IsBranch
+	r.PredictedTaken = idex.PredictedTaken
+	r.PredictedTarget = idex.PredictedTarget
+	r.EarlyResolved = idex.EarlyResolved
 }
 
 // QuinaryIFIDRegister holds the fifth fetched instruction for 6-wide issue.
@@ -670,21 +694,24 @@ type QuinaryIFIDRegister struct {
 	InstructionWord uint32
 }
 
-// QuinaryIDEXRegister holds the fifth decoded instruction for 6-wide issue.
+// QuinaryIDEXRegister holds the decoded instruction for wide issue.
 type QuinaryIDEXRegister struct {
-	Valid    bool
-	PC       uint64
-	Inst     *insts.Instruction
-	RnValue  uint64
-	RmValue  uint64
-	Rd       uint8
-	Rn       uint8
-	Rm       uint8
-	MemRead  bool
-	MemWrite bool
-	RegWrite bool
-	MemToReg bool
-	IsBranch bool
+	Valid           bool
+	PC              uint64
+	Inst            *insts.Instruction
+	RnValue         uint64
+	RmValue         uint64
+	Rd              uint8
+	Rn              uint8
+	Rm              uint8
+	MemRead         bool
+	MemWrite        bool
+	RegWrite        bool
+	MemToReg        bool
+	IsBranch        bool
+	PredictedTaken  bool
+	PredictedTarget uint64
+	EarlyResolved   bool
 }
 
 // QuinaryEXMEMRegister holds the fifth execute result for 6-wide issue.
@@ -742,6 +769,9 @@ func (r *QuinaryIDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // Clear resets the quinary EX/MEM register.
@@ -798,19 +828,22 @@ func (r *QuinaryMEMWBRegister) Clear() {
 // toIDEX converts QuinaryIDEXRegister to IDEXRegister.
 func (r *QuinaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
-		Valid:    r.Valid,
-		PC:       r.PC,
-		Inst:     r.Inst,
-		RnValue:  r.RnValue,
-		RmValue:  r.RmValue,
-		Rd:       r.Rd,
-		Rn:       r.Rn,
-		Rm:       r.Rm,
-		MemRead:  r.MemRead,
-		MemWrite: r.MemWrite,
-		RegWrite: r.RegWrite,
-		MemToReg: r.MemToReg,
-		IsBranch: r.IsBranch,
+		Valid:           r.Valid,
+		PC:              r.PC,
+		Inst:            r.Inst,
+		RnValue:         r.RnValue,
+		RmValue:         r.RmValue,
+		Rd:              r.Rd,
+		Rn:              r.Rn,
+		Rm:              r.Rm,
+		MemRead:         r.MemRead,
+		MemWrite:        r.MemWrite,
+		RegWrite:        r.RegWrite,
+		MemToReg:        r.MemToReg,
+		IsBranch:        r.IsBranch,
+		PredictedTaken:  r.PredictedTaken,
+		PredictedTarget: r.PredictedTarget,
+		EarlyResolved:   r.EarlyResolved,
 	}
 }
 
@@ -829,6 +862,9 @@ func (r *QuinaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.RegWrite = idex.RegWrite
 	r.MemToReg = idex.MemToReg
 	r.IsBranch = idex.IsBranch
+	r.PredictedTaken = idex.PredictedTaken
+	r.PredictedTarget = idex.PredictedTarget
+	r.EarlyResolved = idex.EarlyResolved
 }
 
 // SenaryIFIDRegister holds the sixth fetched instruction for 6-wide issue.
@@ -838,21 +874,24 @@ type SenaryIFIDRegister struct {
 	InstructionWord uint32
 }
 
-// SenaryIDEXRegister holds the sixth decoded instruction for 6-wide issue.
+// SenaryIDEXRegister holds the decoded instruction for wide issue.
 type SenaryIDEXRegister struct {
-	Valid    bool
-	PC       uint64
-	Inst     *insts.Instruction
-	RnValue  uint64
-	RmValue  uint64
-	Rd       uint8
-	Rn       uint8
-	Rm       uint8
-	MemRead  bool
-	MemWrite bool
-	RegWrite bool
-	MemToReg bool
-	IsBranch bool
+	Valid           bool
+	PC              uint64
+	Inst            *insts.Instruction
+	RnValue         uint64
+	RmValue         uint64
+	Rd              uint8
+	Rn              uint8
+	Rm              uint8
+	MemRead         bool
+	MemWrite        bool
+	RegWrite        bool
+	MemToReg        bool
+	IsBranch        bool
+	PredictedTaken  bool
+	PredictedTarget uint64
+	EarlyResolved   bool
 }
 
 // SenaryEXMEMRegister holds the sixth execute result for 6-wide issue.
@@ -910,6 +949,9 @@ func (r *SenaryIDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // Clear resets the senary EX/MEM register.
@@ -966,19 +1008,22 @@ func (r *SenaryMEMWBRegister) Clear() {
 // toIDEX converts SenaryIDEXRegister to IDEXRegister.
 func (r *SenaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
-		Valid:    r.Valid,
-		PC:       r.PC,
-		Inst:     r.Inst,
-		RnValue:  r.RnValue,
-		RmValue:  r.RmValue,
-		Rd:       r.Rd,
-		Rn:       r.Rn,
-		Rm:       r.Rm,
-		MemRead:  r.MemRead,
-		MemWrite: r.MemWrite,
-		RegWrite: r.RegWrite,
-		MemToReg: r.MemToReg,
-		IsBranch: r.IsBranch,
+		Valid:           r.Valid,
+		PC:              r.PC,
+		Inst:            r.Inst,
+		RnValue:         r.RnValue,
+		RmValue:         r.RmValue,
+		Rd:              r.Rd,
+		Rn:              r.Rn,
+		Rm:              r.Rm,
+		MemRead:         r.MemRead,
+		MemWrite:        r.MemWrite,
+		RegWrite:        r.RegWrite,
+		MemToReg:        r.MemToReg,
+		IsBranch:        r.IsBranch,
+		PredictedTaken:  r.PredictedTaken,
+		PredictedTarget: r.PredictedTarget,
+		EarlyResolved:   r.EarlyResolved,
 	}
 }
 
@@ -997,6 +1042,9 @@ func (r *SenaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.RegWrite = idex.RegWrite
 	r.MemToReg = idex.MemToReg
 	r.IsBranch = idex.IsBranch
+	r.PredictedTaken = idex.PredictedTaken
+	r.PredictedTarget = idex.PredictedTarget
+	r.EarlyResolved = idex.EarlyResolved
 }
 
 // canIssueWith checks if a new instruction can be issued with a set of previously issued instructions.
@@ -1185,21 +1233,24 @@ type SeptenaryIFIDRegister struct {
 	InstructionWord uint32
 }
 
-// SeptenaryIDEXRegister holds the seventh decoded instruction for 8-wide issue.
+// SeptenaryIDEXRegister holds the decoded instruction for wide issue.
 type SeptenaryIDEXRegister struct {
-	Valid    bool
-	PC       uint64
-	Inst     *insts.Instruction
-	RnValue  uint64
-	RmValue  uint64
-	Rd       uint8
-	Rn       uint8
-	Rm       uint8
-	MemRead  bool
-	MemWrite bool
-	RegWrite bool
-	MemToReg bool
-	IsBranch bool
+	Valid           bool
+	PC              uint64
+	Inst            *insts.Instruction
+	RnValue         uint64
+	RmValue         uint64
+	Rd              uint8
+	Rn              uint8
+	Rm              uint8
+	MemRead         bool
+	MemWrite        bool
+	RegWrite        bool
+	MemToReg        bool
+	IsBranch        bool
+	PredictedTaken  bool
+	PredictedTarget uint64
+	EarlyResolved   bool
 }
 
 // SeptenaryEXMEMRegister holds the seventh execute result for 8-wide issue.
@@ -1257,6 +1308,9 @@ func (r *SeptenaryIDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // Clear resets the septenary EX/MEM register.
@@ -1313,19 +1367,22 @@ func (r *SeptenaryMEMWBRegister) Clear() {
 // toIDEX converts SeptenaryIDEXRegister to IDEXRegister.
 func (r *SeptenaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
-		Valid:    r.Valid,
-		PC:       r.PC,
-		Inst:     r.Inst,
-		RnValue:  r.RnValue,
-		RmValue:  r.RmValue,
-		Rd:       r.Rd,
-		Rn:       r.Rn,
-		Rm:       r.Rm,
-		MemRead:  r.MemRead,
-		MemWrite: r.MemWrite,
-		RegWrite: r.RegWrite,
-		MemToReg: r.MemToReg,
-		IsBranch: r.IsBranch,
+		Valid:           r.Valid,
+		PC:              r.PC,
+		Inst:            r.Inst,
+		RnValue:         r.RnValue,
+		RmValue:         r.RmValue,
+		Rd:              r.Rd,
+		Rn:              r.Rn,
+		Rm:              r.Rm,
+		MemRead:         r.MemRead,
+		MemWrite:        r.MemWrite,
+		RegWrite:        r.RegWrite,
+		MemToReg:        r.MemToReg,
+		IsBranch:        r.IsBranch,
+		PredictedTaken:  r.PredictedTaken,
+		PredictedTarget: r.PredictedTarget,
+		EarlyResolved:   r.EarlyResolved,
 	}
 }
 
@@ -1344,6 +1401,9 @@ func (r *SeptenaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.RegWrite = idex.RegWrite
 	r.MemToReg = idex.MemToReg
 	r.IsBranch = idex.IsBranch
+	r.PredictedTaken = idex.PredictedTaken
+	r.PredictedTarget = idex.PredictedTarget
+	r.EarlyResolved = idex.EarlyResolved
 }
 
 // WritebackSlot interface implementation for SeptenaryMEMWBRegister
@@ -1376,21 +1436,24 @@ type OctonaryIFIDRegister struct {
 	InstructionWord uint32
 }
 
-// OctonaryIDEXRegister holds the eighth decoded instruction for 8-wide issue.
+// OctonaryIDEXRegister holds the decoded instruction for wide issue.
 type OctonaryIDEXRegister struct {
-	Valid    bool
-	PC       uint64
-	Inst     *insts.Instruction
-	RnValue  uint64
-	RmValue  uint64
-	Rd       uint8
-	Rn       uint8
-	Rm       uint8
-	MemRead  bool
-	MemWrite bool
-	RegWrite bool
-	MemToReg bool
-	IsBranch bool
+	Valid           bool
+	PC              uint64
+	Inst            *insts.Instruction
+	RnValue         uint64
+	RmValue         uint64
+	Rd              uint8
+	Rn              uint8
+	Rm              uint8
+	MemRead         bool
+	MemWrite        bool
+	RegWrite        bool
+	MemToReg        bool
+	IsBranch        bool
+	PredictedTaken  bool
+	PredictedTarget uint64
+	EarlyResolved   bool
 }
 
 // OctonaryEXMEMRegister holds the eighth execute result for 8-wide issue.
@@ -1448,6 +1511,9 @@ func (r *OctonaryIDEXRegister) Clear() {
 	r.RegWrite = false
 	r.MemToReg = false
 	r.IsBranch = false
+	r.PredictedTaken = false
+	r.PredictedTarget = 0
+	r.EarlyResolved = false
 }
 
 // Clear resets the octonary EX/MEM register.
@@ -1504,19 +1570,22 @@ func (r *OctonaryMEMWBRegister) Clear() {
 // toIDEX converts OctonaryIDEXRegister to IDEXRegister.
 func (r *OctonaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
-		Valid:    r.Valid,
-		PC:       r.PC,
-		Inst:     r.Inst,
-		RnValue:  r.RnValue,
-		RmValue:  r.RmValue,
-		Rd:       r.Rd,
-		Rn:       r.Rn,
-		Rm:       r.Rm,
-		MemRead:  r.MemRead,
-		MemWrite: r.MemWrite,
-		RegWrite: r.RegWrite,
-		MemToReg: r.MemToReg,
-		IsBranch: r.IsBranch,
+		Valid:           r.Valid,
+		PC:              r.PC,
+		Inst:            r.Inst,
+		RnValue:         r.RnValue,
+		RmValue:         r.RmValue,
+		Rd:              r.Rd,
+		Rn:              r.Rn,
+		Rm:              r.Rm,
+		MemRead:         r.MemRead,
+		MemWrite:        r.MemWrite,
+		RegWrite:        r.RegWrite,
+		MemToReg:        r.MemToReg,
+		IsBranch:        r.IsBranch,
+		PredictedTaken:  r.PredictedTaken,
+		PredictedTarget: r.PredictedTarget,
+		EarlyResolved:   r.EarlyResolved,
 	}
 }
 
@@ -1535,6 +1604,9 @@ func (r *OctonaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.RegWrite = idex.RegWrite
 	r.MemToReg = idex.MemToReg
 	r.IsBranch = idex.IsBranch
+	r.PredictedTaken = idex.PredictedTaken
+	r.PredictedTarget = idex.PredictedTarget
+	r.EarlyResolved = idex.EarlyResolved
 }
 
 // WritebackSlot interface implementation for OctonaryMEMWBRegister

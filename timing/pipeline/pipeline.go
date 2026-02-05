@@ -4104,6 +4104,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
 			}
+
+			// Branch prediction verification for secondary slot (idex2)
+			if p.idex2.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex2.PredictedTaken
+				predictedTarget := p.idex2.PredictedTarget
+				earlyResolved := p.idex2.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex2.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex2.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2.Clear()
+						p.exmem3.Clear()
+						p.exmem4.Clear()
+						p.exmem5.Clear()
+						p.exmem6.Clear()
+						p.exmem7.Clear()
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
+			}
 		}
 	}
 
@@ -4180,6 +4244,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagZ:      execResult.FlagZ,
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
+			}
+
+			// Branch prediction verification for tertiary slot (idex3)
+			if p.idex3.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex3.PredictedTaken
+				predictedTarget := p.idex3.PredictedTarget
+				earlyResolved := p.idex3.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex3.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex3.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2 = nextEXMEM2
+						p.exmem3.Clear()
+						p.exmem4.Clear()
+						p.exmem5.Clear()
+						p.exmem6.Clear()
+						p.exmem7.Clear()
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
@@ -4262,6 +4390,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagZ:      execResult.FlagZ,
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
+			}
+
+			// Branch prediction verification for quaternary slot (idex4)
+			if p.idex4.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex4.PredictedTaken
+				predictedTarget := p.idex4.PredictedTarget
+				earlyResolved := p.idex4.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex4.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex4.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2 = nextEXMEM2
+						p.exmem3 = nextEXMEM3
+						p.exmem4.Clear()
+						p.exmem5.Clear()
+						p.exmem6.Clear()
+						p.exmem7.Clear()
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
@@ -4351,6 +4543,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagZ:      execResult.FlagZ,
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
+			}
+
+			// Branch prediction verification for quinary slot (idex5)
+			if p.idex5.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex5.PredictedTaken
+				predictedTarget := p.idex5.PredictedTarget
+				earlyResolved := p.idex5.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex5.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex5.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2 = nextEXMEM2
+						p.exmem3 = nextEXMEM3
+						p.exmem4 = nextEXMEM4
+						p.exmem5.Clear()
+						p.exmem6.Clear()
+						p.exmem7.Clear()
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
@@ -4451,6 +4707,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagZ:      execResult.FlagZ,
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
+			}
+
+			// Branch prediction verification for senary slot (idex6)
+			if p.idex6.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex6.PredictedTaken
+				predictedTarget := p.idex6.PredictedTarget
+				earlyResolved := p.idex6.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex6.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex6.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2 = nextEXMEM2
+						p.exmem3 = nextEXMEM3
+						p.exmem4 = nextEXMEM4
+						p.exmem5 = nextEXMEM5
+						p.exmem6.Clear()
+						p.exmem7.Clear()
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
@@ -4562,6 +4882,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagZ:      execResult.FlagZ,
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
+			}
+
+			// Branch prediction verification for septenary slot (idex7)
+			if p.idex7.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex7.PredictedTaken
+				predictedTarget := p.idex7.PredictedTarget
+				earlyResolved := p.idex7.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex7.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex7.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2 = nextEXMEM2
+						p.exmem3 = nextEXMEM3
+						p.exmem4 = nextEXMEM4
+						p.exmem5 = nextEXMEM5
+						p.exmem6 = nextEXMEM6
+						p.exmem7.Clear()
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
@@ -4684,6 +5068,70 @@ func (p *Pipeline) tickOctupleIssue() {
 				FlagZ:      execResult.FlagZ,
 				FlagC:      execResult.FlagC,
 				FlagV:      execResult.FlagV,
+			}
+
+			// Branch prediction verification for octonary slot (idex8)
+			if p.idex8.IsBranch {
+				actualTaken := execResult.BranchTaken
+				actualTarget := execResult.BranchTarget
+
+				p.stats.BranchPredictions++
+
+				predictedTaken := p.idex8.PredictedTaken
+				predictedTarget := p.idex8.PredictedTarget
+				earlyResolved := p.idex8.EarlyResolved
+
+				wasMispredicted := false
+				if actualTaken {
+					if !predictedTaken {
+						wasMispredicted = true
+					} else if predictedTarget != actualTarget {
+						wasMispredicted = true
+					}
+				} else {
+					if predictedTaken {
+						wasMispredicted = true
+					}
+				}
+
+				if earlyResolved && actualTaken {
+					wasMispredicted = false
+				}
+
+				p.branchPredictor.Update(p.idex8.PC, actualTaken, actualTarget)
+
+				if wasMispredicted {
+					p.stats.BranchMispredictions++
+					branchTarget := actualTarget
+					if !actualTaken {
+						branchTarget = p.idex8.PC + 4
+					}
+					p.pc = branchTarget
+					p.flushAllIFID()
+					p.flushAllIDEX()
+					p.stats.Flushes++
+
+					if !memStall {
+						p.memwb = nextMEMWB
+						p.memwb2 = nextMEMWB2
+						p.memwb3 = nextMEMWB3
+						p.memwb4 = nextMEMWB4
+						p.memwb5 = nextMEMWB5
+						p.memwb6 = nextMEMWB6
+						p.memwb7 = nextMEMWB7
+						p.memwb8 = nextMEMWB8
+						p.exmem = nextEXMEM
+						p.exmem2 = nextEXMEM2
+						p.exmem3 = nextEXMEM3
+						p.exmem4 = nextEXMEM4
+						p.exmem5 = nextEXMEM5
+						p.exmem6 = nextEXMEM6
+						p.exmem7 = nextEXMEM7
+						p.exmem8.Clear()
+					}
+					return
+				}
+				p.stats.BranchCorrect++
 			}
 		}
 	}
