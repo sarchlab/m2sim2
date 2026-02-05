@@ -83,6 +83,10 @@ type Prediction struct {
 	Target uint64
 	// TargetKnown indicates whether the target address is known.
 	TargetKnown bool
+	// Confidence is the prediction confidence level (0-3).
+	// 0-1 = low confidence (weakly not-taken/taken)
+	// 2-3 = high confidence (strongly not-taken/taken)
+	Confidence uint8
 }
 
 // BranchPredictor implements a tournament predictor combining:
@@ -227,14 +231,17 @@ func (bp *BranchPredictor) Predict(pc uint64) Prediction {
 
 		if useGshare {
 			pred.Taken = gshareTaken
+			pred.Confidence = gshareCounter
 			bp.stats.TournamentChoseGshare++
 		} else {
 			pred.Taken = bimodalTaken
+			pred.Confidence = bimodalCounter
 			bp.stats.TournamentChoseBimodal++
 		}
 	} else {
 		// Just use bimodal (legacy mode)
 		pred.Taken = bimodalTaken
+		pred.Confidence = bimodalCounter
 	}
 
 	// Look up BTB for target address
