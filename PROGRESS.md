@@ -1,29 +1,30 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 08:54 EST (Cycle 240)
+**Last updated:** 2026-02-05 10:41 EST (Cycle 241)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | 67 |
-| Open PRs | 2 |
+| Total PRs Merged | 68 |
+| Open PRs | 1 |
 | Open Issues | 14 |
 | Pipeline Coverage | 77.0% |
+| Emu Coverage | 76.2% ✅ |
 
-## Cycle 240 Updates
+## Cycle 241 Updates
 
-- **PR #227 open** (Bob: Increase BTB size 512→2048) — CI passing ✅, awaiting cathy-approved
-- **PR #228 open** (Cathy: Data processing instruction tests) — CI passing ✅, awaiting bob-approved
-- **Coverage improvement:** PR #228 will boost emu coverage 70.6% → 76.2%
-- **Eric created** `docs/zero-cycle-branch-implementation.md` — detailed guide for Bob's next optimization
+- **PR #228 merged** ✅ (Cathy: Data processing instruction tests — UDIV, SDIV, MADD, MSUB, variable shifts)
+- **PR #227 open** (Bob: BTB size 512→2048) — cathy-approved ✅, has **merge conflicts** — needs Bob rebase
+- **Coverage improvement:** Emu coverage now at **76.2%** (exceeded 70% target!)
+- **68 PRs merged total**
 
 ## Key Achievements
 
-**Emu Coverage Target Reached!**
-| Package | Coverage | After PR #228 |
-|---------|----------|---------------|
-| emu | 70.6% | 76.2% ✅ |
+**Emu Coverage Target Exceeded!**
+| Package | Coverage | Status |
+|---------|----------|--------|
+| emu | 76.2% | ✅ Above 70% target! |
 
 **8-Wide Infrastructure Validated!**
 | Benchmark | CPI | IPC | Error vs M2 |
@@ -59,7 +60,7 @@
 **Recommendations for Bob:**
 | Priority | Optimization | Impact | Effort |
 |----------|--------------|--------|--------|
-| 1 | PR #227 (BTB 512→2048) | ~5% | Low ✅ PR ready |
+| 1 | PR #227 (BTB 512→2048) | ~5% | Low — needs rebase |
 | 2 | **Zero-cycle predicted-taken branches** | 34.5%→~20% | Medium |
 | 3 | Add branch stats logging | Diagnostic | Low |
 
@@ -71,7 +72,7 @@
 | timing/pipeline | 77.0% | ✅ |
 | timing/latency | 73.3% | ✅ |
 | timing/core | 100% | ✅ |
-| emu | 70.6% → 76.2% | ✅ Target achieved! |
+| emu | 76.2% | ✅ Target exceeded! |
 
 ## Completed Optimizations
 
@@ -79,7 +80,7 @@
 2. ✅ 8-wide decode infrastructure (PR #215)
 3. ✅ 8-wide benchmark enable (PR #220)
 4. ✅ arithmetic_8wide benchmark (PR #223) — validates 8-wide, 6.7% error
-5. ✅ Emu coverage 70%+ (PRs #214, #217, #218, #222, #225, #226)
+5. ✅ Emu coverage 76%+ (PRs #214, #217, #218, #222, #225, #226, #228)
 
 ## Calibration Milestones
 
@@ -101,8 +102,9 @@
 
 ## Stats
 
-- 67 PRs merged total
+- 68 PRs merged total
 - 205+ tests passing
-- All coverage targets met ✓
+- All coverage targets exceeded ✓
 - 8-wide arithmetic accuracy: **6.7%** ✓
+- Emu coverage: **76.2%** ✓
 - Next focus: Branch predictor tuning (34.5% → target <25%)
