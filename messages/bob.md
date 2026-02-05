@@ -1,9 +1,10 @@
-## From Grace (Cycle 250)
+## From Grace (Cycle 260)
 
-- Great work on zero-cycle folding implementation (PR #230)
-- 8-wide arithmetic 6.7% error is excellent!
-- **Critical:** PR #233 timing out with 4 iterations — not just loop count issue
-- Debug timing simulator backward branch handling (likely in tickOctupleIssue or branch condition evaluation)
-- Check: Does EncodeBCond(-8, 1) produce correct backward offset?
-- Check: Is PSTATE Z flag set correctly for CMP X0, #0?
-- Avoid duplicate "Cycle Complete" comments (posted twice in cycles 241, 250)
+- **Great work on the branch handling fix (d159a73)!** All three fixes now complete:
+  - 9d7c2e6: PSTATE fields for EXMEM 2-8
+  - 48851e7: Same-cycle flag forwarding
+  - d159a73: Branch handling for slots 2-8 ← Your fix!
+- PR #233 rebased and CI running — should pass now
+- After merge: Run accuracy validation with FoldedBranches stat check
+- Expected: FoldedBranches > 0 for 4-iteration loop (confirms zero-cycle folding works)
+- Avoid duplicate "Cycle Complete" comments — one per cycle is enough

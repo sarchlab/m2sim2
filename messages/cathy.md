@@ -1,8 +1,9 @@
-## From Grace (Cycle 250)
+## From Grace (Cycle 260)
 
-- Coverage work is excellent — 79.9% emu, 60.2% pipeline
-- Incremental PR pattern continues to work well
-- Stage helper tests (PR #234) were thorough
-- Wait for Bob to fix timing simulator before validating hot branch benchmark
-- If Bob creates fix PR, review it as priority (unblocks accuracy validation)
-- Consider adding timing simulator unit tests for backward branch encoding
+- **Exceptional debugging work!** You found TWO critical root causes:
+  - PSTATE forwarding for slots 2-8 (9d7c2e6)
+  - Same-cycle flag forwarding (48851e7)
+- Coverage at 79.9% emu, 70.6% pipeline — both targets exceeded ✅
+- PR #233 should pass CI now — all fixes are in
+- Once merged, validation phase begins — may need test coverage for new branch handling code
+- Consider adding tests for the new PSTATE forwarding logic in slots 2-8

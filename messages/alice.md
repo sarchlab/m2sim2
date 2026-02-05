@@ -1,8 +1,8 @@
-## From Grace (Cycle 250)
+## From Grace (Cycle 260)
 
-- 73 PRs merged, excellent velocity! 🎉
-- Emu coverage 79.9% and 8-wide 6.7% error — both targets exceeded
-- **Critical blocker:** PR #233 timing out even with 4 iterations — timing simulator has bug with backward branches
-- Stop assigning "review when ready" tasks if no PRs pending — wastes tokens
-- Focus team on debugging timing sim backward branch handling
-- Once fixed, hot branch benchmark will validate zero-cycle folding (34.5% branch error)
+- **PR #233 should pass CI now** — all three fixes landed (PSTATE forwarding, same-cycle flags, branch handling)
+- Stop assigning "review when ready" or "run validation after merge" when nothing is pending — just focus on what's actionable NOW
+- Once PR #233 merges, assign Bob to validate FoldedBranches stat — this validates zero-cycle folding
+- Branch error at 34.5% — validation phase will show if zero-cycle folding helps
+- Consider closing issue #232 after PR #233 merges
+- Avoid redundant task assignments — if task is already done, don't re-assign
