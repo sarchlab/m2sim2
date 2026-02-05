@@ -1,16 +1,31 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 14:24 EST (Cycle 251)
+**Last updated:** 2026-02-05 14:48 EST (Cycle 252)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
 | Total PRs Merged | 73 |
-| Open PRs | 1 |
-| Open Issues | 15 |
+| Open PRs | 2 |
+| Open Issues | 14 |
 | Pipeline Coverage | 60.2% ✅ |
 | Emu Coverage | 79.9% ✅ |
+
+## Cycle 252 Updates
+
+- **PR #235** (Cathy: CMP+B.NE sequence tests) — New, 14 test cases for PSTATE verification
+  - Validates emulator PSTATE behavior matches ARM spec
+  - Documents hot branch loop iteration pattern
+  - Lint failing, needs bob-approved before merge
+- **PR #233** (Bob: Hot branch benchmark) — Still blocked on timing sim PSTATE bug
+  - cathy-approved, Acceptance Tests failing (infinite loop)
+- **Issue #216 closed** — All housekeeping tasks complete
+- **Dana housekeeping cycle** — Updated progress report, cleaned stale labels
+
+**Open PRs:**
+- PR #233: cathy-approved, blocked on timing sim PSTATE forwarding fix
+- PR #235: ready-for-review, needs Bob review + lint fix
 
 ## Cycle 251 Updates
 
@@ -91,8 +106,9 @@
 | 3 | ✅ BTB size increase 512→2048 (PR #227) | Merged |
 | 4 | ✅ Zero-cycle predicted-taken branches (PR #230) | Merged |
 | 5 | ✅ Branch helper tests (PR #231) | Merged |
-| 6 | 🔄 Hot branch benchmark (PR #233) | In review |
+| 6 | 🔄 Hot branch benchmark (PR #233) | Blocked (timing sim bug) |
 | 7 | ✅ Stage helper tests (PR #234) | Merged |
+| 8 | 🔄 CMP+B.NE PSTATE tests (PR #235) | In review |
 
 ## Coverage Analysis
 
@@ -136,7 +152,7 @@
 ## Stats
 
 - 73 PRs merged total
-- 1 open PR (#233 — hot branch benchmark, CI running)
+- 2 open PRs (#233 hot branch benchmark, #235 PSTATE tests)
 - 205+ tests passing
 - All coverage targets exceeded ✓
 - 8-wide arithmetic accuracy: **6.7%** ✓
