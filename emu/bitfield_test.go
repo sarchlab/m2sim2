@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/sarchlab/m2sim/emu"
-	"github.com/sarchlab/m2sim/insts"
 )
 
 var _ = Describe("Bitfield Operations", func() {
@@ -408,22 +407,6 @@ func encodeSBFM(rd, rn, immr, imms uint8, is64bit bool) uint32 {
 	inst |= 0b100110 << 23
 	inst |= uint32(immr&0x3F) << 16
 	inst |= uint32(imms&0x3F) << 10
-	inst |= uint32(rn&0x1F) << 5
-	inst |= uint32(rd & 0x1F)
-	return inst
-}
-
-// encodeCSEL encodes a CSEL instruction.
-// Format: sf | op(0) | S(0) | 11010100 | Rm | cond | op2(00) | Rn | Rd
-func encodeCSEL(rd, rn, rm uint8, cond insts.Cond, is64bit bool) uint32 {
-	var inst uint32 = 0
-	if is64bit {
-		inst |= 1 << 31 // sf = 1
-	}
-	inst |= 0b11010100 << 21
-	inst |= uint32(rm&0x1F) << 16
-	inst |= uint32(cond&0xF) << 12
-	inst |= 0b00 << 10 // op2 = 00 for CSEL
 	inst |= uint32(rn&0x1F) << 5
 	inst |= uint32(rd & 0x1F)
 	return inst
