@@ -5549,19 +5549,20 @@ func (p *Pipeline) tickOctupleIssue() {
 				continue
 			}
 
-			// Zero-cycle branch folding: high-confidence predicted-taken conditional branches
-			// are eliminated similar to unconditional B. This matches M2's behavior where
-			// predicted-taken branches with BTB hits execute at zero effective cost.
-			if isCond, _ := isFoldableConditionalBranch(word, fetchPC); isCond {
-				pred := p.branchPredictor.Predict(fetchPC)
-				// Fold if: BTB hit + predicted taken + high confidence (strongly taken)
-				if pred.TargetKnown && pred.Taken && pred.Confidence >= 3 {
-					fetchPC = pred.Target
-					p.stats.FoldedBranches++
-					// Don't create IFID entry - branch is folded
-					continue
-				}
-			}
+			// Zero-cycle branch folding: DISABLED
+			// Previous implementation eliminated high-confidence conditional branches at
+			// fetch time without entering the pipeline. This is unsafe because:
+			// 1. Folded branches never execute, so condition flags are never checked
+			// 2. When prediction is wrong (e.g., loop exit), there's no recovery path
+			// 3. The pipeline hangs indefinitely on loop exits
+			//
+			// The M2's zero-cycle folding likely works differently - perhaps branches
+			// still enter the pipeline but complete in zero cycles when prediction is
+			// correct. For now, all conditional branches must enter the pipeline for
+			// proper misprediction detection and recovery.
+			//
+			// TODO: Implement proper zero-cycle folding with misprediction recovery
+			_ = isFoldableConditionalBranch // silence unused warning
 
 			if slotIdx == 0 {
 				isUncondBranch, uncondTarget := isUnconditionalBranch(word, fetchPC)
