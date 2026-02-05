@@ -166,8 +166,14 @@ func (s *ExecuteStage) Execute(idex *IDEXRegister, rnValue, rmValue uint64) Exec
 	switch inst.Op {
 	case insts.OpADD:
 		result.ALUResult = s.executeADD(inst, rnValue, rmValue)
+		if inst.SetFlags {
+			s.setAddFlags(inst, rnValue, rmValue, result.ALUResult)
+		}
 	case insts.OpSUB:
 		result.ALUResult = s.executeSUB(inst, rnValue, rmValue)
+		if inst.SetFlags {
+			s.setSubFlags(inst, rnValue, rmValue, result.ALUResult)
+		}
 	case insts.OpAND:
 		result.ALUResult = s.executeAND(inst, rnValue, rmValue)
 	case insts.OpORR:
@@ -330,6 +336,60 @@ func (s *ExecuteStage) executeEOR(inst *insts.Instruction, rnValue, rmValue uint
 		return rnValue ^ rmValue
 	}
 	return uint64(uint32(rnValue) ^ uint32(rmValue))
+}
+
+// setAddFlags sets PSTATE flags after an ADD/ADDS operation.
+func (s *ExecuteStage) setAddFlags(inst *insts.Instruction, op1, op2, result uint64) {
+	if inst.Is64Bit {
+		// 64-bit flags
+		s.regFile.PSTATE.N = (result >> 63) == 1
+		s.regFile.PSTATE.Z = result == 0
+		s.regFile.PSTATE.C = result < op1 // unsigned overflow (carry out)
+		// V: signed overflow - adding same signs gives different sign
+		op1Sign := op1 >> 63
+		op2Sign := op2 >> 63
+		resultSign := result >> 63
+		s.regFile.PSTATE.V = (op1Sign == op2Sign) && (op1Sign != resultSign)
+	} else {
+		// 32-bit flags
+		r32 := uint32(result)
+		o1 := uint32(op1)
+		o2 := uint32(op2)
+		s.regFile.PSTATE.N = (r32 >> 31) == 1
+		s.regFile.PSTATE.Z = r32 == 0
+		s.regFile.PSTATE.C = r32 < o1
+		op1Sign := o1 >> 31
+		op2Sign := o2 >> 31
+		resultSign := r32 >> 31
+		s.regFile.PSTATE.V = (op1Sign == op2Sign) && (op1Sign != resultSign)
+	}
+}
+
+// setSubFlags sets PSTATE flags after a SUB/SUBS/CMP operation.
+func (s *ExecuteStage) setSubFlags(inst *insts.Instruction, op1, op2, result uint64) {
+	if inst.Is64Bit {
+		// 64-bit flags
+		s.regFile.PSTATE.N = (result >> 63) == 1
+		s.regFile.PSTATE.Z = result == 0
+		s.regFile.PSTATE.C = op1 >= op2 // no borrow
+		// V: signed overflow - subtracting different signs gives wrong sign
+		op1Sign := op1 >> 63
+		op2Sign := op2 >> 63
+		resultSign := result >> 63
+		s.regFile.PSTATE.V = (op1Sign != op2Sign) && (op2Sign == resultSign)
+	} else {
+		// 32-bit flags
+		r32 := uint32(result)
+		o1 := uint32(op1)
+		o2 := uint32(op2)
+		s.regFile.PSTATE.N = (r32 >> 31) == 1
+		s.regFile.PSTATE.Z = r32 == 0
+		s.regFile.PSTATE.C = o1 >= o2
+		op1Sign := o1 >> 31
+		op2Sign := o2 >> 31
+		resultSign := r32 >> 31
+		s.regFile.PSTATE.V = (op1Sign != op2Sign) && (op2Sign == resultSign)
+	}
 }
 
 // MemoryStage handles memory reads and writes.
