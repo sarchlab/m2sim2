@@ -179,6 +179,18 @@ type Pipeline struct {
 	exmem6 SenaryEXMEMRegister
 	memwb6 SenaryMEMWBRegister
 
+	// Pipeline registers (septenary slot for 8-wide superscalar)
+	ifid7  SeptenaryIFIDRegister
+	idex7  SeptenaryIDEXRegister
+	exmem7 SeptenaryEXMEMRegister
+	memwb7 SeptenaryMEMWBRegister
+
+	// Pipeline registers (octonary slot for 8-wide superscalar)
+	ifid8  OctonaryIFIDRegister
+	idex8  OctonaryIDEXRegister
+	exmem8 OctonaryEXMEMRegister
+	memwb8 OctonaryMEMWBRegister
+
 	// Pipeline stages
 	fetchStage     *FetchStage
 	decodeStage    *DecodeStage
@@ -206,6 +218,8 @@ type Pipeline struct {
 	exLatency4   uint64 // Remaining cycles for quaternary execute slot
 	exLatency5   uint64 // Remaining cycles for quinary execute slot
 	exLatency6   uint64 // Remaining cycles for senary execute slot
+	exLatency7   uint64 // Remaining cycles for septenary execute slot
+	exLatency8   uint64 // Remaining cycles for octonary execute slot
 
 	// Non-cached memory latency tracking
 	memPending   bool   // True if waiting for memory operation to complete
@@ -350,6 +364,10 @@ func (p *Pipeline) Tick() {
 	p.stats.Cycles++
 
 	// Use superscalar tick if multi-issue is enabled
+	if p.superscalarConfig.IssueWidth >= 8 {
+		p.tickOctupleIssue()
+		return
+	}
 	if p.superscalarConfig.IssueWidth >= 6 {
 		p.tickSextupleIssue()
 		return
@@ -2132,6 +2150,12 @@ func (p *Pipeline) forwardFromAllSlots(reg uint8, currentValue uint64) uint64 {
 	if p.memwb6.Valid && p.memwb6.RegWrite && p.memwb6.Rd == reg {
 		currentValue = p.memwb6.ALUResult
 	}
+	if p.memwb7.Valid && p.memwb7.RegWrite && p.memwb7.Rd == reg {
+		currentValue = p.memwb7.ALUResult
+	}
+	if p.memwb8.Valid && p.memwb8.RegWrite && p.memwb8.Rd == reg {
+		currentValue = p.memwb8.ALUResult
+	}
 
 	// Check exmem stages (newer, higher priority, primary slot first)
 	if p.exmem.Valid && p.exmem.RegWrite && p.exmem.Rd == reg {
@@ -2152,6 +2176,12 @@ func (p *Pipeline) forwardFromAllSlots(reg uint8, currentValue uint64) uint64 {
 	if p.exmem6.Valid && p.exmem6.RegWrite && p.exmem6.Rd == reg {
 		currentValue = p.exmem6.ALUResult
 	}
+	if p.exmem7.Valid && p.exmem7.RegWrite && p.exmem7.Rd == reg {
+		currentValue = p.exmem7.ALUResult
+	}
+	if p.exmem8.Valid && p.exmem8.RegWrite && p.exmem8.Rd == reg {
+		currentValue = p.exmem8.ALUResult
+	}
 
 	return currentValue
 }
@@ -2166,6 +2196,8 @@ func (p *Pipeline) flushAllIFID() {
 	p.ifid4.Clear()
 	p.ifid5.Clear()
 	p.ifid6.Clear()
+	p.ifid7.Clear()
+	p.ifid8.Clear()
 }
 
 // flushAllIDEX clears all ID/EX pipeline registers.
@@ -2178,6 +2210,8 @@ func (p *Pipeline) flushAllIDEX() {
 	p.idex4.Clear()
 	p.idex5.Clear()
 	p.idex6.Clear()
+	p.idex7.Clear()
+	p.idex8.Clear()
 }
 
 // tickSextupleIssue executes one cycle with 6-wide superscalar support.
@@ -3320,4 +3354,14 @@ func (p *Pipeline) BranchPredictorStats() BranchPredictorStats {
 		return p.branchPredictor.Stats()
 	}
 	return BranchPredictorStats{}
+}
+
+// tickOctupleIssue executes one cycle with 8-wide superscalar support.
+// This extends 6-wide to match the Apple M2's 8-wide decode bandwidth.
+// TODO: Full implementation needed - currently falls back to 6-wide.
+func (p *Pipeline) tickOctupleIssue() {
+	// Temporary: Fall back to 6-wide until full implementation
+	// Note: This still provides correct functionality, just not optimal
+	// 8-wide performance. Full implementation pending.
+	p.tickSextupleIssue()
 }

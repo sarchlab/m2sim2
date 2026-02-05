@@ -39,6 +39,14 @@ func SextupleIssueConfig() SuperscalarConfig {
 	}
 }
 
+// OctupleIssueConfig returns an 8-wide superscalar configuration.
+// This matches the Apple M2's 8-wide decode bandwidth.
+func OctupleIssueConfig() SuperscalarConfig {
+	return SuperscalarConfig{
+		IssueWidth: 8,
+	}
+}
+
 // WithSuperscalar sets the superscalar configuration.
 func WithSuperscalar(config SuperscalarConfig) PipelineOption {
 	return func(p *Pipeline) {
@@ -65,6 +73,14 @@ func WithQuadIssue() PipelineOption {
 func WithSextupleIssue() PipelineOption {
 	return func(p *Pipeline) {
 		p.superscalarConfig = SextupleIssueConfig()
+	}
+}
+
+// WithOctupleIssue enables 8-wide superscalar execution.
+// This matches the Apple M2's 8-wide decode bandwidth.
+func WithOctupleIssue() PipelineOption {
+	return func(p *Pipeline) {
+		p.superscalarConfig = OctupleIssueConfig()
 	}
 }
 
@@ -1101,3 +1117,361 @@ func (r *SenaryMEMWBRegister) GetMemData() uint64 { return r.MemData }
 
 // GetIsFused returns false as fusion only occurs in slot 0.
 func (r *SenaryMEMWBRegister) GetIsFused() bool { return false }
+
+// SeptenaryIFIDRegister holds the seventh fetched instruction for 8-wide issue.
+type SeptenaryIFIDRegister struct {
+	Valid           bool
+	PC              uint64
+	InstructionWord uint32
+}
+
+// SeptenaryIDEXRegister holds the seventh decoded instruction for 8-wide issue.
+type SeptenaryIDEXRegister struct {
+	Valid    bool
+	PC       uint64
+	Inst     *insts.Instruction
+	RnValue  uint64
+	RmValue  uint64
+	Rd       uint8
+	Rn       uint8
+	Rm       uint8
+	MemRead  bool
+	MemWrite bool
+	RegWrite bool
+	MemToReg bool
+	IsBranch bool
+}
+
+// SeptenaryEXMEMRegister holds the seventh execute result for 8-wide issue.
+type SeptenaryEXMEMRegister struct {
+	Valid      bool
+	PC         uint64
+	Inst       *insts.Instruction
+	ALUResult  uint64
+	StoreValue uint64
+	Rd         uint8
+	MemRead    bool
+	MemWrite   bool
+	RegWrite   bool
+	MemToReg   bool
+}
+
+// SeptenaryMEMWBRegister holds the seventh memory result for 8-wide issue.
+type SeptenaryMEMWBRegister struct {
+	Valid     bool
+	PC        uint64
+	Inst      *insts.Instruction
+	ALUResult uint64
+	MemData   uint64
+	Rd        uint8
+	RegWrite  bool
+	MemToReg  bool
+}
+
+// Clear resets the septenary IF/ID register.
+func (r *SeptenaryIFIDRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.InstructionWord = 0
+}
+
+// Clear resets the septenary ID/EX register.
+func (r *SeptenaryIDEXRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.Inst = nil
+	r.RnValue = 0
+	r.RmValue = 0
+	r.Rd = 0
+	r.Rn = 0
+	r.Rm = 0
+	r.MemRead = false
+	r.MemWrite = false
+	r.RegWrite = false
+	r.MemToReg = false
+	r.IsBranch = false
+}
+
+// Clear resets the septenary EX/MEM register.
+func (r *SeptenaryEXMEMRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.Inst = nil
+	r.ALUResult = 0
+	r.StoreValue = 0
+	r.Rd = 0
+	r.MemRead = false
+	r.MemWrite = false
+	r.RegWrite = false
+	r.MemToReg = false
+}
+
+// MemorySlot interface implementation for SeptenaryEXMEMRegister
+
+// IsValid returns true if the register contains valid data.
+func (r *SeptenaryEXMEMRegister) IsValid() bool { return r.Valid }
+
+// GetMemRead returns true if this is a load instruction.
+func (r *SeptenaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
+
+// GetMemWrite returns true if this is a store instruction.
+func (r *SeptenaryEXMEMRegister) GetMemWrite() bool { return r.MemWrite }
+
+// GetInst returns the instruction.
+func (r *SeptenaryEXMEMRegister) GetInst() *insts.Instruction { return r.Inst }
+
+// GetALUResult returns the computed address/result.
+func (r *SeptenaryEXMEMRegister) GetALUResult() uint64 { return r.ALUResult }
+
+// GetStoreValue returns the value to store.
+func (r *SeptenaryEXMEMRegister) GetStoreValue() uint64 { return r.StoreValue }
+
+// Clear resets the septenary MEM/WB register.
+func (r *SeptenaryMEMWBRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.Inst = nil
+	r.ALUResult = 0
+	r.MemData = 0
+	r.Rd = 0
+	r.RegWrite = false
+	r.MemToReg = false
+}
+
+// toIDEX converts SeptenaryIDEXRegister to IDEXRegister.
+func (r *SeptenaryIDEXRegister) toIDEX() IDEXRegister {
+	return IDEXRegister{
+		Valid:    r.Valid,
+		PC:       r.PC,
+		Inst:     r.Inst,
+		RnValue:  r.RnValue,
+		RmValue:  r.RmValue,
+		Rd:       r.Rd,
+		Rn:       r.Rn,
+		Rm:       r.Rm,
+		MemRead:  r.MemRead,
+		MemWrite: r.MemWrite,
+		RegWrite: r.RegWrite,
+		MemToReg: r.MemToReg,
+		IsBranch: r.IsBranch,
+	}
+}
+
+// fromIDEX populates SeptenaryIDEXRegister from IDEXRegister.
+func (r *SeptenaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
+	r.Valid = idex.Valid
+	r.PC = idex.PC
+	r.Inst = idex.Inst
+	r.RnValue = idex.RnValue
+	r.RmValue = idex.RmValue
+	r.Rd = idex.Rd
+	r.Rn = idex.Rn
+	r.Rm = idex.Rm
+	r.MemRead = idex.MemRead
+	r.MemWrite = idex.MemWrite
+	r.RegWrite = idex.RegWrite
+	r.MemToReg = idex.MemToReg
+	r.IsBranch = idex.IsBranch
+}
+
+// WritebackSlot interface implementation for SeptenaryMEMWBRegister
+
+// IsValid returns true if the register contains valid data.
+func (r *SeptenaryMEMWBRegister) IsValid() bool { return r.Valid }
+
+// GetRegWrite returns true if this instruction writes to a register.
+func (r *SeptenaryMEMWBRegister) GetRegWrite() bool { return r.RegWrite }
+
+// GetRd returns the destination register.
+func (r *SeptenaryMEMWBRegister) GetRd() uint8 { return r.Rd }
+
+// GetMemToReg returns true if the value comes from memory.
+func (r *SeptenaryMEMWBRegister) GetMemToReg() bool { return r.MemToReg }
+
+// GetALUResult returns the ALU computation result.
+func (r *SeptenaryMEMWBRegister) GetALUResult() uint64 { return r.ALUResult }
+
+// GetMemData returns the data loaded from memory.
+func (r *SeptenaryMEMWBRegister) GetMemData() uint64 { return r.MemData }
+
+// GetIsFused returns false as fusion only occurs in slot 0.
+func (r *SeptenaryMEMWBRegister) GetIsFused() bool { return false }
+
+// OctonaryIFIDRegister holds the eighth fetched instruction for 8-wide issue.
+type OctonaryIFIDRegister struct {
+	Valid           bool
+	PC              uint64
+	InstructionWord uint32
+}
+
+// OctonaryIDEXRegister holds the eighth decoded instruction for 8-wide issue.
+type OctonaryIDEXRegister struct {
+	Valid    bool
+	PC       uint64
+	Inst     *insts.Instruction
+	RnValue  uint64
+	RmValue  uint64
+	Rd       uint8
+	Rn       uint8
+	Rm       uint8
+	MemRead  bool
+	MemWrite bool
+	RegWrite bool
+	MemToReg bool
+	IsBranch bool
+}
+
+// OctonaryEXMEMRegister holds the eighth execute result for 8-wide issue.
+type OctonaryEXMEMRegister struct {
+	Valid      bool
+	PC         uint64
+	Inst       *insts.Instruction
+	ALUResult  uint64
+	StoreValue uint64
+	Rd         uint8
+	MemRead    bool
+	MemWrite   bool
+	RegWrite   bool
+	MemToReg   bool
+}
+
+// OctonaryMEMWBRegister holds the eighth memory result for 8-wide issue.
+type OctonaryMEMWBRegister struct {
+	Valid     bool
+	PC        uint64
+	Inst      *insts.Instruction
+	ALUResult uint64
+	MemData   uint64
+	Rd        uint8
+	RegWrite  bool
+	MemToReg  bool
+}
+
+// Clear resets the octonary IF/ID register.
+func (r *OctonaryIFIDRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.InstructionWord = 0
+}
+
+// Clear resets the octonary ID/EX register.
+func (r *OctonaryIDEXRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.Inst = nil
+	r.RnValue = 0
+	r.RmValue = 0
+	r.Rd = 0
+	r.Rn = 0
+	r.Rm = 0
+	r.MemRead = false
+	r.MemWrite = false
+	r.RegWrite = false
+	r.MemToReg = false
+	r.IsBranch = false
+}
+
+// Clear resets the octonary EX/MEM register.
+func (r *OctonaryEXMEMRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.Inst = nil
+	r.ALUResult = 0
+	r.StoreValue = 0
+	r.Rd = 0
+	r.MemRead = false
+	r.MemWrite = false
+	r.RegWrite = false
+	r.MemToReg = false
+}
+
+// MemorySlot interface implementation for OctonaryEXMEMRegister
+
+// IsValid returns true if the register contains valid data.
+func (r *OctonaryEXMEMRegister) IsValid() bool { return r.Valid }
+
+// GetMemRead returns true if this is a load instruction.
+func (r *OctonaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
+
+// GetMemWrite returns true if this is a store instruction.
+func (r *OctonaryEXMEMRegister) GetMemWrite() bool { return r.MemWrite }
+
+// GetInst returns the instruction.
+func (r *OctonaryEXMEMRegister) GetInst() *insts.Instruction { return r.Inst }
+
+// GetALUResult returns the computed address/result.
+func (r *OctonaryEXMEMRegister) GetALUResult() uint64 { return r.ALUResult }
+
+// GetStoreValue returns the value to store.
+func (r *OctonaryEXMEMRegister) GetStoreValue() uint64 { return r.StoreValue }
+
+// Clear resets the octonary MEM/WB register.
+func (r *OctonaryMEMWBRegister) Clear() {
+	r.Valid = false
+	r.PC = 0
+	r.Inst = nil
+	r.ALUResult = 0
+	r.MemData = 0
+	r.Rd = 0
+	r.RegWrite = false
+	r.MemToReg = false
+}
+
+// toIDEX converts OctonaryIDEXRegister to IDEXRegister.
+func (r *OctonaryIDEXRegister) toIDEX() IDEXRegister {
+	return IDEXRegister{
+		Valid:    r.Valid,
+		PC:       r.PC,
+		Inst:     r.Inst,
+		RnValue:  r.RnValue,
+		RmValue:  r.RmValue,
+		Rd:       r.Rd,
+		Rn:       r.Rn,
+		Rm:       r.Rm,
+		MemRead:  r.MemRead,
+		MemWrite: r.MemWrite,
+		RegWrite: r.RegWrite,
+		MemToReg: r.MemToReg,
+		IsBranch: r.IsBranch,
+	}
+}
+
+// fromIDEX populates OctonaryIDEXRegister from IDEXRegister.
+func (r *OctonaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
+	r.Valid = idex.Valid
+	r.PC = idex.PC
+	r.Inst = idex.Inst
+	r.RnValue = idex.RnValue
+	r.RmValue = idex.RmValue
+	r.Rd = idex.Rd
+	r.Rn = idex.Rn
+	r.Rm = idex.Rm
+	r.MemRead = idex.MemRead
+	r.MemWrite = idex.MemWrite
+	r.RegWrite = idex.RegWrite
+	r.MemToReg = idex.MemToReg
+	r.IsBranch = idex.IsBranch
+}
+
+// WritebackSlot interface implementation for OctonaryMEMWBRegister
+
+// IsValid returns true if the register contains valid data.
+func (r *OctonaryMEMWBRegister) IsValid() bool { return r.Valid }
+
+// GetRegWrite returns true if this instruction writes to a register.
+func (r *OctonaryMEMWBRegister) GetRegWrite() bool { return r.RegWrite }
+
+// GetRd returns the destination register.
+func (r *OctonaryMEMWBRegister) GetRd() uint8 { return r.Rd }
+
+// GetMemToReg returns true if the value comes from memory.
+func (r *OctonaryMEMWBRegister) GetMemToReg() bool { return r.MemToReg }
+
+// GetALUResult returns the ALU computation result.
+func (r *OctonaryMEMWBRegister) GetALUResult() uint64 { return r.ALUResult }
+
+// GetMemData returns the data loaded from memory.
+func (r *OctonaryMEMWBRegister) GetMemData() uint64 { return r.MemData }
+
+// GetIsFused returns false as fusion only occurs in slot 0.
+func (r *OctonaryMEMWBRegister) GetIsFused() bool { return false }
