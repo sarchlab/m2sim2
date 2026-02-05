@@ -426,7 +426,7 @@ func (e *Emulator) executeBitfield(inst *insts.Instruction) {
 			}
 		}
 	case insts.OpSBFM:
-		// SBFM: Signed bitfield move (ASR, SXTB, SXTH, SXTW)
+		// SBFM: Signed bitfield move (ASR, SXTB, SXTH, SXTW, SBFIZ)
 		if inst.Is64Bit {
 			if imms >= immr {
 				// ASR, SXTB, SXTH style: extract and sign-extend
@@ -440,11 +440,17 @@ func (e *Emulator) executeBitfield(inst *insts.Instruction) {
 				}
 				result = extracted
 			} else {
-				// Shift and sign-extend
+				// SBFIZ: extract bits [imms:0], sign-extend, then shift left
 				shift := 64 - immr
 				width := imms + 1
 				mask := (uint64(1) << width) - 1
-				result = (rnVal & mask) << shift
+				extracted := rnVal & mask
+				// Sign-extend from bit (width-1)
+				signBit := uint64(1) << (width - 1)
+				if extracted&signBit != 0 {
+					extracted |= ^mask // Sign extend
+				}
+				result = extracted << shift
 			}
 		} else {
 			rn32 := uint32(rnVal)
@@ -458,10 +464,17 @@ func (e *Emulator) executeBitfield(inst *insts.Instruction) {
 				}
 				result = uint64(extracted)
 			} else {
+				// SBFIZ: extract bits [imms:0], sign-extend, then shift left
 				shift := 32 - immr
 				width := imms + 1
 				mask := (uint32(1) << width) - 1
-				result = uint64((rn32 & mask) << shift)
+				extracted := rn32 & mask
+				// Sign-extend from bit (width-1)
+				signBit := uint32(1) << (width - 1)
+				if extracted&signBit != 0 {
+					extracted |= ^mask
+				}
+				result = uint64(extracted << shift)
 			}
 		}
 	case insts.OpBFM:
@@ -663,6 +676,9 @@ func (e *Emulator) executeLoadStore(inst *insts.Instruction) {
 		} else {
 			e.lsu.LDRSH32(inst.Rd, addr)
 		}
+	case insts.OpLDRSW:
+		// LDRSW: Load 32-bit word and sign-extend to 64-bit
+		e.lsu.LDRSW(inst.Rd, addr)
 	}
 
 	// Handle writeback for pre/post-indexed modes
