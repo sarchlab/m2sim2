@@ -243,6 +243,20 @@ func encodeSVC(imm uint16) uint32 {
 	return inst
 }
 
+// encodeMOVZ encodes MOVZ (move wide with zero) for 64-bit.
+// Format: 1 10 100101 hw imm16 Rd
+// Sets Rd = imm16 << (hw * 16), zeros other bits
+func encodeMOVZ(rd uint8, imm16 uint16, hw uint8) uint32 {
+	var inst uint32 = 0
+	inst |= 1 << 31          // sf = 1 (64-bit)
+	inst |= 0b10 << 29       // opc = 10 (MOVZ)
+	inst |= 0b100101 << 23   // fixed bits
+	inst |= uint32(hw&3) << 21
+	inst |= uint32(imm16) << 5
+	inst |= uint32(rd & 0x1F)
+	return inst
+}
+
 // encodeSTR64 encodes STR (64-bit) with unsigned immediate offset.
 // Format: 11 111 0 01 00 imm12 Rn Rt
 func encodeSTR64(rt, rn uint8, imm12 uint16) uint32 {
@@ -289,12 +303,12 @@ func TestEdgeCases(t *testing.T) {
 			},
 			program: buildProgram(
 				// Push X0 onto stack (simulate stack operation)
-				encodeADDImm(0, 31, 42, false), // X0 = 42
-				encodeSTR64(0, 31, 0),          // STR X0, [SP, #0] (uses SP as base)
-				encodeADDImm(0, 31, 0, false),  // X0 = 0 (clear X0)
-				encodeLDR64(0, 31, 0),          // LDR X0, [SP, #0] (restore from stack)
-				encodeADDImm(8, 31, 93, false), // X8 = 93 (exit syscall)
-				encodeSVC(0),                   // exit with X0
+				encodeMOVZ(0, 42, 0),  // X0 = 42 (using MOVZ, not ADD from SP)
+				encodeSTR64(0, 31, 0), // STR X0, [SP, #0] (uses SP as base)
+				encodeMOVZ(0, 0, 0),   // X0 = 0 (clear X0)
+				encodeLDR64(0, 31, 0), // LDR X0, [SP, #0] (restore from stack)
+				encodeMOVZ(8, 93, 0),  // X8 = 93 (exit syscall)
+				encodeSVC(0),          // exit with X0
 			),
 			expectedExit: 42,
 		},
@@ -507,10 +521,10 @@ func TestIntermediateStateVerification(t *testing.T) {
 		e.RegFile().SP = 0x8000
 
 		program := buildProgram(
-			encodeADDImm(0, 31, 42, false), // X0 = 42
-			encodeSTR64(0, 31, 0),          // STR X0, [SP]
-			encodeADDImm(8, 31, 93, false), // X8 = 93
-			encodeSVC(0),                   // exit
+			encodeMOVZ(0, 42, 0),  // X0 = 42 (using MOVZ)
+			encodeSTR64(0, 31, 0), // STR X0, [SP]
+			encodeMOVZ(8, 93, 0),  // X8 = 93
+			encodeSVC(0),          // exit
 		)
 
 		e.LoadProgram(0x1000, program)
@@ -534,7 +548,7 @@ func TestIntermediateStateVerification(t *testing.T) {
 		)
 
 		program := buildProgram(
-			encodeADDImm(0, 31, 5, false),  // X0 = 5
+			encodeMOVZ(0, 5, 0),            // X0 = 5 (using MOVZ)
 			encodeSUBImm(0, 0, 5, true),    // SUBS X0, X0, #5 (should set Z flag)
 			encodeADDImm(8, 31, 93, false), // X8 = 93
 			encodeSVC(0),                   // exit
