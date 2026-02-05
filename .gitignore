@@ -16,3 +16,4 @@ benchmarks/spec
 .DS_Store
 # CoreMark source (cloned from upstream)
 benchmarks/coremark/
+embench-iot/

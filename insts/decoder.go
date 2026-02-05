@@ -79,6 +79,7 @@ const (
 	// Compare and branch opcodes
 	OpCBZ  // Compare and branch if zero
 	OpCBNZ // Compare and branch if not zero
+	OpNOP  // No operation (HINT #0)
 )
 
 // Format represents an instruction encoding format.
@@ -267,6 +268,8 @@ func (d *Decoder) Decode(word uint32) *Instruction {
 		d.decodeBranchCond(word, inst)
 	case d.isBranchReg(word):
 		d.decodeBranchReg(word, inst)
+	case d.isNOP(word):
+		d.decodeNOP(word, inst)
 	case d.isException(word):
 		d.decodeException(word, inst)
 	default:
@@ -530,6 +533,18 @@ func (d *Decoder) decodeLoadStoreImm(word uint32, inst *Instruction) {
 	} else {
 		inst.Op = OpSTR
 	}
+}
+
+// isNOP checks for NOP instruction (HINT #0).
+// NOP encoding: 0xd503201f = 1101 0101 0000 0011 0010 0000 0001 1111
+func (d *Decoder) isNOP(word uint32) bool {
+	return word == 0xd503201f
+}
+
+// decodeNOP decodes the NOP instruction.
+func (d *Decoder) decodeNOP(word uint32, inst *Instruction) {
+	inst.Op = OpNOP
+	// NOP has no operands
 }
 
 // isException checks for exception generation instructions.

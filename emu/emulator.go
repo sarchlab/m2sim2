@@ -225,6 +225,12 @@ func (e *Emulator) execute(inst *insts.Instruction) StepResult {
 		}
 	}
 
+	// Handle NOP - no operation, just advance PC
+	if inst.Op == insts.OpNOP {
+		e.regFile.PC += 4
+		return StepResult{}
+	}
+
 	// Execute based on instruction type
 	switch inst.Format {
 	case insts.FormatDPImm:

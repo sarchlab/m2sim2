@@ -25,11 +25,19 @@ func (a *ALU) ADD64(rd, rn, rm uint8, setFlags bool) {
 }
 
 // ADD64Imm performs 64-bit addition with immediate: Xd = Xn + imm
+// For ADD immediate, register 31 means SP for both Rn and Rd.
+// For ADDS/CMN (setFlags=true), Rd=31 means XZR (result is discarded).
 func (a *ALU) ADD64Imm(rd, rn uint8, imm uint64, setFlags bool) {
-	op1 := a.regFile.ReadReg(rn)
+	op1 := a.regFile.ReadRegOrSP(rn)
 	result := op1 + imm
 
-	a.regFile.WriteReg(rd, result)
+	// For ADDS (setFlags=true) with Rd=31, write to XZR (i.e., discard)
+	// For ADD (setFlags=false), Rd=31 means write to SP
+	if setFlags {
+		a.regFile.WriteReg(rd, result) // XZR if rd=31
+	} else {
+		a.regFile.WriteRegOrSP(rd, result) // SP if rd=31
+	}
 
 	if setFlags {
 		a.setAddFlags64(op1, imm, result)
@@ -56,11 +64,19 @@ func (a *ALU) ADD32(rd, rn, rm uint8, setFlags bool) {
 }
 
 // ADD32Imm performs 32-bit addition with immediate: Wd = Wn + imm (zero-extended)
+// For ADD immediate, register 31 means SP for both Rn and Rd.
+// For ADDS/CMN (setFlags=true), Rd=31 means XZR (result is discarded).
 func (a *ALU) ADD32Imm(rd, rn uint8, imm uint32, setFlags bool) {
-	op1 := uint32(a.regFile.ReadReg(rn))
+	op1 := uint32(a.regFile.ReadRegOrSP(rn))
 	result := op1 + imm
 
-	a.regFile.WriteReg(rd, uint64(result))
+	// For ADDS (setFlags=true) with Rd=31, write to XZR (i.e., discard)
+	// For ADD (setFlags=false), Rd=31 means write to SP
+	if setFlags {
+		a.regFile.WriteReg(rd, uint64(result)) // XZR if rd=31
+	} else {
+		a.regFile.WriteRegOrSP(rd, uint64(result)) // SP if rd=31
+	}
 
 	if setFlags {
 		a.setAddFlags32(op1, imm, result)
@@ -81,11 +97,19 @@ func (a *ALU) SUB64(rd, rn, rm uint8, setFlags bool) {
 }
 
 // SUB64Imm performs 64-bit subtraction with immediate: Xd = Xn - imm
+// For SUB immediate, register 31 means SP for both Rn and Rd.
+// For SUBS/CMP (setFlags=true), Rd=31 means XZR (result is discarded).
 func (a *ALU) SUB64Imm(rd, rn uint8, imm uint64, setFlags bool) {
-	op1 := a.regFile.ReadReg(rn)
+	op1 := a.regFile.ReadRegOrSP(rn)
 	result := op1 - imm
 
-	a.regFile.WriteReg(rd, result)
+	// For SUBS (setFlags=true) with Rd=31, write to XZR (i.e., discard)
+	// For SUB (setFlags=false), Rd=31 means write to SP
+	if setFlags {
+		a.regFile.WriteReg(rd, result) // XZR if rd=31
+	} else {
+		a.regFile.WriteRegOrSP(rd, result) // SP if rd=31
+	}
 
 	if setFlags {
 		a.setSubFlags64(op1, imm, result)
@@ -93,11 +117,19 @@ func (a *ALU) SUB64Imm(rd, rn uint8, imm uint64, setFlags bool) {
 }
 
 // SUB32Imm performs 32-bit subtraction with immediate: Wd = Wn - imm (zero-extended)
+// For SUB immediate, register 31 means SP for both Rn and Rd.
+// For SUBS/CMP (setFlags=true), Rd=31 means XZR (result is discarded).
 func (a *ALU) SUB32Imm(rd, rn uint8, imm uint32, setFlags bool) {
-	op1 := uint32(a.regFile.ReadReg(rn))
+	op1 := uint32(a.regFile.ReadRegOrSP(rn))
 	result := op1 - imm
 
-	a.regFile.WriteReg(rd, uint64(result))
+	// For SUBS (setFlags=true) with Rd=31, write to XZR (i.e., discard)
+	// For SUB (setFlags=false), Rd=31 means write to SP
+	if setFlags {
+		a.regFile.WriteReg(rd, uint64(result)) // XZR if rd=31
+	} else {
+		a.regFile.WriteRegOrSP(rd, uint64(result)) // SP if rd=31
+	}
 
 	if setFlags {
 		a.setSubFlags32(op1, imm, result)

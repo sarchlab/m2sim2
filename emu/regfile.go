@@ -39,6 +39,25 @@ func (r *RegFile) ReadReg(reg uint8) uint64 {
 	return r.X[reg]
 }
 
+// ReadRegOrSP reads a register value, treating register 31 as SP (not XZR).
+// This is used by instructions like ADD/SUB immediate where Rn=31 means SP.
+func (r *RegFile) ReadRegOrSP(reg uint8) uint64 {
+	if reg == 31 {
+		return r.SP
+	}
+	return r.X[reg]
+}
+
+// WriteRegOrSP writes a register value, treating register 31 as SP (not XZR).
+// This is used by instructions like ADD/SUB immediate where Rd=31 means SP.
+func (r *RegFile) WriteRegOrSP(reg uint8, value uint64) {
+	if reg == 31 {
+		r.SP = value
+		return
+	}
+	r.X[reg] = value
+}
+
 // WriteReg writes a value to a register. Writes to register 31 are ignored.
 func (r *RegFile) WriteReg(reg uint8, value uint64) {
 	if reg == 31 {
