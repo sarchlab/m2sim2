@@ -718,15 +718,8 @@ func (p *Pipeline) tickSuperscalar() {
 	if p.memwb.Valid {
 		p.stats.Instructions++
 	}
-	// Writeback secondary slot
-	if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 {
-		var value uint64
-		if p.memwb2.MemToReg {
-			value = p.memwb2.MemData
-		} else {
-			value = p.memwb2.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb2.Rd, value)
+	// Writeback secondary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb2) {
 		p.stats.Instructions++
 	}
 
@@ -1337,39 +1330,18 @@ func (p *Pipeline) tickQuadIssue() {
 		p.stats.Instructions++
 	}
 
-	// Writeback secondary slot
-	if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 {
-		var value uint64
-		if p.memwb2.MemToReg {
-			value = p.memwb2.MemData
-		} else {
-			value = p.memwb2.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb2.Rd, value)
+	// Writeback secondary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb2) {
 		p.stats.Instructions++
 	}
 
-	// Writeback tertiary slot
-	if p.memwb3.Valid && p.memwb3.RegWrite && p.memwb3.Rd != 31 {
-		var value uint64
-		if p.memwb3.MemToReg {
-			value = p.memwb3.MemData
-		} else {
-			value = p.memwb3.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb3.Rd, value)
+	// Writeback tertiary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb3) {
 		p.stats.Instructions++
 	}
 
-	// Writeback quaternary slot
-	if p.memwb4.Valid && p.memwb4.RegWrite && p.memwb4.Rd != 31 {
-		var value uint64
-		if p.memwb4.MemToReg {
-			value = p.memwb4.MemData
-		} else {
-			value = p.memwb4.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb4.Rd, value)
+	// Writeback quaternary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb4) {
 		p.stats.Instructions++
 	}
 
@@ -2218,63 +2190,28 @@ func (p *Pipeline) tickSextupleIssue() {
 		p.stats.Instructions++
 	}
 
-	// Writeback secondary slot
-	if p.memwb2.Valid && p.memwb2.RegWrite && p.memwb2.Rd != 31 {
-		var value uint64
-		if p.memwb2.MemToReg {
-			value = p.memwb2.MemData
-		} else {
-			value = p.memwb2.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb2.Rd, value)
+	// Writeback secondary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb2) {
 		p.stats.Instructions++
 	}
 
-	// Writeback tertiary slot
-	if p.memwb3.Valid && p.memwb3.RegWrite && p.memwb3.Rd != 31 {
-		var value uint64
-		if p.memwb3.MemToReg {
-			value = p.memwb3.MemData
-		} else {
-			value = p.memwb3.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb3.Rd, value)
+	// Writeback tertiary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb3) {
 		p.stats.Instructions++
 	}
 
-	// Writeback quaternary slot
-	if p.memwb4.Valid && p.memwb4.RegWrite && p.memwb4.Rd != 31 {
-		var value uint64
-		if p.memwb4.MemToReg {
-			value = p.memwb4.MemData
-		} else {
-			value = p.memwb4.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb4.Rd, value)
+	// Writeback quaternary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb4) {
 		p.stats.Instructions++
 	}
 
-	// Writeback quinary slot
-	if p.memwb5.Valid && p.memwb5.RegWrite && p.memwb5.Rd != 31 {
-		var value uint64
-		if p.memwb5.MemToReg {
-			value = p.memwb5.MemData
-		} else {
-			value = p.memwb5.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb5.Rd, value)
+	// Writeback quinary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb5) {
 		p.stats.Instructions++
 	}
 
-	// Writeback senary slot
-	if p.memwb6.Valid && p.memwb6.RegWrite && p.memwb6.Rd != 31 {
-		var value uint64
-		if p.memwb6.MemToReg {
-			value = p.memwb6.MemData
-		} else {
-			value = p.memwb6.ALUResult
-		}
-		p.regFile.WriteReg(p.memwb6.Rd, value)
+	// Writeback senary slot (using WritebackSlot helper)
+	if p.writebackStage.WritebackSlot(&p.memwb6) {
 		p.stats.Instructions++
 	}
 
