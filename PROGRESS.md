@@ -1,34 +1,29 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 03:27 EST (Cycle 217)
+**Last updated:** 2026-02-05 03:45 EST (Cycle 218)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | 52 |
+| Total PRs Merged | 53 |
 | Open PRs | 0 |
 | Open Issues | 13 |
 | Pipeline Coverage | 76.5% |
 
-## Cycle 217 Updates
+## Cycle 218 Updates
 
-- **Alice:** Updated task board, assigned benchmark alignment work
-- **Eric:** Created issue #203 (benchmark alignment), research docs
-- **Bob:** Reviewed PR #202 (approved)
-- **Cathy:** Coverage at 76.5%, no new work needed
-- **Dana:** Merged PR #202, closed #201 as completed
+- **Alice:** Updated task board, action count → 218
+- **Eric:** Commented on #203 with implementation guidance for conditional branch benchmark
+- **Bob:** Created issue #204 (PSTATE flag blocker), implemented fix → PR #205
+- **Cathy:** Reviewed PR #205 — approved ✅
+- **Dana:** Merged PR #205 ✅
 
-## Key Finding This Cycle
+## Key Achievement This Cycle
 
-**Benchmark alignment is the critical blocker!**
+**PSTATE flag support added to timing pipeline!**
 
-Eric created issue #203 and docs/benchmark-alignment.md documenting:
-- Native baseline uses `b.ge` (conditional branches)
-- Simulator micro uses `B` (unconditional branches)
-- This is apples-to-oranges comparison
-
-#201 closed — zero-cycle branch elimination already works correctly.
+PR #205 adds `setAddFlags()` and `setSubFlags()` helpers to ExecuteStage, enabling conditional branch evaluation. This unblocks issue #203 (benchmark alignment).
 
 ## Accuracy Status (Microbenchmarks)
 
@@ -41,13 +36,13 @@ Eric created issue #203 and docs/benchmark-alignment.md documenting:
 
 **Target:** <20% average error (#141)
 
-**Note:** 39.8% is skewed by benchmark mismatch — will change after alignment.
+**Note:** 39.8% is skewed by benchmark mismatch — will improve after #203 alignment.
 
 ## Next Steps
 
-1. **#203 — Align benchmarks** — fix native/simulator branch type mismatch
+1. **#203 — Align benchmarks** — implement conditional branch microbenchmark (Bob)
 2. Re-run calibration after alignment
-3. Conditional branch optimization (macro-op fusion) if needed
+3. Conditional branch optimization if needed
 
 ## Active PRs
 
@@ -56,20 +51,22 @@ None — all merged!
 ## Active Investigations
 
 - **#197** — Embench timing run request (waiting on human)
-- **#203** — Benchmark alignment (highest priority)
+- **#203** — Benchmark alignment (ready for implementation)
+- **#204** — PSTATE flags (✅ completed — PR #205 merged)
 
 ## Calibration Milestones
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
 | C1 | ✅ Complete | Benchmarks execute to completion |
-| C2 | 🚧 In Progress | Accuracy calibration — benchmark alignment needed |
+| C2 | 🚧 In Progress | Accuracy calibration — benchmark alignment in progress |
 | C3 | Pending | Intermediate benchmark timing |
 
 ## Stats
 
-- 52 PRs merged total
+- 53 PRs merged total
 - 205 pipeline tests passing
 - Zero-cycle branch elimination: working ✓
 - Branch predictor: working ✓
+- PSTATE flag updates: working ✓ (new!)
 - Coverage: 76.5% (target: 70%)
