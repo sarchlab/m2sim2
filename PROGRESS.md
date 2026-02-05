@@ -1,30 +1,21 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-04 22:30 EST (Cycle 199)
+**Last updated:** 2026-02-04 23:00 EST (Cycle 200)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | 44 |
-| Open PRs | 1 |
-| Open Issues | 15 |
+| Total PRs Merged | 45 |
+| Open PRs | 0 |
+| Open Issues | 16 |
 | Pipeline Coverage | 75.9% |
 
-## 🎉 Major Breakthrough: Primecount Fixed!
+## 🎉 Cycle 200 Milestone!
 
-### Root Cause Found (Cycle 199)
-Bob discovered that `executeDPReg` was ignoring `ShiftType`/`ShiftAmount` for shifted register instructions like `ADD x7, x8, x9, LSL #2`.
-
-**Impact:** All benchmarks using shifted register operations were affected.
-
-**Fix:** Added `applyShift64`/`applyShift32` helpers, now correctly applies shifts before operations.
-
-### Results
-| Metric | Before | After |
-|--------|--------|-------|
-| Instructions | 256 | 2,835,622 |
-| Primes counted | 4 | **3,512** ✅ |
+### Recent Merges
+- **PR #192** — edn benchmark added (Phase 2)
+- **PR #188** — primecount benchmark + shifted register fix
 
 ## Embench Phase 1 — Complete! ✅
 
@@ -38,10 +29,10 @@ Bob discovered that `executeDPReg` was ignoring `ShiftType`/`ShiftAmount` for sh
 
 | Issue | Benchmark | Status |
 |-------|-----------|--------|
-| #184 | primecount | PR #188 **FIXED** ✅ |
-| #185 | edn | Ready for Bob |
-| #186 | huffbench | Ready for Bob |
-| #187 | statemate | Ready for Bob |
+| #184 | primecount | ✅ Merged (PR #188) |
+| #185 | edn | ✅ Merged (PR #192) |
+| #186 | huffbench | ⚠️ Blocked (execution time too long) |
+| #187 | statemate | ⚠️ Blocked (requires NEON/SIMD) |
 
 ## Accuracy Status (Microbenchmarks)
 
@@ -58,43 +49,34 @@ From Eric's analysis (Cycle 199):
 
 ## Active Work
 
-### PR #188 — Primecount Benchmark (Bob)
-- **Status:** Cathy-approved, CI pending
-- **Contains:** Shifted register fix + LDRSW + SBFIZ fixes
-- **Ready for merge** once CI passes
-
 ### #122 — Pipeline Refactor (Cathy)
 - **Branch:** `cathy/122-pipeline-refactor-writeback`
-- **Status:** WritebackSlot interface added
+- **Status:** WritebackSlot interface added, integrating into tick functions
 
-## Recent Progress
+### Eric — Accuracy Calibration
+- Report: `reports/accuracy-report-2026-02-04.md`
+- Next: Run Embench timing simulations, tune parameters
 
-### Cycle 199 (Current) 🎉
-- **Bob found and fixed shifted register bug** — major breakthrough!
-- **Eric created accuracy report** — 39.8% average error baseline
-- **Human suggested (#189):** Bob on benchmarks, Eric on accuracy
+## New Research
 
-### Cycle 198
-- Bob added LDRSW + SBFIZ fixes (partial)
-- Primecount still broken (now fixed!)
-
-### Prior
-- PR #182 merged — exit code fix
-- Phase 1 Embench complete
+### PolyBench (#191)
+- Eric researched: 30 numerical benchmarks
+- Recommended for Phase 3 after Embench
+- Report: `reports/polybench-research.md`
 
 ## Calibration Milestones
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| C1 | 🎉 **COMPLETE** | Phase 1 Embench + CoreMark execute |
-| C1.5 | **UNBLOCKED** | Phase 2 — primecount fixed! |
+| C1 | ✅ **COMPLETE** | Phase 1 Embench execute |
+| C1.5 | ✅ **COMPLETE** | Phase 2 started (primecount, edn) |
 | C2 | In Progress | Microbenchmark Accuracy — <20% avg error |
 | C3 | Pending | Intermediate Benchmark Accuracy |
 | C4 | Pending | SPEC Benchmark Accuracy |
 
 ## Next Steps
 
-1. **Merge PR #188** — once CI passes
-2. **Continue Phase 2** — edn, huffbench, statemate
-3. **Start accuracy tuning** — Eric's calibration work
-4. **Test other benchmarks** — shifted register fix may help
+1. Continue Phase 2 benchmarks (find alternatives to huffbench/statemate)
+2. Eric: accuracy calibration work
+3. Cathy: complete pipeline refactor (#122)
+4. Consider PolyBench for Phase 3
