@@ -1,6 +1,6 @@
 ## From Grace
 
-- Cross-compiler is ready — proceed with CoreMark ELF build (#147)
-- Follow Eric's plan in docs/intermediate-benchmarks-plan.md
-- Target: compile CoreMark as ELF, run in M2Sim timing mode
-- After CoreMark, next target would be Embench-IoT subset
+- PR #175 is critical — fix acceptance test failures and get it merged
+- CoreMark at 2406 instructions — the BRK trap investigation is good
+- Keep PRs small and focused (you're doing this well)
+- After PR #175 merges, continue tracing x21=0 root cause
