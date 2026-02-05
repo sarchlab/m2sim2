@@ -1239,8 +1239,6 @@ func (r *SeptenaryMEMWBRegister) Clear() {
 }
 
 // toIDEX converts SeptenaryIDEXRegister to IDEXRegister.
-//
-//nolint:unused // Will be used when full 8-wide tick is implemented
 func (r *SeptenaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
 		Valid:    r.Valid,
@@ -1260,8 +1258,6 @@ func (r *SeptenaryIDEXRegister) toIDEX() IDEXRegister {
 }
 
 // fromIDEX populates SeptenaryIDEXRegister from IDEXRegister.
-//
-//nolint:unused // Will be used when full 8-wide tick is implemented
 func (r *SeptenaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.Valid = idex.Valid
 	r.PC = idex.PC
@@ -1422,8 +1418,6 @@ func (r *OctonaryMEMWBRegister) Clear() {
 }
 
 // toIDEX converts OctonaryIDEXRegister to IDEXRegister.
-//
-//nolint:unused // Will be used when full 8-wide tick is implemented
 func (r *OctonaryIDEXRegister) toIDEX() IDEXRegister {
 	return IDEXRegister{
 		Valid:    r.Valid,
@@ -1443,8 +1437,6 @@ func (r *OctonaryIDEXRegister) toIDEX() IDEXRegister {
 }
 
 // fromIDEX populates OctonaryIDEXRegister from IDEXRegister.
-//
-//nolint:unused // Will be used when full 8-wide tick is implemented
 func (r *OctonaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 	r.Valid = idex.Valid
 	r.PC = idex.PC

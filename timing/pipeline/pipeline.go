@@ -218,8 +218,8 @@ type Pipeline struct {
 	exLatency4   uint64 // Remaining cycles for quaternary execute slot
 	exLatency5   uint64 // Remaining cycles for quinary execute slot
 	exLatency6   uint64 // Remaining cycles for senary execute slot
-	exLatency7   uint64 //nolint:unused // Remaining cycles for septenary execute slot (used when full 8-wide implemented)
-	exLatency8   uint64 //nolint:unused // Remaining cycles for octonary execute slot (used when full 8-wide implemented)
+	exLatency7   uint64 // Remaining cycles for septenary execute slot
+	exLatency8   uint64 // Remaining cycles for octonary execute slot
 
 	// Non-cached memory latency tracking
 	memPending   bool   // True if waiting for memory operation to complete
@@ -3296,6 +3296,14 @@ func (p *Pipeline) Reset() {
 	p.idex6.Clear()
 	p.exmem6.Clear()
 	p.memwb6.Clear()
+	p.ifid7.Clear()
+	p.idex7.Clear()
+	p.exmem7.Clear()
+	p.memwb7.Clear()
+	p.ifid8.Clear()
+	p.idex8.Clear()
+	p.exmem8.Clear()
+	p.memwb8.Clear()
 	p.pc = 0
 	p.stats = Statistics{}
 	p.halted = false
@@ -3305,6 +3313,8 @@ func (p *Pipeline) Reset() {
 	p.exLatency4 = 0
 	p.exLatency5 = 0
 	p.exLatency6 = 0
+	p.exLatency7 = 0
+	p.exLatency8 = 0
 	p.memPending = false
 	p.memPendingPC = 0
 	if p.branchPredictor != nil {
