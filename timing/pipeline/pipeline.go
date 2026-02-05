@@ -4063,8 +4063,30 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 2
+			forwardFlags2 := false
+			var fwdN2, fwdZ2, fwdC2, fwdV2 bool
+			if p.idex2.Inst != nil && p.idex2.Inst.Op == insts.OpBCond {
+				// Check same-cycle: slot 0 (nextEXMEM)
+				if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags2 = true
+					fwdN2, fwdZ2, fwdC2, fwdV2 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				// Check previous cycle EXMEM registers
+				if !forwardFlags2 {
+					if p.exmem.Valid && p.exmem.SetsFlags {
+						forwardFlags2 = true
+						fwdN2, fwdZ2, fwdC2, fwdV2 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+					} else if p.exmem2.Valid && p.exmem2.SetsFlags {
+						forwardFlags2 = true
+						fwdN2, fwdZ2, fwdC2, fwdV2 = p.exmem2.FlagN, p.exmem2.FlagZ, p.exmem2.FlagC, p.exmem2.FlagV
+					}
+				}
+			}
+
 			idex2 := p.idex2.toIDEX()
-			execResult := p.executeStage.Execute(&idex2, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex2, rnValue, rmValue,
+				forwardFlags2, fwdN2, fwdZ2, fwdC2, fwdV2)
 			nextEXMEM2 = SecondaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex2.PC,
@@ -4112,8 +4134,36 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM2.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 3
+			forwardFlags3 := false
+			var fwdN3, fwdZ3, fwdC3, fwdV3 bool
+			if p.idex3.Inst != nil && p.idex3.Inst.Op == insts.OpBCond {
+				// Check same-cycle: slots 0-1 (nextEXMEM, nextEXMEM2)
+				if nextEXMEM2.Valid && nextEXMEM2.SetsFlags {
+					forwardFlags3 = true
+					fwdN3, fwdZ3, fwdC3, fwdV3 = nextEXMEM2.FlagN, nextEXMEM2.FlagZ, nextEXMEM2.FlagC, nextEXMEM2.FlagV
+				} else if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags3 = true
+					fwdN3, fwdZ3, fwdC3, fwdV3 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				// Check previous cycle EXMEM registers
+				if !forwardFlags3 {
+					if p.exmem.Valid && p.exmem.SetsFlags {
+						forwardFlags3 = true
+						fwdN3, fwdZ3, fwdC3, fwdV3 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+					} else if p.exmem2.Valid && p.exmem2.SetsFlags {
+						forwardFlags3 = true
+						fwdN3, fwdZ3, fwdC3, fwdV3 = p.exmem2.FlagN, p.exmem2.FlagZ, p.exmem2.FlagC, p.exmem2.FlagV
+					} else if p.exmem3.Valid && p.exmem3.SetsFlags {
+						forwardFlags3 = true
+						fwdN3, fwdZ3, fwdC3, fwdV3 = p.exmem3.FlagN, p.exmem3.FlagZ, p.exmem3.FlagC, p.exmem3.FlagV
+					}
+				}
+			}
+
 			idex3 := p.idex3.toIDEX()
-			execResult := p.executeStage.Execute(&idex3, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex3, rnValue, rmValue,
+				forwardFlags3, fwdN3, fwdZ3, fwdC3, fwdV3)
 			nextEXMEM3 = TertiaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex3.PC,
@@ -4169,8 +4219,33 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM3.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 4
+			forwardFlags4 := false
+			var fwdN4, fwdZ4, fwdC4, fwdV4 bool
+			if p.idex4.Inst != nil && p.idex4.Inst.Op == insts.OpBCond {
+				// Check same-cycle: slots 0-2
+				if nextEXMEM3.Valid && nextEXMEM3.SetsFlags {
+					forwardFlags4 = true
+					fwdN4, fwdZ4, fwdC4, fwdV4 = nextEXMEM3.FlagN, nextEXMEM3.FlagZ, nextEXMEM3.FlagC, nextEXMEM3.FlagV
+				} else if nextEXMEM2.Valid && nextEXMEM2.SetsFlags {
+					forwardFlags4 = true
+					fwdN4, fwdZ4, fwdC4, fwdV4 = nextEXMEM2.FlagN, nextEXMEM2.FlagZ, nextEXMEM2.FlagC, nextEXMEM2.FlagV
+				} else if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags4 = true
+					fwdN4, fwdZ4, fwdC4, fwdV4 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				// Check previous cycle
+				if !forwardFlags4 {
+					if p.exmem.Valid && p.exmem.SetsFlags {
+						forwardFlags4 = true
+						fwdN4, fwdZ4, fwdC4, fwdV4 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+					}
+				}
+			}
+
 			idex4 := p.idex4.toIDEX()
-			execResult := p.executeStage.Execute(&idex4, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex4, rnValue, rmValue,
+				forwardFlags4, fwdN4, fwdZ4, fwdC4, fwdV4)
 			nextEXMEM4 = QuaternaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex4.PC,
@@ -4234,8 +4309,32 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM4.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 5
+			forwardFlags5 := false
+			var fwdN5, fwdZ5, fwdC5, fwdV5 bool
+			if p.idex5.Inst != nil && p.idex5.Inst.Op == insts.OpBCond {
+				if nextEXMEM4.Valid && nextEXMEM4.SetsFlags {
+					forwardFlags5 = true
+					fwdN5, fwdZ5, fwdC5, fwdV5 = nextEXMEM4.FlagN, nextEXMEM4.FlagZ, nextEXMEM4.FlagC, nextEXMEM4.FlagV
+				} else if nextEXMEM3.Valid && nextEXMEM3.SetsFlags {
+					forwardFlags5 = true
+					fwdN5, fwdZ5, fwdC5, fwdV5 = nextEXMEM3.FlagN, nextEXMEM3.FlagZ, nextEXMEM3.FlagC, nextEXMEM3.FlagV
+				} else if nextEXMEM2.Valid && nextEXMEM2.SetsFlags {
+					forwardFlags5 = true
+					fwdN5, fwdZ5, fwdC5, fwdV5 = nextEXMEM2.FlagN, nextEXMEM2.FlagZ, nextEXMEM2.FlagC, nextEXMEM2.FlagV
+				} else if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags5 = true
+					fwdN5, fwdZ5, fwdC5, fwdV5 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				if !forwardFlags5 && p.exmem.Valid && p.exmem.SetsFlags {
+					forwardFlags5 = true
+					fwdN5, fwdZ5, fwdC5, fwdV5 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+				}
+			}
+
 			idex5 := p.idex5.toIDEX()
-			execResult := p.executeStage.Execute(&idex5, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex5, rnValue, rmValue,
+				forwardFlags5, fwdN5, fwdZ5, fwdC5, fwdV5)
 			nextEXMEM5 = QuinaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex5.PC,
@@ -4307,8 +4406,35 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM5.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 6
+			forwardFlags6 := false
+			var fwdN6, fwdZ6, fwdC6, fwdV6 bool
+			if p.idex6.Inst != nil && p.idex6.Inst.Op == insts.OpBCond {
+				if nextEXMEM5.Valid && nextEXMEM5.SetsFlags {
+					forwardFlags6 = true
+					fwdN6, fwdZ6, fwdC6, fwdV6 = nextEXMEM5.FlagN, nextEXMEM5.FlagZ, nextEXMEM5.FlagC, nextEXMEM5.FlagV
+				} else if nextEXMEM4.Valid && nextEXMEM4.SetsFlags {
+					forwardFlags6 = true
+					fwdN6, fwdZ6, fwdC6, fwdV6 = nextEXMEM4.FlagN, nextEXMEM4.FlagZ, nextEXMEM4.FlagC, nextEXMEM4.FlagV
+				} else if nextEXMEM3.Valid && nextEXMEM3.SetsFlags {
+					forwardFlags6 = true
+					fwdN6, fwdZ6, fwdC6, fwdV6 = nextEXMEM3.FlagN, nextEXMEM3.FlagZ, nextEXMEM3.FlagC, nextEXMEM3.FlagV
+				} else if nextEXMEM2.Valid && nextEXMEM2.SetsFlags {
+					forwardFlags6 = true
+					fwdN6, fwdZ6, fwdC6, fwdV6 = nextEXMEM2.FlagN, nextEXMEM2.FlagZ, nextEXMEM2.FlagC, nextEXMEM2.FlagV
+				} else if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags6 = true
+					fwdN6, fwdZ6, fwdC6, fwdV6 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				if !forwardFlags6 && p.exmem.Valid && p.exmem.SetsFlags {
+					forwardFlags6 = true
+					fwdN6, fwdZ6, fwdC6, fwdV6 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+				}
+			}
+
 			idex6 := p.idex6.toIDEX()
-			execResult := p.executeStage.Execute(&idex6, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex6, rnValue, rmValue,
+				forwardFlags6, fwdN6, fwdZ6, fwdC6, fwdV6)
 			nextEXMEM6 = SenaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex6.PC,
@@ -4388,8 +4514,38 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM6.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 7
+			forwardFlags7 := false
+			var fwdN7, fwdZ7, fwdC7, fwdV7 bool
+			if p.idex7.Inst != nil && p.idex7.Inst.Op == insts.OpBCond {
+				if nextEXMEM6.Valid && nextEXMEM6.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = nextEXMEM6.FlagN, nextEXMEM6.FlagZ, nextEXMEM6.FlagC, nextEXMEM6.FlagV
+				} else if nextEXMEM5.Valid && nextEXMEM5.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = nextEXMEM5.FlagN, nextEXMEM5.FlagZ, nextEXMEM5.FlagC, nextEXMEM5.FlagV
+				} else if nextEXMEM4.Valid && nextEXMEM4.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = nextEXMEM4.FlagN, nextEXMEM4.FlagZ, nextEXMEM4.FlagC, nextEXMEM4.FlagV
+				} else if nextEXMEM3.Valid && nextEXMEM3.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = nextEXMEM3.FlagN, nextEXMEM3.FlagZ, nextEXMEM3.FlagC, nextEXMEM3.FlagV
+				} else if nextEXMEM2.Valid && nextEXMEM2.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = nextEXMEM2.FlagN, nextEXMEM2.FlagZ, nextEXMEM2.FlagC, nextEXMEM2.FlagV
+				} else if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				if !forwardFlags7 && p.exmem.Valid && p.exmem.SetsFlags {
+					forwardFlags7 = true
+					fwdN7, fwdZ7, fwdC7, fwdV7 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+				}
+			}
+
 			idex7 := p.idex7.toIDEX()
-			execResult := p.executeStage.Execute(&idex7, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex7, rnValue, rmValue,
+				forwardFlags7, fwdN7, fwdZ7, fwdC7, fwdV7)
 			nextEXMEM7 = SeptenaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex7.PC,
@@ -4477,8 +4633,41 @@ func (p *Pipeline) tickOctupleIssue() {
 					rmValue = nextEXMEM7.ALUResult
 				}
 			}
+			// Same-cycle PSTATE flag forwarding for B.cond in slot 8
+			forwardFlags8 := false
+			var fwdN8, fwdZ8, fwdC8, fwdV8 bool
+			if p.idex8.Inst != nil && p.idex8.Inst.Op == insts.OpBCond {
+				if nextEXMEM7.Valid && nextEXMEM7.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM7.FlagN, nextEXMEM7.FlagZ, nextEXMEM7.FlagC, nextEXMEM7.FlagV
+				} else if nextEXMEM6.Valid && nextEXMEM6.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM6.FlagN, nextEXMEM6.FlagZ, nextEXMEM6.FlagC, nextEXMEM6.FlagV
+				} else if nextEXMEM5.Valid && nextEXMEM5.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM5.FlagN, nextEXMEM5.FlagZ, nextEXMEM5.FlagC, nextEXMEM5.FlagV
+				} else if nextEXMEM4.Valid && nextEXMEM4.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM4.FlagN, nextEXMEM4.FlagZ, nextEXMEM4.FlagC, nextEXMEM4.FlagV
+				} else if nextEXMEM3.Valid && nextEXMEM3.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM3.FlagN, nextEXMEM3.FlagZ, nextEXMEM3.FlagC, nextEXMEM3.FlagV
+				} else if nextEXMEM2.Valid && nextEXMEM2.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM2.FlagN, nextEXMEM2.FlagZ, nextEXMEM2.FlagC, nextEXMEM2.FlagV
+				} else if nextEXMEM.Valid && nextEXMEM.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = nextEXMEM.FlagN, nextEXMEM.FlagZ, nextEXMEM.FlagC, nextEXMEM.FlagV
+				}
+				if !forwardFlags8 && p.exmem.Valid && p.exmem.SetsFlags {
+					forwardFlags8 = true
+					fwdN8, fwdZ8, fwdC8, fwdV8 = p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV
+				}
+			}
+
 			idex8 := p.idex8.toIDEX()
-			execResult := p.executeStage.Execute(&idex8, rnValue, rmValue)
+			execResult := p.executeStage.ExecuteWithFlags(&idex8, rnValue, rmValue,
+				forwardFlags8, fwdN8, fwdZ8, fwdC8, fwdV8)
 			nextEXMEM8 = OctonaryEXMEMRegister{
 				Valid:      true,
 				PC:         p.idex8.PC,
