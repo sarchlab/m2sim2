@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-*Last updated: 2026-02-04 18:45 EST*
+*Last updated: 2026-02-04 19:35 EST*
 
 ## Current Milestone: C1 - Execution Completeness
 
@@ -11,17 +11,18 @@
 
 ### Recent Activity (2026-02-04)
 
-**This cycle (18:45):**
-- Grace: Skipped (cycle 188, not a 10th)
-- Alice: Updated task board, action count 187→188
+**This cycle (19:35):**
+- Grace: Skipped (cycle 190, not a 10th)
+- Alice: Updated task board, action count 189→190
 - Eric: Evaluated status, 15 open issues healthy
-- Bob: **PR #174** — Add BRK instruction support
-- Cathy: Reviewed PR #174 — approved ✅
-- Dana: **Merged PR #174** ✅
+- Bob: **Fixed PR #175 tests** — added encodeMOVZ helper
+- Cathy: Reviewed Bob's test fix — approved ✅
+- Dana: Fixed gofmt formatting in PR #175, pushed CI fix
 
 **Progress:**
-- ✅ **PR #174 merged** — BRK instruction decoding & handling
-- ✅ **PR #173 merged** — LSLV, UBFM, STR register offset, CCMP
+- **PR #175** — ADD/SUB SP handling + NOP support (cathy-approved, CI re-running)
+- Test fix: encodeMOVZ added for proper ARM64 immediate value setting
+- Tests corrected to use MOVZ instead of incorrectly assuming ADD from SP gives zero
 - **CoreMark: 2406 instructions** (now properly reports BRK trap)
 - **40 PRs merged** total — excellent velocity!
 
@@ -32,12 +33,18 @@
 - SPEC: `benchspec/CPU` exists ✅
 - Logical immediate instructions ✅
 - LSLV, UBFM, STR register offset, CCMP ✅
-- BRK instruction ✅ (was showing "unknown instruction")
+- BRK instruction ✅
 
-**Current status:**
+**Current blockers:**
+- PR #175 waiting on CI (lint fixed, awaiting re-run)
 - CoreMark hits BRK #0x3e8 at PC=0x80BA8 (2406 instructions)
 - Bob investigating why x21 becomes 0 in core_list_mergesort
-- Need execution tracing to find root cause
+
+### Open PRs
+
+| PR | Title | Status |
+|----|-------|--------|
+| #175 | [Bob] Fix ADD/SUB SP handling + NOP | cathy-approved, CI re-running |
 
 ### Calibration Milestones
 
@@ -49,10 +56,11 @@ Per #167 discussion, Eric's proposal approved by Human:
 
 ### Next Steps
 
-1. **Debug BRK trap** — trace execution to find why x21 becomes 0
-2. **Complete CoreMark** — achieve C1 milestone
-3. **Begin #122 refactor** — after C1 completes
-4. Continue **Embench-IoT phase 2** after CoreMark validates
+1. **Merge PR #175** — once CI passes
+2. **Debug BRK trap** — trace execution to find why x21 becomes 0
+3. **Complete CoreMark** — achieve C1 milestone
+4. **Begin #122 refactor** — after C1 completes
+5. Continue **Embench-IoT phase 2** after CoreMark validates
 
 ### Current Accuracy (microbenchmarks)
 
@@ -76,10 +84,6 @@ Per #167 discussion, Eric's proposal approved by Human:
 | timing/latency | 71.8% | |
 | timing/core | 60.0% | |
 | timing/pipeline | 25.6% | #122 refactor pending |
-
-### Open PRs
-
-None currently.
 
 ### Recent Merges
 
