@@ -52,7 +52,7 @@ var _ = Describe("CMP+B.NE Sequences", func() {
 				// B.NE -8 (backward branch to simulate loop)
 				branchUnit.BCond(-8, emu.CondNE)
 
-				Expect(regFile.PC).To(Equal(uint64(0x1000 - 8)), "Should have branched backward")
+				Expect(regFile.PC).To(Equal(uint64(0x1000-8)), "Should have branched backward")
 			})
 
 			It("should take branch for X0=1 (loop's last iteration before exit)", func() {
