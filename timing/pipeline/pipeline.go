@@ -48,6 +48,87 @@ func isEliminableBranch(word uint32) bool {
 	return opcode == 0b000101 // Only pure B, not BL
 }
 
+// isConditionalBranch checks if an instruction word is a conditional branch (B.cond).
+// Returns true and the target PC if it is, false otherwise.
+func isConditionalBranch(word uint32, pc uint64) (bool, uint64) {
+	// B.cond instruction: bits [31:25] = 0101010, bit 24 = 0, bits [4] = 0
+	// Encoding: 01010100 imm19 0 cond
+	if (word >> 24) != 0x54 {
+		return false, 0
+	}
+	// Check bit 4 must be 0
+	if (word & 0x10) != 0 {
+		return false, 0
+	}
+	// Extract signed 19-bit immediate (offset in words)
+	imm19 := int64((word >> 5) & 0x7FFFF)
+	// Sign extend the 19-bit immediate
+	if (imm19 & 0x40000) != 0 {
+		imm19 |= ^int64(0x7FFFF)
+	}
+	// Multiply by 4 to get byte offset
+	target := uint64(int64(pc) + imm19*4)
+	return true, target
+}
+
+// isCompareAndBranch checks if an instruction word is CBZ or CBNZ.
+// Returns true and the target PC if it is, false otherwise.
+func isCompareAndBranch(word uint32, pc uint64) (bool, uint64) {
+	// CBZ: sf 011010 0 imm19 Rt
+	// CBNZ: sf 011010 1 imm19 Rt
+	// bits [30:25] = 011010
+	if ((word >> 25) & 0x3F) != 0b011010 {
+		return false, 0
+	}
+	// Extract signed 19-bit immediate
+	imm19 := int64((word >> 5) & 0x7FFFF)
+	// Sign extend
+	if (imm19 & 0x40000) != 0 {
+		imm19 |= ^int64(0x7FFFF)
+	}
+	target := uint64(int64(pc) + imm19*4)
+	return true, target
+}
+
+// isTestAndBranch checks if an instruction word is TBZ or TBNZ.
+// Returns true and the target PC if it is, false otherwise.
+func isTestAndBranch(word uint32, pc uint64) (bool, uint64) {
+	// TBZ: b5 011011 0 b40 imm14 Rt
+	// TBNZ: b5 011011 1 b40 imm14 Rt
+	// bits [30:25] = 011011
+	if ((word >> 25) & 0x3F) != 0b011011 {
+		return false, 0
+	}
+	// Extract signed 14-bit immediate
+	imm14 := int64((word >> 5) & 0x3FFF)
+	// Sign extend
+	if (imm14 & 0x2000) != 0 {
+		imm14 |= ^int64(0x3FFF)
+	}
+	target := uint64(int64(pc) + imm14*4)
+	return true, target
+}
+
+// isFoldableConditionalBranch checks if an instruction can be folded (eliminated)
+// at fetch time. Returns true with the target if the branch can be folded.
+// A branch is foldable if it's a conditional branch type (B.cond, CBZ, CBNZ, TBZ, TBNZ).
+// The actual folding decision also requires BTB hit and high-confidence prediction.
+func isFoldableConditionalBranch(word uint32, pc uint64) (bool, uint64) {
+	// Check B.cond
+	if isCond, target := isConditionalBranch(word, pc); isCond {
+		return true, target
+	}
+	// Check CBZ/CBNZ
+	if isCB, target := isCompareAndBranch(word, pc); isCB {
+		return true, target
+	}
+	// Check TBZ/TBNZ
+	if isTB, target := isTestAndBranch(word, pc); isTB {
+		return true, target
+	}
+	return false, 0
+}
+
 // Statistics holds pipeline performance statistics.
 type Statistics struct {
 	// Cycles is the total number of cycles simulated.
@@ -75,6 +156,11 @@ type Statistics struct {
 	// pipeline and consume zero cycles, matching Apple M2's behavior where
 	// unconditional B instructions never issue to execution units.
 	EliminatedBranches uint64
+	// FoldedBranches is the count of conditional branches that were folded
+	// at fetch time due to high-confidence prediction. These branches are
+	// eliminated from the pipeline (zero-cycle execution), similar to how
+	// M2 handles predicted-taken branches with BTB hits.
+	FoldedBranches uint64
 }
 
 // CPI returns the cycles per instruction.
@@ -4544,6 +4630,20 @@ func (p *Pipeline) tickOctupleIssue() {
 				// Don't create IFID entry - branch is eliminated
 				// Continue fetching from target without advancing slotIdx
 				continue
+			}
+
+			// Zero-cycle branch folding: high-confidence predicted-taken conditional branches
+			// are eliminated similar to unconditional B. This matches M2's behavior where
+			// predicted-taken branches with BTB hits execute at zero effective cost.
+			if isCond, _ := isFoldableConditionalBranch(word, fetchPC); isCond {
+				pred := p.branchPredictor.Predict(fetchPC)
+				// Fold if: BTB hit + predicted taken + high confidence (strongly taken)
+				if pred.TargetKnown && pred.Taken && pred.Confidence >= 3 {
+					fetchPC = pred.Target
+					p.stats.FoldedBranches++
+					// Don't create IFID entry - branch is folded
+					continue
+				}
 			}
 
 			if slotIdx == 0 {
