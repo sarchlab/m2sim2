@@ -691,3 +691,54 @@ var _ = Describe("Pipeline Integration", func() {
 		})
 	})
 })
+
+// Tests for Stats and rate methods - added by Cathy for coverage
+var _ = Describe("Pipeline Stats Methods", func() {
+	var (
+		regFile *emu.RegFile
+		memory  *emu.Memory
+		pipe    *pipeline.Pipeline
+	)
+
+	BeforeEach(func() {
+		regFile = &emu.RegFile{}
+		memory = emu.NewMemory()
+		pipe = pipeline.NewPipeline(regFile, memory, pipeline.WithSextupleIssue())
+	})
+
+	Describe("Statistics.CPI", func() {
+		It("should return zero for zero instructions", func() {
+			stats := pipe.Stats()
+			cpi := stats.CPI()
+			Expect(cpi).To(Equal(0.0))
+		})
+	})
+
+	Describe("ExitCode", func() {
+		It("should return zero initially", func() {
+			code := pipe.ExitCode()
+			Expect(code).To(Equal(int64(0)))
+		})
+	})
+
+	Describe("BranchPredictorStats", func() {
+		It("should return branch predictor statistics", func() {
+			stats := pipe.BranchPredictorStats()
+			Expect(stats.Predictions).To(BeNumerically(">=", 0))
+		})
+
+		It("should calculate misprediction rate", func() {
+			stats := pipe.BranchPredictorStats()
+			rate := stats.MispredictionRate()
+			Expect(rate).To(BeNumerically(">=", 0.0))
+			Expect(rate).To(BeNumerically("<=", 1.0))
+		})
+
+		It("should calculate BTB hit rate", func() {
+			stats := pipe.BranchPredictorStats()
+			rate := stats.BTBHitRate()
+			Expect(rate).To(BeNumerically(">=", 0.0))
+			Expect(rate).To(BeNumerically("<=", 1.0))
+		})
+	})
+})
