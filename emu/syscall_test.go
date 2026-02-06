@@ -376,4 +376,93 @@ var _ = Describe("Syscall Handler", func() {
 			handler.Handle()
 		})
 	})
+
+	Describe("Brk syscall", func() {
+		It("should return default program break when addr is 0", func() {
+			regFile.WriteReg(8, 214) // SyscallBrk
+			regFile.WriteReg(0, 0)   // Query current break
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain the default program break
+			Expect(regFile.ReadReg(0)).To(Equal(emu.DefaultProgramBreak))
+		})
+
+		It("should extend program break when addr is larger", func() {
+			newBreak := emu.DefaultProgramBreak + 0x10000 // Add 64KB
+
+			regFile.WriteReg(8, 214)      // SyscallBrk
+			regFile.WriteReg(0, newBreak) // Request larger break
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain the new program break
+			Expect(regFile.ReadReg(0)).To(Equal(newBreak))
+
+			// Verify break was actually extended
+			Expect(handler.GetProgramBreak()).To(Equal(newBreak))
+		})
+
+		It("should not shrink program break when addr is smaller", func() {
+			// First, extend the break
+			newBreak := emu.DefaultProgramBreak + 0x10000
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, newBreak)
+			handler.Handle()
+
+			// Try to shrink it
+			smallerAddr := emu.DefaultProgramBreak - 0x1000
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, smallerAddr)
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should still contain the current (larger) break
+			Expect(regFile.ReadReg(0)).To(Equal(newBreak))
+			Expect(handler.GetProgramBreak()).To(Equal(newBreak))
+		})
+
+		It("should handle multiple sequential brk calls", func() {
+			// Query initial break
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, 0)
+			handler.Handle()
+			initialBreak := regFile.ReadReg(0)
+
+			// Extend break
+			firstExtend := initialBreak + 0x1000
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, firstExtend)
+			handler.Handle()
+			Expect(regFile.ReadReg(0)).To(Equal(firstExtend))
+
+			// Extend again
+			secondExtend := firstExtend + 0x2000
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, secondExtend)
+			handler.Handle()
+			Expect(regFile.ReadReg(0)).To(Equal(secondExtend))
+
+			// Query again (addr=0)
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, 0)
+			handler.Handle()
+			Expect(regFile.ReadReg(0)).To(Equal(secondExtend))
+		})
+
+		It("should handle setting custom initial program break", func() {
+			customBreak := uint64(0x20000000)
+			handler.SetProgramBreak(customBreak)
+
+			regFile.WriteReg(8, 214)
+			regFile.WriteReg(0, 0)
+
+			handler.Handle()
+
+			Expect(regFile.ReadReg(0)).To(Equal(customBreak))
+		})
+	})
 })
