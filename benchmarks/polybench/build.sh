@@ -22,7 +22,7 @@ CFLAGS+=" -DPOLYBENCH_USE_RESTRICT"
 CFLAGS+=" -DMINI_DATASET"
 
 # Available benchmarks
-BENCHMARKS="gemm"
+BENCHMARKS="gemm atax"
 
 # Build function
 build_benchmark() {

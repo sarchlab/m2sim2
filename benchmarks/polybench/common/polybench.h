@@ -20,6 +20,12 @@
   #define NK 16
 #endif
 
+/* ATAX matrix dimensions (MINI) */
+#ifdef MINI_DATASET
+  #define NX 16
+  #define NY 16
+#endif
+
 /* Integer data type for bare-metal (no FPU dependencies) */
 typedef int DATA_TYPE;
 
