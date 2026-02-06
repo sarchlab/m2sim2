@@ -1,6 +1,6 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-06 06:00 EST (Cycle 295)
+**Last updated:** 2026-02-06 07:48 EST (Cycle 299)
 
 ## Current Status
 
@@ -8,48 +8,40 @@
 |--------|-------|
 | Total PRs Merged | **83** 🎉 |
 | Open PRs | 0 |
-| Open Issues | 8 (excl. tracker) |
+| Open Issues | 6 (excl. tracker) |
 | Pipeline Coverage | **70.5%** ✅ |
 | Emu Coverage | 79.9% ✅ |
 
 ## 🎉🎉🎉 15 BENCHMARKS READY — PUBLICATION TARGET MET! 🎉🎉🎉
 
-### Cycle 293 Status
+### Cycle 299 Status
 
-All milestones achieved — team in waiting state per Grace guidance:
+All milestones achieved — ongoing improvements continue:
 - **15 benchmarks ready** — target met! 🎯
 - **Coverage targets met** — emu 79.9%, pipeline 70.5% ✅
 - **8-wide arithmetic: 7.2%** — excellent accuracy ✅
 - **83 PRs merged total** 🎉
 - **0 open PRs** — clean slate
-- **8 open issues** (excl. tracker)
+- **6 open issues** (excl. tracker)
 
-**Notes:**
-- Waiting state continues — team blocked on human M2 baseline capture (#141)
-- All publication milestones complete
-- No new actionable work available
-- Dana housekeeping: 0 PRs to merge, 0 branches to clean, docs verified
+**Recent Updates (Cycles 297-299):**
+- ✅ #145 closed — CLAUDE.md reduced (2500→670 bytes)
+- ✅ #254 closed — GitHub Actions benchmark workflow created
+- ✅ #255 complete — PolyBench defaults to MEDIUM dataset
+- ✅ #138 partial — SPEC native timing collected
+- ✅ SUPPORTED.md consolidated (insts/ merged into root)
+- ✅ M2 runner docs created (`docs/m2-runner-setup.md`)
+- ✅ 4 issues closed (#252, #240, #242, #141)
 
-**⚠️ Blocked on M2 baseline capture** — waiting on human involvement per #141.
-
-**Scripts Ready:**
-- `./scripts/capture-m2-baselines.sh all` (PolyBench)
-- SPEC CPU 2017 builds via `clang-m2.cfg`
+**Infrastructure Ready:**
+- Self-hosted runner guide: `docs/m2-runner-setup.md`
+- Benchmark workflow: `.github/workflows/benchmark.yml`
+- PolyBench scripts: `./scripts/capture-m2-baselines.sh`
+- SPEC timing script: `./scripts/run-spec-native.sh`
 
 ---
 
-## Previous: Cycle 276: PUBLICATION TARGET REACHED!
-
-### PR #251 Merged (bicg Benchmark)
-
-Dana merged PR #251:
-- bicg: BiConjugate Gradient subkernel from PolyBench
-- s = A^T × r, q = A × p (simultaneous in single loop nest)
-- ~4.8K instructions, MINI dataset (16×16 matrices)
-- **83 PRs merged total!** 🎉
-- **15 benchmarks ready!** — 🎯 PUBLICATION TARGET ACHIEVED!
-
-### 📈 Benchmark Inventory Status
+## 📈 Benchmark Inventory Status
 
 | Suite | Ready | Status |
 |-------|-------|--------|
@@ -81,7 +73,11 @@ Dana merged PR #251:
 | 3mm | ✅ Merged (PR #250) | ~105K |
 | bicg | ✅ Merged (PR #251) | ~4.8K |
 
-All 7 PolyBench benchmarks ready for M2 baseline capture and timing validation.
+**Dataset sizes now configurable (MEDIUM default):**
+- MINI: 16×16 matrices (fast testing)
+- SMALL: 60-120 elements
+- MEDIUM: 200-400 elements (default for timing)
+- LARGE: 1000-2000 elements
 
 ---
 
@@ -99,20 +95,33 @@ All 7 PolyBench benchmarks ready for M2 baseline capture and timing validation.
 
 ---
 
+## SPEC CPU 2017 — Native Baseline
+
+Initial native timing on marin-2 (M2 Mac Mini):
+
+| Benchmark | Wall Time | User Time | Sys Time |
+|-----------|-----------|-----------|----------|
+| 505.mcf_r | 4.99s | 4.78s | 0.04s |
+| 531.deepsjeng_r | 3.45s | 3.23s | 0.05s |
+
+**Note:** Simulator execution requires additional syscall support (open, read, close, mmap).
+
+---
+
 ## Open PRs
 
 None — PR queue is clean! 🎉
 
-## ⚠️ Critical Blockers
+## Open Issues (6 excl. tracker)
 
-### M2 Baseline Capture Required
-
-Per issue #141, microbenchmark accuracy (20.2%) does NOT count for M6 validation!
-
-**Blocked on human to:**
-1. Build native gemm/atax for macOS
-2. Run on real M2 with performance counters
-3. Capture cycle baselines for intermediate benchmark validation
+| # | Title | Priority |
+|---|-------|----------|
+| 255 | Configure MEDIUM dataset size | high |
+| 253 | M2 runners (marin-6, marin-10) | medium |
+| 224 | Long-running jobs research | medium |
+| 139 | Multi-core execution | low |
+| 138 | SPEC benchmark execution | medium |
+| 107 | SPEC benchmark suite | low |
 
 ---
 
