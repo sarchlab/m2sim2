@@ -7,16 +7,21 @@ helping prioritize syscall implementation order.
 
 | Syscall | Number | Status | Issue/PR |
 |---------|--------|--------|----------|
-| exit | 93 | Implemented | - |
-| write | 64 | Implemented | - |
-| read | 63 | Implemented | #264 (merged) |
-| close | 57 | In Review | #258 → PR #267 |
-| openat | 56 | In Review | #259 → PR #268 |
-| brk | 214 | Planned | #260 |
-| mmap | 222 | Planned | #261 |
-| fstat | 80 | Planned | #263 |
+| exit | 93 | ✅ Implemented | - |
+| write | 64 | ✅ Implemented | - |
+| read | 63 | ✅ Implemented | PR #264 merged |
+| close | 57 | ✅ Implemented | PR #267 merged |
+| openat | 56 | ✅ Implemented | PR #268 merged |
+| brk | 214 | 📋 Planned | #260 |
+| mmap | 222 | 📋 Planned | #261 |
+| fstat | 80 | 📋 Planned | #263 |
+| lseek | 62 | 📋 Planned | #270 |
+| munmap | 215 | 📋 Planned | #271 |
+| exit_group | 94 | 📋 Planned | #272 |
 
-**Dependencies:** File descriptor table (#262) → PR #266 (in review, needs lint fix).
+**Dependencies:** ✅ File descriptor table (#262) → PR #266 merged.
+
+**Note:** read/write syscalls currently only support stdin/stdout/stderr. Issue #269 tracks extending them to use FDTable for opened files.
 
 ## Benchmark Syscall Requirements Matrix
 
@@ -123,3 +128,4 @@ Run remaining benchmarks incrementally.
 
 ---
 *Research compiled by Eric (Cycle 302)*
+*Updated by Eric (Cycle 304) — FD table, close, openat merged*

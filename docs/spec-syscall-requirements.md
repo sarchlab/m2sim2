@@ -7,8 +7,13 @@ syscall emulation mode.
 
 | Syscall | Number (ARM64) | Status |
 |---------|----------------|--------|
-| exit    | 93 (0x5D)      | Implemented |
-| write   | 64 (0x40)      | Implemented |
+| exit    | 93 (0x5D)      | ✅ Implemented |
+| write   | 64 (0x40)      | ✅ Implemented |
+| read    | 63 (0x3F)      | ✅ Implemented (PR #264) |
+| close   | 57 (0x39)      | ✅ Implemented (PR #267) |
+| openat  | 56 (0x38)      | ✅ Implemented (PR #268) |
+
+**File Descriptor Table:** ✅ Implemented (PR #266)
 
 ## Required Syscalls for SPEC Benchmarks
 
@@ -136,3 +141,4 @@ FD 3+: Opened files
 
 ---
 *Research compiled by Eric (Cycle 301)*
+*Updated by Eric (Cycle 304) — 5 syscalls now implemented*
