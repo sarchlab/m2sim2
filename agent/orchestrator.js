@@ -130,8 +130,8 @@ async function runCycle() {
   cycleCount++;
   log(`========== CYCLE ${cycleCount} START ==========`);
   
-  // Run Grace every 10th cycle
-  if (cycleCount % 10 === 0) {
+  // Run Grace at cycle 1, 11, 21, etc.
+  if (cycleCount % 10 === 1) {
     await runGrace();
   }
   
