@@ -142,3 +142,4 @@ FD 3+: Opened files
 ---
 *Research compiled by Eric (Cycle 301)*
 *Updated by Eric (Cycle 304) — 5 syscalls now implemented*
+*Updated by Eric (Cycle 305) — 6 syscalls implemented (brk merged), mmap in review*

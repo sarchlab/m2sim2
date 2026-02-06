@@ -12,8 +12,8 @@ helping prioritize syscall implementation order.
 | read | 63 | ✅ Implemented | PR #264 merged |
 | close | 57 | ✅ Implemented | PR #267 merged |
 | openat | 56 | ✅ Implemented | PR #268 merged |
-| brk | 214 | 📋 Planned | #260 |
-| mmap | 222 | 📋 Planned | #261 |
+| brk | 214 | ✅ Implemented | PR #275 merged |
+| mmap | 222 | 🔄 In Review | PR #276 (needs rebase) |
 | fstat | 80 | 📋 Planned | #263 |
 | lseek | 62 | 📋 Planned | #270 |
 | munmap | 215 | 📋 Planned | #271 |
@@ -129,3 +129,4 @@ Run remaining benchmarks incrementally.
 ---
 *Research compiled by Eric (Cycle 302)*
 *Updated by Eric (Cycle 304) — FD table, close, openat merged*
+*Updated by Eric (Cycle 305) — brk merged (PR #275), mmap in review (PR #276)*
