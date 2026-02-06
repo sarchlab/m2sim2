@@ -225,7 +225,7 @@ var _ = Describe("Syscall Handler", func() {
 		})
 
 		AfterEach(func() {
-			os.RemoveAll(tempDir)
+			_ = os.RemoveAll(tempDir)
 		})
 
 		writePathToMemory := func(path string, addr uint64) {
@@ -245,11 +245,11 @@ var _ = Describe("Syscall Handler", func() {
 			writePathToMemory(testFile, 0x1000)
 
 			// Set up openat syscall
-			regFile.WriteReg(8, 56)                    // SyscallOpenat
-			regFile.WriteReg(0, emu.AT_FDCWD_U64)   // AT_FDCWD
-			regFile.WriteReg(1, 0x1000)                // pathname pointer
-			regFile.WriteReg(2, 0)                     // O_RDONLY
-			regFile.WriteReg(3, 0)                     // mode (ignored for O_RDONLY)
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 0)                // O_RDONLY
+			regFile.WriteReg(3, 0)                // mode (ignored for O_RDONLY)
 
 			result := handler.Handle()
 
@@ -269,11 +269,11 @@ var _ = Describe("Syscall Handler", func() {
 			writePathToMemory("/nonexistent/file.txt", 0x1000)
 
 			// Set up openat syscall
-			regFile.WriteReg(8, 56)                    // SyscallOpenat
-			regFile.WriteReg(0, emu.AT_FDCWD_U64)   // AT_FDCWD
-			regFile.WriteReg(1, 0x1000)                // pathname pointer
-			regFile.WriteReg(2, 0)                     // O_RDONLY
-			regFile.WriteReg(3, 0)                     // mode
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 0)                // O_RDONLY
+			regFile.WriteReg(3, 0)                // mode
 
 			result := handler.Handle()
 
@@ -290,11 +290,11 @@ var _ = Describe("Syscall Handler", func() {
 			writePathToMemory(newFile, 0x1000)
 
 			// Set up openat syscall with O_WRONLY | O_CREAT
-			regFile.WriteReg(8, 56)                    // SyscallOpenat
-			regFile.WriteReg(0, emu.AT_FDCWD_U64)   // AT_FDCWD
-			regFile.WriteReg(1, 0x1000)                // pathname pointer
-			regFile.WriteReg(2, 1|0x40)                // O_WRONLY | O_CREAT
-			regFile.WriteReg(3, 0644)                  // mode
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 1|0x40)           // O_WRONLY | O_CREAT
+			regFile.WriteReg(3, 0644)             // mode
 
 			result := handler.Handle()
 
@@ -315,7 +315,8 @@ var _ = Describe("Syscall Handler", func() {
 
 		It("should return EBADF for invalid dirfd", func() {
 			testFile := filepath.Join(tempDir, "test.txt")
-			os.WriteFile(testFile, []byte("hello"), 0644)
+			err := os.WriteFile(testFile, []byte("hello"), 0644)
+			Expect(err).ToNot(HaveOccurred())
 			writePathToMemory(testFile, 0x1000)
 
 			// Set up openat syscall with invalid dirfd (not AT_FDCWD)
@@ -339,8 +340,10 @@ var _ = Describe("Syscall Handler", func() {
 			// Create test files
 			testFile1 := filepath.Join(tempDir, "test1.txt")
 			testFile2 := filepath.Join(tempDir, "test2.txt")
-			os.WriteFile(testFile1, []byte("1"), 0644)
-			os.WriteFile(testFile2, []byte("2"), 0644)
+			err := os.WriteFile(testFile1, []byte("1"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.WriteFile(testFile2, []byte("2"), 0644)
+			Expect(err).ToNot(HaveOccurred())
 
 			// Open first file
 			writePathToMemory(testFile1, 0x1000)
