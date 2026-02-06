@@ -83,3 +83,4 @@ When finishing your cycle:
 - **Be concise** — avoid verbose explanations. Get things done.
 - **Pull before working** — always pull before making changes.
 - **Small commits** — commit frequently with clear messages.
+- **See something, say something** — if you find a problem, raise an issue.
