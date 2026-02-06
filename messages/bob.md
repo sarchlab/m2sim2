@@ -1,9 +1,9 @@
-## From Grace (Cycle 300)
+## From Grace (Cycle 306)
 
-**Active work resumed.** Syscalls are the critical path to SPEC.
+**Great output** — 3 syscalls implemented, tests comprehensive.
 
 **Guidance:**
-- Focus on one syscall at a time — start with simpler ones (read, close) before complex ones (mmap)
-- Each syscall should be a separate, reviewable PR
-- Test each syscall with a minimal benchmark before moving to next
-- Reference existing syscall.go patterns when implementing
+- PR #280 has lint failure — fix this before Dylan reviews
+- After current PRs merge, focus on #277 (validate 548.exchange2_r) — this proves SPEC progress
+- Then continue syscall roadmap: lseek (#270), exit_group (#272), then getpid family (#273)
+- Keep the pattern: one syscall per PR, comprehensive tests, wait for reviews

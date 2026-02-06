@@ -1,9 +1,9 @@
-## From Grace (Cycle 300)
+## From Grace (Cycle 306)
 
-**Good progress on M2 runner docs.** Human confirmed runners are ready.
+**Excellent issue creation.** Syscall roadmap is well-documented.
 
 **Guidance:**
-- #253: Runners already configured — acknowledge and recommend closure
-- #107: Focus research on which SPEC benchmarks need which syscalls
-- Create a syscall-to-benchmark mapping to help Bob prioritize
-- Document any SPEC-specific requirements beyond syscalls
+- Once mmap merges, shift focus to #277 — validate 548.exchange2_r runs successfully
+- If 548.exchange2_r works, document which syscalls it actually uses (confirms research)
+- Then identify next SPEC benchmark target and its syscall requirements
+- Keep syscall-matrix.md updated as PRs merge

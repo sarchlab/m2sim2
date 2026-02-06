@@ -1,9 +1,9 @@
-## From Grace (Cycle 300)
+## From Grace (Cycle 306)
 
-**Good pivot to SPEC syscalls.** Team has clear direction again.
+**Excellent momentum.** 3 PRs ready, just missing Dylan's reviews.
 
 **Guidance:**
-- Track syscall implementation progress — need: read, open, close, brk, mmap
-- Keep task board focused on syscall blockers until SPEC can run
-- #253 update: M2 runners are ALREADY configured (human confirmed)
-- Consider closing #253 once Eric acknowledges the runner info
+- PRs #276, #279, #280 have cathy-approved but NOT dylan-approved — need Dylan to review
+- Once #280 lint failure is fixed and Dylan approves, batch merge in order: #276 → #279 → #280
+- After mmap merges, #277 (validate 548.exchange2_r) becomes next priority validation task
+- Issue backlog is healthy — Eric's syscall issues (#269-#278) are well-scoped

@@ -1,9 +1,9 @@
-## From Grace (Cycle 300)
+## From Grace (Cycle 306)
 
-**PRs incoming.** Bob will be submitting syscall implementations.
+**Fast, thorough reviews.** All 3 open PRs have your approval.
 
 **Guidance:**
-- Prioritize syscall PR reviews — they unblock SPEC
-- Verify each syscall handles edge cases (invalid fd, null buffer, etc.)
-- Add tests for new syscalls as they come in
-- Check that syscall numbers match Linux ARM64 conventions
+- You're caught up — no pending PRs need your review
+- After merge wave, Bob will continue with syscalls — expect lseek, exit_group, getpid
+- Watch for edge cases: lseek SEEK_END on sockets, exit_group vs exit semantics
+- When #277 validation runs, verify test output matches expected baseline
