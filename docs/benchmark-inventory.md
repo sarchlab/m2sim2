@@ -1,7 +1,7 @@
 # M2Sim Benchmark Inventory
 
 **Author:** Eric (AI Researcher)  
-**Date:** 2026-02-05  
+**Updated:** 2026-02-05 (Cycle 271)  
 **Purpose:** Track all available intermediate benchmarks for M6 validation
 
 ## Summary
@@ -10,21 +10,23 @@ Per Issue #141, microbenchmarks do NOT count for accuracy validation. We need in
 
 | Suite | Ready | Pending | Notes |
 |-------|-------|---------|-------|
-| PolyBench | 2 | Many more available | gemm, atax ready |
-| Embench-IoT | 4 | 1 (edn needs build) | Good diversity |
+| PolyBench | **4** | Many more available | gemm, atax, 2mm, mvt ready |
+| Embench-IoT | **5** | huffbench, statemate | edn now built! |
 | CoreMark | 1 | - | Impractical (50M+ instr) |
-| **Total** | **7** | **1** | Target: 15+ for publication |
+| **Total** | **10** | **2** | Target: 15+ for publication |
 
 ## Ready Benchmarks (with ELFs)
 
-### PolyBench/C
+### PolyBench/C (4 ready)
 
 | Benchmark | Location | Instructions | Status |
 |-----------|----------|--------------|--------|
 | gemm | benchmarks/polybench/gemm_m2sim.elf | ~37K | ✅ Ready |
 | atax | benchmarks/polybench/atax_m2sim.elf | ~5K | ✅ Ready |
+| 2mm | benchmarks/polybench/2mm_m2sim.elf | ~70K | ✅ Ready (PR #246) |
+| mvt | benchmarks/polybench/mvt_m2sim.elf | ~5K | ✅ Ready (PR #246) |
 
-### Embench-IoT
+### Embench-IoT (5 ready)
 
 | Benchmark | Location | Workload Type | Status |
 |-----------|----------|---------------|--------|
@@ -32,6 +34,7 @@ Per Issue #141, microbenchmarks do NOT count for accuracy validation. We need in
 | crc32 | benchmarks/crc32-m2sim/ | Checksum/bit ops | ✅ Ready |
 | matmult-int | benchmarks/matmult-int-m2sim/ | Matrix multiply | ✅ Ready |
 | primecount | benchmarks/primecount-m2sim/ | Integer math | ✅ Ready |
+| edn | benchmarks/edn-m2sim/ | Signal processing | ✅ Ready (Bob built #243) |
 
 ### CoreMark
 
@@ -41,76 +44,94 @@ Per Issue #141, microbenchmarks do NOT count for accuracy validation. We need in
 
 ## Pending Benchmarks
 
-### Embench-IoT (Need Build)
-
-| Benchmark | Location | Issue | Notes |
-|-----------|----------|-------|-------|
-| edn | benchmarks/edn-m2sim/ | Needed | Has sources, no ELF |
-
-### Embench-IoT Phase 2 (Alice Approved)
+### Embench-IoT Phase 2 (#245)
 
 Per Issue #183, these are approved for implementation:
 
-| Benchmark | Workload Type | Priority |
-|-----------|---------------|----------|
-| huffbench | Huffman coding | High |
-| statemate | State machine | High |
+| Benchmark | Workload Type | Dependencies | Complexity |
+|-----------|---------------|--------------|------------|
+| statemate | State machine | string.h only | **Low** ✅ |
+| huffbench | Huffman coding | stdlib (heap), math | Medium |
 
-### PolyBench Expansion
+**Recommendation:** statemate is easiest — uses `#define float int` trick, no FPU needed.
 
-Additional PolyBench kernels could be added:
+### Additional PolyBench Kernels (Optional)
 
 | Benchmark | Type | Complexity |
 |-----------|------|------------|
-| 2mm | Matrix multiply chain | Medium |
 | 3mm | Matrix multiply chain | Medium |
-| mvt | Matrix-vector ops | Low |
 | bicg | Bi-conjugate gradient | Medium |
 | doitgen | Multi-resolution | Medium |
+| jacobi-1d | Stencil | Low |
+| seidel-2d | Stencil | Medium |
 
 ## Publication Gap Analysis
 
 | Metric | Current | Target | Gap |
 |--------|---------|--------|-----|
-| Ready benchmarks | 6 | 15+ | +9 needed |
-| M2 baselines | 0 | 15+ | Requires human |
-| Accuracy measured | 0 | 15+ | Awaiting baselines |
+| Ready benchmarks | **10** | 15+ | +5 needed |
+| M2 baselines captured | 0 | 10+ | Requires human |
+| Accuracy measured | 0 | 10+ | Awaiting baselines |
+
+## Path to 15 Benchmarks
+
+| Action | New Total | Status |
+|--------|-----------|--------|
+| Current state | 10 | ✅ |
+| +statemate (#245) | 11 | Pending Bob |
+| +huffbench (#245) | 12 | Needs heap support |
+| +3 more PolyBench (3mm, bicg, jacobi) | 15 | Future |
+
+## Benchmark Diversity Analysis
+
+| Category | Benchmarks | Count |
+|----------|------------|-------|
+| Matrix/Linear Algebra | gemm, atax, 2mm, mvt, matmult-int | 5 |
+| Integer/Crypto | aha-mont64, crc32 | 2 |
+| Signal Processing | edn | 1 |
+| Control/State | primecount, (statemate pending) | 1-2 |
+| Compression | (huffbench pending) | 0-1 |
+
+**Diversity is good!** We have representation across workload types.
+
+## M6 Completion Requirements
+
+Per SPEC.md and #141:
+
+1. **Benchmark count:** 10 ready (need intermediate benchmarks, not microbenchmarks)
+2. **M2 baselines:** Required for accuracy measurement (blocked on human)
+3. **<20% average error:** Must be measured against intermediate benchmarks
+4. **Per #141 caveat:** Microbenchmark accuracy (20.2%) does NOT count
 
 ## Recommended Priorities
 
-### Immediate (Bob)
-1. Build edn ELF (low effort, sources exist) — #243
-2. Port statemate (low effort, see `docs/huffbench-statemate-analysis.md`) — #245
-3. Add 2mm, mvt from PolyBench — #244
+### For Bob
+1. ✅ edn ELF built (done!)
+2. ✅ 2mm/mvt added (PR #246 merged!)
+3. → statemate (#245) — easiest remaining Embench
 
 ### Requires Human
-1. Capture M2 baselines for gemm, atax
-2. Decision on accepting intermediate benchmarks for M6
+1. Capture M2 baselines for 10 ready benchmarks
+2. Run native builds with performance counters on real M2
 
-### Medium-term
-1. Add huffbench from Embench (needs beebs heap support)
-2. Reach 15+ benchmarks for publication credibility
-
-## Embench Port Complexity (Eric Analysis)
-
-| Benchmark | Dependencies | Complexity | Status |
-|-----------|--------------|------------|--------|
-| statemate | string.h only | **Low** | #245 - port first |
-| huffbench | stdlib (heap), math | Medium | #245 - port second |
-| edn | string.h, stddef.h | Low | #243 - build.sh ready |
-
-See `docs/huffbench-statemate-analysis.md` for detailed analysis.
+### Future Expansion
+1. Add huffbench (needs beebs heap support)
+2. Add 3+ more PolyBench kernels
+3. Reach 15+ benchmarks for publication credibility
 
 ## Verification Commands
 
 ```bash
 # List all ready ELFs
-for elf in benchmarks/*/*m2sim.elf benchmarks/polybench/*m2sim.elf; do
-  echo "$(basename $elf): $(du -h $elf | cut -f1)"
+find benchmarks -name "*m2sim.elf" -type f | while read elf; do
+  echo "$(basename $elf): $(du -h "$elf" | cut -f1)"
 done
 
-# Test a benchmark
+# Test a benchmark (functional)
 go run cmd/m2sim/main.go benchmarks/polybench/gemm_m2sim.elf
+
+# Test a benchmark (timing)
+go run cmd/m2sim/main.go --timing benchmarks/polybench/gemm_m2sim.elf
 ```
 
 ---
