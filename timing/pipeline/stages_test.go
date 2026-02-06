@@ -1120,5 +1120,62 @@ var _ = Describe("Pipeline Stages", func() {
 				Expect(regFile.ReadReg(5)).To(Equal(uint64(999)))
 			})
 		})
+
+		Context("WritebackSlot", func() {
+			It("should return false for invalid slot", func() {
+				memwb := &pipeline.MEMWBRegister{
+					Valid: false,
+				}
+				result := writebackStage.WritebackSlot(memwb)
+				Expect(result).To(BeFalse())
+			})
+
+			It("should return true for valid slot without regwrite", func() {
+				memwb := &pipeline.MEMWBRegister{
+					Valid:    true,
+					RegWrite: false,
+				}
+				result := writebackStage.WritebackSlot(memwb)
+				Expect(result).To(BeTrue())
+			})
+
+			It("should return true when writing to XZR (Rd=31)", func() {
+				memwb := &pipeline.MEMWBRegister{
+					Valid:     true,
+					RegWrite:  true,
+					Rd:        31,
+					ALUResult: 100,
+				}
+				result := writebackStage.WritebackSlot(memwb)
+				Expect(result).To(BeTrue())
+				Expect(regFile.ReadReg(31)).To(Equal(uint64(0))) // XZR always 0
+			})
+
+			It("should write ALU result via WritebackSlot", func() {
+				memwb := &pipeline.MEMWBRegister{
+					Valid:     true,
+					RegWrite:  true,
+					Rd:        7,
+					MemToReg:  false,
+					ALUResult: 42,
+				}
+				result := writebackStage.WritebackSlot(memwb)
+				Expect(result).To(BeTrue())
+				Expect(regFile.ReadReg(7)).To(Equal(uint64(42)))
+			})
+
+			It("should write memory data via WritebackSlot", func() {
+				memwb := &pipeline.MEMWBRegister{
+					Valid:     true,
+					RegWrite:  true,
+					Rd:        8,
+					MemToReg:  true,
+					MemData:   999,
+				}
+				result := writebackStage.WritebackSlot(memwb)
+				Expect(result).To(BeTrue())
+				Expect(regFile.ReadReg(8)).To(Equal(uint64(999)))
+			})
+		})
 	})
 })

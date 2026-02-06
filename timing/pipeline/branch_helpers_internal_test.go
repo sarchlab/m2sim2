@@ -202,6 +202,70 @@ func TestIsTestAndBranch(t *testing.T) {
 	}
 }
 
+// Test isUnconditionalBranch (B and BL instruction detection)
+func TestIsUnconditionalBranch(t *testing.T) {
+	tests := []struct {
+		name       string
+		word       uint32
+		pc         uint64
+		wantMatch  bool
+		wantTarget uint64
+	}{
+		{
+			name:       "B forward offset",
+			word:       0x14000002, // B +8
+			pc:         0x1000,
+			wantMatch:  true,
+			wantTarget: 0x1008,
+		},
+		{
+			name:       "BL forward offset",
+			word:       0x94000002, // BL +8
+			pc:         0x1000,
+			wantMatch:  true,
+			wantTarget: 0x1008,
+		},
+		{
+			name:       "B backward offset",
+			word:       0x17FFFFFE, // B -8 (sign extended)
+			pc:         0x1000,
+			wantMatch:  true,
+			wantTarget: 0x0FF8,
+		},
+		{
+			name:       "BL backward offset",
+			word:       0x97FFFFFE, // BL -8 (sign extended)
+			pc:         0x2000,
+			wantMatch:  true,
+			wantTarget: 0x1FF8,
+		},
+		{
+			name:      "Not B/BL - conditional branch",
+			word:      0x54000040, // B.EQ
+			pc:        0x1000,
+			wantMatch: false,
+		},
+		{
+			name:      "Not B/BL - ADD instruction",
+			word:      0x8B000000, // ADD X0, X0, X0
+			pc:        0x1000,
+			wantMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotMatch, gotTarget := isUnconditionalBranch(tt.word, tt.pc)
+			if gotMatch != tt.wantMatch {
+				t.Errorf("isUnconditionalBranch() match = %v, want %v", gotMatch, tt.wantMatch)
+			}
+			if gotMatch && gotTarget != tt.wantTarget {
+				t.Errorf("isUnconditionalBranch() target = 0x%X, want 0x%X", gotTarget, tt.wantTarget)
+			}
+		})
+	}
+}
+
 // Test isFoldableConditionalBranch (combines all three checks)
 func TestIsFoldableConditionalBranch(t *testing.T) {
 	tests := []struct {

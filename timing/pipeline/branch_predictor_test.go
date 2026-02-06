@@ -348,6 +348,61 @@ var _ = Describe("BranchPredictor", func() {
 		})
 	})
 
+	Describe("Statistics helper methods", func() {
+		It("should return zero Accuracy when no predictions made", func() {
+			stats := bp.Stats()
+			Expect(stats.Predictions).To(Equal(uint64(0)))
+			Expect(stats.Accuracy()).To(Equal(float64(0)))
+		})
+
+		It("should return zero MispredictionRate when no predictions made", func() {
+			stats := bp.Stats()
+			Expect(stats.Predictions).To(Equal(uint64(0)))
+			Expect(stats.MispredictionRate()).To(Equal(float64(0)))
+		})
+
+		It("should return non-zero MispredictionRate after predictions", func() {
+			pc := uint64(0x1000)
+			target := uint64(0x2000)
+
+			// Make predictions and updates
+			bp.Predict(pc)
+			bp.Update(pc, true, target)
+			bp.Predict(pc)
+			bp.Update(pc, true, target)
+
+			stats := bp.Stats()
+			Expect(stats.Predictions).To(BeNumerically(">", 0))
+			rate := stats.MispredictionRate()
+			Expect(rate).To(BeNumerically(">=", 0.0))
+			Expect(rate).To(BeNumerically("<=", 100.0))
+		})
+
+		It("should return zero BTBHitRate when no BTB accesses", func() {
+			stats := bp.Stats()
+			total := stats.BTBHits + stats.BTBMisses
+			Expect(total).To(Equal(uint64(0)))
+			Expect(stats.BTBHitRate()).To(Equal(float64(0)))
+		})
+
+		It("should return non-zero BTBHitRate after BTB accesses", func() {
+			pc := uint64(0x1000)
+			target := uint64(0x2000)
+
+			bp.Predict(pc)
+			bp.Update(pc, true, target)
+			bp.Predict(pc)
+			bp.Update(pc, true, target)
+
+			stats := bp.Stats()
+			total := stats.BTBHits + stats.BTBMisses
+			Expect(total).To(BeNumerically(">", 0))
+			rate := stats.BTBHitRate()
+			Expect(rate).To(BeNumerically(">=", 0.0))
+			Expect(rate).To(BeNumerically("<=", 100.0))
+		})
+	})
+
 	Describe("Global history", func() {
 		It("should use global history for gshare index", func() {
 			config := pipeline.BranchPredictorConfig{
@@ -369,6 +424,24 @@ var _ = Describe("BranchPredictor", func() {
 			// The predictor should have updated various entries
 			stats := bp.Stats()
 			Expect(stats.Predictions).To(Equal(uint64(0))) // No predictions yet
+		})
+	})
+
+	Describe("Default configuration", func() {
+		It("should use defaults when config values are zero", func() {
+			// Create with all-zero config to exercise default value branches
+			config := pipeline.BranchPredictorConfig{
+				BHTSize:             0, // Will default to 4096
+				BTBSize:             0, // Will default to 512
+				GlobalHistoryLength: 0, // Will default to 12
+				UseTournament:       false,
+			}
+			bp = pipeline.NewBranchPredictor(config)
+			Expect(bp).NotTo(BeNil())
+
+			// Should still work correctly with defaults
+			pred := bp.Predict(0x1000)
+			Expect(pred.Taken).To(BeFalse()) // Initially not-taken
 		})
 	})
 })

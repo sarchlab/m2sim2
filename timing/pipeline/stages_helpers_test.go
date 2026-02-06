@@ -9,6 +9,48 @@ import (
 )
 
 var _ = Describe("Stage Helper Functions", func() {
+	Describe("IsCMP", func() {
+		It("should return true for CMP instructions (SUB with SetFlags and Rd=31)", func() {
+			inst := &insts.Instruction{
+				Op:       insts.OpSUB,
+				SetFlags: true,
+				Rd:       31,
+			}
+			Expect(pipeline.IsCMP(inst)).To(BeTrue())
+		})
+
+		It("should return false for nil instruction", func() {
+			Expect(pipeline.IsCMP(nil)).To(BeFalse())
+		})
+
+		It("should return false for non-SUB instruction", func() {
+			inst := &insts.Instruction{
+				Op:       insts.OpADD,
+				SetFlags: true,
+				Rd:       31,
+			}
+			Expect(pipeline.IsCMP(inst)).To(BeFalse())
+		})
+
+		It("should return false for SUB without SetFlags", func() {
+			inst := &insts.Instruction{
+				Op:       insts.OpSUB,
+				SetFlags: false,
+				Rd:       31,
+			}
+			Expect(pipeline.IsCMP(inst)).To(BeFalse())
+		})
+
+		It("should return false for SUB with SetFlags but Rd!=31 (SUBS)", func() {
+			inst := &insts.Instruction{
+				Op:       insts.OpSUB,
+				SetFlags: true,
+				Rd:       5,
+			}
+			Expect(pipeline.IsCMP(inst)).To(BeFalse())
+		})
+	})
+
 	Describe("IsBCond", func() {
 		It("should return true for B.cond instructions", func() {
 			inst := &insts.Instruction{Op: insts.OpBCond}
