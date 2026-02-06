@@ -1,0 +1,8 @@
+{
+  "cycleIntervalMs": 600000,
+  "agentTimeoutMs": 900000,
+  "model": "claude-opus-4-5",
+  "agents": ["alice", "eric", "bob", "cathy", "dana"],
+  "graceCycleInterval": 10,
+  "trackerIssue": 45
+}
