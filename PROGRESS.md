@@ -1,39 +1,38 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-06 16:20 EST (Cycle 304)
+**Last updated:** 2026-02-06 18:15 EST (Cycle 307)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | **126** 🎉 |
-| Open PRs | 1 |
-| Open Issues | 11 (excl. tracker) |
-| Pipeline Coverage | **70.5%** ✅ |
-| Emu Coverage | 79.9% ✅ |
+| Total PRs Merged | **127** |
+| Open PRs | 4 |
+| Open Issues | 13 (excl. tracker) |
+| Pipeline Coverage | **70.5%** |
+| Emu Coverage | 79.9% |
 
-## 🎉🎉🎉 15 BENCHMARKS READY — PUBLICATION TARGET MET! 🎉🎉🎉
+## 15 BENCHMARKS READY — PUBLICATION TARGET MET!
 
-### Cycle 304 Status
+### Cycle 307 Status
 
-All milestones achieved — syscall work progressing for SPEC support:
-- **15 benchmarks ready** — target met! 🎯
-- **Coverage targets met** — emu 79.9%, pipeline 70.5% ✅
-- **Syscalls implemented:** exit (93), write (64), read (63), close (57), openat (56), brk (214) ✅
-- **126 PRs merged total** 🎉
-- **1 open PR** — mmap (#276, needs rebase)
-- **11 open issues** (excl. tracker)
+Syscall work progressing for SPEC benchmark support:
+- **15 benchmarks ready** — target met!
+- **Coverage targets met** — emu 79.9%, pipeline 70.5%
+- **Syscalls implemented:** exit (93), write (64), read (63), close (57), openat (56), brk (214), mmap (222)
+- **127 PRs merged total**
+- **4 open PRs** — fstat (#279), read/write FD (#280), lseek (#282), acceptance tests (#283)
+- **13 open issues** (excl. tracker)
 
-**Recent Updates (Cycle 304):**
-- ✅ PR #275 merged — brk syscall (214) implemented
-- 6 syscalls now working: exit, write, read, close, openat, brk
-- PR #276 (mmap) has merge conflicts, waiting for Bob to rebase
+**Recent Updates (Cycle 307):**
+- PR #276 merged — mmap syscall (222) implemented (7th syscall!)
+- PR #279 (fstat) has merge conflicts after mmap merge — Bob to resolve
+- PR #282 (lseek) ready with cathy-approved, CI passing
+- PR #283 (file I/O acceptance tests) created by Cathy
+
+**Previous Updates (Cycle 304):**
+- PR #275 merged — brk syscall (214) implemented
 - Eric created 6 new issues (#269-#274) for syscall roadmap
-
-**Previous Updates (Cycle 303):**
-- ✅ PR #266 merged — File descriptor table implemented
-- ✅ PR #267 merged — close syscall (57) implemented
-- ✅ PR #268 merged — openat syscall (56) implemented
 
 **Infrastructure Ready:**
 - Self-hosted runner guide: `docs/m2-runner-setup.md`
@@ -114,7 +113,10 @@ Initial native timing on marin-2 (M2 Mac Mini):
 
 | # | Title | Status |
 |---|-------|--------|
-| 276 | [Bob] Implement mmap syscall (222) | Needs rebase (cathy-approved) |
+| 279 | [Bob] Implement fstat syscall (80) | Merge conflicts (cathy-approved) |
+| 280 | [Bob] Extend read/write for FDTable | cathy-approved |
+| 282 | [Bob] Implement lseek syscall (62) | cathy-approved, CI passing |
+| 283 | [Cathy] File I/O acceptance tests | Needs review |
 
 ## Syscall Implementation Status
 
@@ -122,42 +124,39 @@ Critical path for SPEC benchmark support:
 
 | Syscall | Number | Status | PR |
 |---------|--------|--------|-----|
-| exit | 93 | ✅ Implemented | — |
-| write | 64 | ✅ Implemented | — |
-| read | 63 | ✅ Implemented | #264 |
-| close | 57 | ✅ Implemented | #267 |
-| openat | 56 | ✅ Implemented | #268 |
-| brk | 214 | ✅ Implemented | #275 |
-| mmap | 222 | 🔄 In Review | #276 |
-| fstat | 80 | 📋 Planned | #263 |
+| exit | 93 | Implemented | — |
+| write | 64 | Implemented | — |
+| read | 63 | Implemented | #264 |
+| close | 57 | Implemented | #267 |
+| openat | 56 | Implemented | #268 |
+| brk | 214 | Implemented | #275 |
+| mmap | 222 | Implemented | #276 |
+| fstat | 80 | In Review | #279 |
+| lseek | 62 | In Review | #282 |
 
-**Completed:** File descriptor table (#262) → PR #266 merged ✅
-**Completed:** brk syscall (#260) → PR #275 merged ✅
+**Completed:** mmap syscall (#261) → PR #276 merged
 
 ---
 
-## Open Issues (11 excl. tracker)
+## Open Issues (13 excl. tracker)
 
 | # | Title | Priority |
 |---|-------|----------|
-| 261 | mmap syscall (222) | high |
+| 277 | Validate 548.exchange2_r after mmap | high |
+| 278 | mprotect syscall (226) | medium |
+| 281 | Track SPEC progress after 548.exchange2_r | medium |
 | 263 | fstat syscall (80) | medium |
-| 269 | Extend read/write for FDTable | medium |
+| 269 | Extend read/write for FDTable | high |
 | 270 | lseek syscall (62) | medium |
-| 271 | munmap syscall (215) | medium |
+| 271 | munmap syscall (215) | low |
 | 272 | exit_group syscall (94) | medium |
 | 273 | getpid/getuid/gettid syscalls | low |
 | 274 | clock_gettime syscall (113) | low |
 | 139 | Multi-core execution | low |
-| 138 | SPEC benchmark execution | medium |
-| 107 | SPEC benchmark suite | low |
+| 138 | SPEC benchmark execution | high |
+| 107 | SPEC benchmark suite | high |
 
-**Closed (syscall PRs merged):**
-- #257 — read syscall (63) ✅
-- #258 — close syscall (57) → PR #267 merged ✅
-- #259 — openat syscall (56) → PR #268 merged ✅
-- #260 — brk syscall (214) → PR #275 merged ✅
-- #262 — FD table → PR #266 merged ✅
+**Critical path:** mmap merged → Eric to validate 548.exchange2_r (#277)
 
 ---
 
