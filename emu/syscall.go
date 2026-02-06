@@ -8,11 +8,12 @@ import (
 
 // ARM64 Linux syscall numbers.
 const (
-	SyscallOpenat uint64 = 56 // openat(dirfd, pathname, flags, mode)
-	SyscallClose  uint64 = 57 // close(fd)
-	SyscallRead   uint64 = 63 // read(fd, buf, count)
-	SyscallWrite  uint64 = 64 // write(fd, buf, count)
-	SyscallExit   uint64 = 93 // exit(status)
+	SyscallOpenat uint64 = 56  // openat(dirfd, pathname, flags, mode)
+	SyscallClose  uint64 = 57  // close(fd)
+	SyscallRead   uint64 = 63  // read(fd, buf, count)
+	SyscallWrite  uint64 = 64  // write(fd, buf, count)
+	SyscallExit   uint64 = 93  // exit(status)
+	SyscallBrk    uint64 = 214 // brk(addr)
 )
 
 // Linux error codes.
@@ -62,23 +63,29 @@ type SyscallHandler interface {
 
 // DefaultSyscallHandler provides a basic syscall handler implementation.
 type DefaultSyscallHandler struct {
-	regFile *RegFile
-	memory  *Memory
-	fdTable *FDTable
-	stdin   io.Reader
-	stdout  io.Writer
-	stderr  io.Writer
+	regFile      *RegFile
+	memory       *Memory
+	fdTable      *FDTable
+	stdin        io.Reader
+	stdout       io.Writer
+	stderr       io.Writer
+	programBreak uint64 // Current program break (heap end)
 }
+
+// DefaultProgramBreak is the initial program break address.
+// This is set to a reasonable default for the heap start.
+const DefaultProgramBreak uint64 = 0x10000000 // 256MB mark
 
 // NewDefaultSyscallHandler creates a default syscall handler.
 func NewDefaultSyscallHandler(regFile *RegFile, memory *Memory, stdout, stderr io.Writer) *DefaultSyscallHandler {
 	return &DefaultSyscallHandler{
-		regFile: regFile,
-		memory:  memory,
-		fdTable: NewFDTable(),
-		stdin:   nil,
-		stdout:  stdout,
-		stderr:  stderr,
+		regFile:      regFile,
+		memory:       memory,
+		fdTable:      NewFDTable(),
+		stdin:        nil,
+		stdout:       stdout,
+		stderr:       stderr,
+		programBreak: DefaultProgramBreak,
 	}
 }
 
@@ -97,6 +104,16 @@ func (h *DefaultSyscallHandler) SetStdin(stdin io.Reader) {
 	h.stdin = stdin
 }
 
+// GetProgramBreak returns the current program break.
+func (h *DefaultSyscallHandler) GetProgramBreak() uint64 {
+	return h.programBreak
+}
+
+// SetProgramBreak sets the program break to a specific address.
+func (h *DefaultSyscallHandler) SetProgramBreak(addr uint64) {
+	h.programBreak = addr
+}
+
 // Handle executes the syscall indicated by the register file state.
 func (h *DefaultSyscallHandler) Handle() SyscallResult {
 	syscallNum := h.regFile.ReadReg(8)
@@ -112,6 +129,8 @@ func (h *DefaultSyscallHandler) Handle() SyscallResult {
 		return h.handleWrite()
 	case SyscallExit:
 		return h.handleExit()
+	case SyscallBrk:
+		return h.handleBrk()
 	default:
 		return h.handleUnknown()
 	}
@@ -302,4 +321,24 @@ func (h *DefaultSyscallHandler) linuxToGoFlags(linuxFlags int) int {
 	}
 
 	return goFlags
+}
+
+// handleBrk handles the brk syscall (214).
+// brk manages the program break (end of heap).
+// - addr == 0: query current program break
+// - addr < current: no change, return current break
+// - addr > current: extend heap, return new break
+func (h *DefaultSyscallHandler) handleBrk() SyscallResult {
+	addr := h.regFile.ReadReg(0)
+
+	// If addr is 0 or less than current break, just return current break
+	if addr == 0 || addr < h.programBreak {
+		h.regFile.WriteReg(0, h.programBreak)
+		return SyscallResult{}
+	}
+
+	// Extend the program break
+	h.programBreak = addr
+	h.regFile.WriteReg(0, h.programBreak)
+	return SyscallResult{}
 }
