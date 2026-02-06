@@ -1,64 +1,54 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 21:06 EST (Cycle 269)
+**Last updated:** 2026-02-05 21:31 EST (Cycle 270)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | **77** 🎉 |
+| Total PRs Merged | **78** 🎉 |
 | Open PRs | 0 |
 | Open Issues | 17 (excl. tracker) |
 | Pipeline Coverage | 69.6% |
 | Emu Coverage | 79.9% ✅ |
 
-## Cycle 269 Updates
+## Cycle 270 Updates
+
+### 🎉 PR #246 Merged — PolyBench Expanded!
+
+Dana merged PR #246 (Bob's PolyBench 2mm/mvt kernels):
+- **2mm:** Double matrix multiplication (~70K instructions)
+- **mvt:** Matrix-vector transpose multiplication (~5K instructions)
+- PolyBench collection now has **4 benchmarks** (gemm, atax, 2mm, mvt)
+- Updated branch to fix lint issue, all CI checks passed
+
+### 📊 Benchmark Inventory Status
+
+| Suite | Ready | Status |
+|-------|-------|--------|
+| PolyBench | **4** (gemm, atax, 2mm, mvt) | ✅ Expanded! |
+| Embench | 5 (aha-mont64, crc32, matmult-int, primecount, edn) | ✅ |
+| CoreMark | 1 | ⚠️ Impractical (>50M instr) |
+| **Total** | **10 ready** | Need 15+ for publication |
+
+---
+
+## Previous Cycle Updates (269)
 
 ### 📊 Pipeline Coverage Progress
 
 Cathy improved pipeline coverage to 69.6% (+0.2pp):
 - Added tests for IsCMP, isUnconditionalBranch sign extension
 - Added tests for BranchPredictor stats (Accuracy, MispredictionRate, BTBHitRate)
-- Added tests for NewBranchPredictor default config, WritebackSlot
 - 8 helper functions now at 100% coverage
 - **Only ~0.4% remaining to reach 70% target!**
 
 ### 🔬 CoreMark Research Finding (Bob)
 
 Bob investigated CoreMark execution and discovered:
-- **All required instructions already work!** (ADRP, LDR literal, etc.)
+- **All required instructions already work!**
 - **Real blocker:** CoreMark takes **>50M instructions per iteration**
-- This makes CoreMark impractical for validation timing
 - Issue #241 closed — not a missing instruction issue
-
-### 📊 Benchmark Inventory (Eric)
-
-Eric created comprehensive benchmark inventory:
-| Suite | Ready | Status |
-|-------|-------|--------|
-| PolyBench | 2 (gemm, atax) | ✅ |
-| Embench | 4 (aha-mont64, crc32, matmult-int, primecount) | ✅ |
-| CoreMark | 1 | ⚠️ Impractical (>50M instr) |
-| **Total** | **7 ready** | Need 15+ for publication |
-
-### 📋 New Issues Created
-
-Eric created issues for benchmark expansion:
-- #243: Build edn benchmark ELF (low effort)
-- #244: Add PolyBench 2mm and mvt kernels
-- #245: Add huffbench and statemate from Embench-IoT
-
-### ⚠️ M2 Baseline Capture — Requires Human
-
-Bob confirmed M2 baseline capture for PolyBench benchmarks requires human involvement:
-- Current ELFs are bare-metal for simulator, not native executables
-- Need native macOS builds for performance counter integration
-- Must run on actual M2 hardware with cycle measurements
-
-### 🎯 Critical Validation Finding
-
-Per issue #141, the 20.2% microbenchmark accuracy **doesn't count** — Human explicitly requires intermediate-size benchmarks:
-> "Microbenchmarks should NOT be included in the accuracy measurement"
 
 ---
 
@@ -68,8 +58,10 @@ Per issue #141, the 20.2% microbenchmark accuracy **doesn't count** — Human ex
 |-----------|--------|--------------|
 | gemm | ✅ Merged (PR #238) | ~37K |
 | atax | ✅ Merged (PR #239) | ~5K |
+| 2mm | ✅ Merged (PR #246) | ~70K |
+| mvt | ✅ Merged (PR #246) | ~5K |
 
-Both benchmarks ready for M2 baseline capture and timing validation.
+All 4 benchmarks ready for M2 baseline capture and timing validation.
 
 ---
 
@@ -79,7 +71,7 @@ None! 🎉 Clean slate.
 
 ## Key Achievements
 
-**77 PRs Merged!**
+**78 PRs Merged!**
 
 **Emu Coverage Target Exceeded!**
 | Package | Coverage | Status |
@@ -109,7 +101,7 @@ None! 🎉 Clean slate.
 
 ## Next Steps
 
-1. **M2 baseline capture (requires human)** — Run gemm/atax on real M2 with performance counters
+1. **M2 baseline capture (requires human)** — Run gemm/atax/2mm/mvt on real M2 with performance counters
 2. **Intermediate benchmark accuracy** — Measure PolyBench results against M2 baselines
 3. **Pipeline coverage** — 69.6% → 70%+ target (~0.4% remaining)
-4. **Benchmark expansion** — Build edn, add 2mm/mvt, huffbench/statemate (#243, #244, #245)
+4. **Benchmark expansion** — Add huffbench/statemate (#245) to reach 15+ benchmarks
