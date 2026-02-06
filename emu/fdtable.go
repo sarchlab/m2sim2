@@ -4,6 +4,7 @@ package emu
 import (
 	"os"
 	"sync"
+	"time"
 )
 
 // FileDescriptor represents an open file descriptor.
@@ -162,3 +163,40 @@ func (t *FDTable) Write(fd uint64, buf []byte) (int, error) {
 
 	return hostFile.Write(buf)
 }
+
+// Stat returns file information for a file descriptor.
+func (t *FDTable) Stat(fd uint64) (os.FileInfo, error) {
+	t.mu.Lock()
+	entry, exists := t.fds[fd]
+	if !exists || !entry.IsOpen {
+		t.mu.Unlock()
+		return nil, os.ErrInvalid
+	}
+
+	hostFile := entry.HostFile
+	t.mu.Unlock()
+
+	// stdin/stdout/stderr return a stub FileInfo
+	if fd <= 2 {
+		return &stdioFileInfo{name: entry.Path, isCharDevice: true}, nil
+	}
+
+	if hostFile == nil {
+		return nil, os.ErrInvalid
+	}
+
+	return hostFile.Stat()
+}
+
+// stdioFileInfo is a stub FileInfo for stdin/stdout/stderr.
+type stdioFileInfo struct {
+	name         string
+	isCharDevice bool
+}
+
+func (f *stdioFileInfo) Name() string       { return f.name }
+func (f *stdioFileInfo) Size() int64        { return 0 }
+func (f *stdioFileInfo) Mode() os.FileMode  { return os.ModeCharDevice | 0666 }
+func (f *stdioFileInfo) ModTime() time.Time { return time.Time{} }
+func (f *stdioFileInfo) IsDir() bool        { return false }
+func (f *stdioFileInfo) Sys() interface{}   { return nil }

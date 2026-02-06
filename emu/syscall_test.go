@@ -611,4 +611,136 @@ var _ = Describe("Syscall Handler", func() {
 			Expect(x0).To(Equal(expectedError))
 		})
 	})
+
+	Describe("Fstat syscall", func() {
+		var tempDir string
+
+		BeforeEach(func() {
+			var err error
+			tempDir, err = os.MkdirTemp("", "fstat_test")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tempDir)
+		})
+
+		writePathToMemory := func(path string, addr uint64) {
+			for i, c := range []byte(path) {
+				memory.Write8(addr+uint64(i), c)
+			}
+			memory.Write8(addr+uint64(len(path)), 0) // null terminator
+		}
+
+		It("should return file size and mode for regular file", func() {
+			// Create a test file with known content
+			testFile := filepath.Join(tempDir, "test.txt")
+			content := []byte("hello world") // 11 bytes
+			err := os.WriteFile(testFile, content, 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Open the file
+			writePathToMemory(testFile, 0x1000)
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 0)                // O_RDONLY
+			regFile.WriteReg(3, 0)                // mode
+			handler.Handle()
+			fd := regFile.ReadReg(0)
+			Expect(fd).To(BeNumerically(">=", 3))
+
+			// Call fstat
+			statbufAddr := uint64(0x2000)
+			regFile.WriteReg(8, 80)          // SyscallFstat
+			regFile.WriteReg(0, fd)          // fd
+			regFile.WriteReg(1, statbufAddr) // statbuf
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should be 0 (success)
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(0)))
+
+			// Check file size at offset 48
+			size := memory.Read64(statbufAddr + 48)
+			Expect(size).To(Equal(uint64(11)))
+
+			// Check mode at offset 16 - should be S_IFREG | permissions
+			mode := memory.Read32(statbufAddr + 16)
+			Expect(mode & 0170000).To(Equal(uint32(0100000))) // S_IFREG
+
+			// Clean up
+			regFile.WriteReg(8, 57) // SyscallClose
+			regFile.WriteReg(0, fd)
+			handler.Handle()
+		})
+
+		It("should return EBADF for invalid fd", func() {
+			statbufAddr := uint64(0x2000)
+			regFile.WriteReg(8, 80)          // SyscallFstat
+			regFile.WriteReg(0, 999)         // Invalid fd
+			regFile.WriteReg(1, statbufAddr) // statbuf
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain -EBADF (9)
+			x0 := regFile.ReadReg(0)
+			var ebadf int64 = 9
+			expectedError := uint64(-ebadf)
+			Expect(x0).To(Equal(expectedError))
+		})
+
+		It("should handle fstat on stdout", func() {
+			statbufAddr := uint64(0x2000)
+			regFile.WriteReg(8, 80)          // SyscallFstat
+			regFile.WriteReg(0, 1)           // stdout
+			regFile.WriteReg(1, statbufAddr) // statbuf
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should be 0 (success)
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(0)))
+
+			// Check mode - should be character device
+			mode := memory.Read32(statbufAddr + 16)
+			Expect(mode & 0170000).To(Equal(uint32(0020000))) // S_IFCHR
+		})
+
+		It("should return correct block count", func() {
+			// Create a file with known size (5000 bytes)
+			testFile := filepath.Join(tempDir, "bigfile.txt")
+			content := make([]byte, 5000)
+			err := os.WriteFile(testFile, content, 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Open the file
+			writePathToMemory(testFile, 0x1000)
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 0)                // O_RDONLY
+			regFile.WriteReg(3, 0)                // mode
+			handler.Handle()
+			fd := regFile.ReadReg(0)
+
+			// Call fstat
+			statbufAddr := uint64(0x2000)
+			regFile.WriteReg(8, 80)          // SyscallFstat
+			regFile.WriteReg(0, fd)          // fd
+			regFile.WriteReg(1, statbufAddr) // statbuf
+			handler.Handle()
+
+			// Check blocks at offset 64 - should be ceil(5000/512) = 10
+			blocks := memory.Read64(statbufAddr + 64)
+			Expect(blocks).To(Equal(uint64(10)))
+
+			// Clean up
+			regFile.WriteReg(8, 57) // SyscallClose
+			regFile.WriteReg(0, fd)
+			handler.Handle()
+		})
+	})
 })

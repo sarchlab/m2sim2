@@ -12,6 +12,7 @@ const (
 	SyscallClose  uint64 = 57  // close(fd)
 	SyscallRead   uint64 = 63  // read(fd, buf, count)
 	SyscallWrite  uint64 = 64  // write(fd, buf, count)
+	SyscallFstat  uint64 = 80  // fstat(fd, statbuf)
 	SyscallExit   uint64 = 93  // exit(status)
 	SyscallBrk    uint64 = 214 // brk(addr)
 	SyscallMmap   uint64 = 222 // mmap(addr, length, prot, flags, fd, offset)
@@ -162,6 +163,8 @@ func (h *DefaultSyscallHandler) Handle() SyscallResult {
 		return h.handleRead()
 	case SyscallWrite:
 		return h.handleWrite()
+	case SyscallFstat:
+		return h.handleFstat()
 	case SyscallExit:
 		return h.handleExit()
 	case SyscallBrk:
@@ -450,4 +453,130 @@ func (h *DefaultSyscallHandler) handleMmap() SyscallResult {
 // GetMmapRegions returns the list of mmap'd regions.
 func (h *DefaultSyscallHandler) GetMmapRegions() []MmapRegion {
 	return h.mmapRegions
+}
+
+// ARM64 Linux stat structure offsets (128 bytes total).
+const (
+	statOffsetDev     = 0   // uint64
+	statOffsetIno     = 8   // uint64
+	statOffsetMode    = 16  // uint32
+	statOffsetNlink   = 20  // uint32
+	statOffsetUID     = 24  // uint32
+	statOffsetGID     = 28  // uint32
+	statOffsetRdev    = 32  // uint64
+	statOffsetPad1    = 40  // uint64
+	statOffsetSize    = 48  // int64
+	statOffsetBlksize = 56  // int32
+	statOffsetPad2    = 60  // int32
+	statOffsetBlocks  = 64  // int64
+	statOffsetAtime   = 72  // int64 (seconds)
+	statOffsetAtimeNs = 80  // int64 (nanoseconds)
+	statOffsetMtime   = 88  // int64 (seconds)
+	statOffsetMtimeNs = 96  // int64 (nanoseconds)
+	statOffsetCtime   = 104 // int64 (seconds)
+	statOffsetCtimeNs = 112 // int64 (nanoseconds)
+	statSize          = 128
+)
+
+// handleFstat handles the fstat syscall (80).
+// fstat gets file status for an open file descriptor.
+func (h *DefaultSyscallHandler) handleFstat() SyscallResult {
+	fd := h.regFile.ReadReg(0)
+	statbufPtr := h.regFile.ReadReg(1)
+
+	// Get file info from FDTable
+	info, err := h.fdTable.Stat(fd)
+	if err != nil {
+		h.setError(EBADF)
+		return SyscallResult{}
+	}
+
+	// Write stat structure to memory
+	h.writeStatToMemory(statbufPtr, info)
+
+	// Return 0 on success
+	h.regFile.WriteReg(0, 0)
+	return SyscallResult{}
+}
+
+// writeStatToMemory writes a FileInfo to memory as an ARM64 stat structure.
+func (h *DefaultSyscallHandler) writeStatToMemory(addr uint64, info os.FileInfo) {
+	// Device ID (use 0 for simplicity)
+	h.memory.Write64(addr+statOffsetDev, 0)
+
+	// Inode (use 0 for simplicity)
+	h.memory.Write64(addr+statOffsetIno, 0)
+
+	// Mode - convert Go FileMode to Linux mode
+	mode := h.fileInfoToLinuxMode(info)
+	h.memory.Write32(addr+statOffsetMode, mode)
+
+	// Number of hard links (use 1)
+	h.memory.Write32(addr+statOffsetNlink, 1)
+
+	// UID and GID (use 0)
+	h.memory.Write32(addr+statOffsetUID, 0)
+	h.memory.Write32(addr+statOffsetGID, 0)
+
+	// Device ID for special files (use 0)
+	h.memory.Write64(addr+statOffsetRdev, 0)
+
+	// Padding
+	h.memory.Write64(addr+statOffsetPad1, 0)
+
+	// Size in bytes
+	h.memory.Write64(addr+statOffsetSize, uint64(info.Size()))
+
+	// Block size (use 4096)
+	h.memory.Write32(addr+statOffsetBlksize, 4096)
+
+	// Padding
+	h.memory.Write32(addr+statOffsetPad2, 0)
+
+	// Number of 512-byte blocks allocated
+	blocks := (info.Size() + 511) / 512
+	h.memory.Write64(addr+statOffsetBlocks, uint64(blocks))
+
+	// Timestamps
+	modTime := info.ModTime()
+	h.memory.Write64(addr+statOffsetAtime, uint64(modTime.Unix()))
+	h.memory.Write64(addr+statOffsetAtimeNs, uint64(modTime.Nanosecond()))
+	h.memory.Write64(addr+statOffsetMtime, uint64(modTime.Unix()))
+	h.memory.Write64(addr+statOffsetMtimeNs, uint64(modTime.Nanosecond()))
+	h.memory.Write64(addr+statOffsetCtime, uint64(modTime.Unix()))
+	h.memory.Write64(addr+statOffsetCtimeNs, uint64(modTime.Nanosecond()))
+}
+
+// Linux file mode constants.
+const (
+	S_IFMT   = 0170000 // File type mask
+	S_IFREG  = 0100000 // Regular file
+	S_IFDIR  = 0040000 // Directory
+	S_IFCHR  = 0020000 // Character device
+	S_IFIFO  = 0010000 // FIFO (named pipe)
+	S_IFLNK  = 0120000 // Symbolic link
+	S_IFSOCK = 0140000 // Socket
+)
+
+// fileInfoToLinuxMode converts Go FileMode to Linux mode_t.
+func (h *DefaultSyscallHandler) fileInfoToLinuxMode(info os.FileInfo) uint32 {
+	mode := uint32(info.Mode().Perm()) // Permission bits
+
+	// File type
+	switch {
+	case info.IsDir():
+		mode |= S_IFDIR
+	case info.Mode()&os.ModeSymlink != 0:
+		mode |= S_IFLNK
+	case info.Mode()&os.ModeCharDevice != 0:
+		mode |= S_IFCHR
+	case info.Mode()&os.ModeNamedPipe != 0:
+		mode |= S_IFIFO
+	case info.Mode()&os.ModeSocket != 0:
+		mode |= S_IFSOCK
+	default:
+		mode |= S_IFREG // Regular file
+	}
+
+	return mode
 }
