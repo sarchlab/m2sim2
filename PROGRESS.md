@@ -1,41 +1,36 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-05 23:20 EST (Cycle 275)
+**Last updated:** 2026-02-05 23:40 EST (Cycle 276)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | **82** 🎉 |
+| Total PRs Merged | **83** 🎉 |
 | Open PRs | 0 |
-| Open Issues | 15 (excl. tracker) |
+| Open Issues | 14 (excl. tracker) |
 | Pipeline Coverage | **70.5%** ✅ |
 | Emu Coverage | 79.9% ✅ |
 
-## Cycle 275 Updates
+## 🎉🎉🎉 Cycle 276: PUBLICATION TARGET REACHED! 🎉🎉🎉
 
-### 🎉 PR #250 Merged (3mm Benchmark)
+### PR #251 Merged (bicg Benchmark)
 
-Dana merged PR #250:
-- 3mm: Three chained matrix multiplications from PolyBench
-- E := A × B, F := C × D, G := E × F
-- ~105K instructions, MINI dataset (16×16 matrices)
-- **82 PRs merged total!** 🎉
-- **14 benchmarks ready!** — only 1 more to 15+ goal!
+Dana merged PR #251:
+- bicg: BiConjugate Gradient subkernel from PolyBench
+- s = A^T × r, q = A × p (simultaneous in single loop nest)
+- ~4.8K instructions, MINI dataset (16×16 matrices)
+- **83 PRs merged total!** 🎉
+- **15 benchmarks ready!** — 🎯 PUBLICATION TARGET ACHIEVED!
 
 ### 📈 Benchmark Inventory Status
 
 | Suite | Ready | Status |
 |-------|-------|--------|
-| PolyBench | **6** (gemm, atax, 2mm, mvt, jacobi-1d, 3mm) | ✅ +3mm |
+| PolyBench | **7** (gemm, atax, 2mm, mvt, jacobi-1d, 3mm, bicg) | ✅ Complete |
 | Embench | **7** (aha-mont64, crc32, matmult-int, primecount, edn, statemate, huffbench) | ✅ Complete |
 | CoreMark | 1 | ⚠️ Impractical (>50M instr) |
-| **Total** | **14 ready** | Need 15+ for publication |
-
-### 🔜 Next: bicg (final stretch!)
-
-Per Eric's roadmap (docs/path-to-15-benchmarks.md):
-- bicg: CG subkernel (~10-15K instructions) — will reach 15+ goal!
+| **Total** | **15 ready** | 🎯 **PUBLICATION TARGET MET!** |
 
 ---
 
@@ -48,7 +43,7 @@ Per Eric's roadmap (docs/path-to-15-benchmarks.md):
 
 ---
 
-## PolyBench — 6 Benchmarks Ready 🎉
+## PolyBench — 7 Benchmarks Ready 🎉
 
 | Benchmark | Status | Instructions |
 |-----------|--------|--------------|
@@ -58,8 +53,9 @@ Per Eric's roadmap (docs/path-to-15-benchmarks.md):
 | mvt | ✅ Merged (PR #246) | ~5K |
 | jacobi-1d | ✅ Merged (PR #249) | ~5.3K |
 | 3mm | ✅ Merged (PR #250) | ~105K |
+| bicg | ✅ Merged (PR #251) | ~4.8K |
 
-All 6 PolyBench benchmarks ready for M2 baseline capture and timing validation.
+All 7 PolyBench benchmarks ready for M2 baseline capture and timing validation.
 
 ---
 
@@ -92,33 +88,27 @@ Per issue #141, microbenchmark accuracy (20.2%) does NOT count for M6 validation
 2. Run on real M2 with performance counters
 3. Capture cycle baselines for intermediate benchmark validation
 
-### Benchmark Path to 15+
-
-| Action | New Total | Status |
-|--------|-----------|--------|
-| Current state | 14 | ✅ (3mm merged!) |
-| +bicg | 15 | CG subkernel — **final stretch!** |
-
 ---
 
 ## Key Achievements
 
-**82 PRs Merged!** 🎉🎉🎉
+**83 PRs Merged!** 🎉🎉🎉
 
 **Both Coverage Targets MET!**
 - emu: 79.9% ✅ (exceeded)
 - pipeline: 70.5% ✅ (achieved!)
 
-**14 Intermediate Benchmarks Ready!**
-- PolyBench: 6 kernels (gemm, atax, 2mm, mvt, jacobi-1d, 3mm)
+**🎯 15 Intermediate Benchmarks Ready!**
+- PolyBench: 7 kernels (gemm, atax, 2mm, mvt, jacobi-1d, 3mm, bicg)
 - Embench: 7 benchmarks (aha-mont64, crc32, matmult-int, primecount, edn, statemate, huffbench)
 - CoreMark: 1 (impractical for emulation)
 
 **Workload Diversity:**
-- Matrix computation (gemm, 2mm, 3mm, mvt, matmult-int)
+- Matrix computation (gemm, 2mm, 3mm, mvt, matmult-int, bicg)
 - Stencil computation (jacobi-1d)
 - Compression (huffbench)
 - Signal processing (edn)
 - State machine (statemate)
 - Cryptographic (aha-mont64, crc32)
 - Integer arithmetic (primecount)
+- Linear algebra (atax, bicg)
