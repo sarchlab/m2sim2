@@ -712,6 +712,25 @@ var _ = Describe("Pipeline Stats Methods", func() {
 			cpi := stats.CPI()
 			Expect(cpi).To(Equal(0.0))
 		})
+
+		It("should calculate CPI when instructions executed", func() {
+			// Write a simple program: MOV X0, #0; RET (2 instructions)
+			// MOV X0, #0 → d2800000
+			memory.Write32(0x1000, 0xd2800000)
+			// RET → d65f03c0
+			memory.Write32(0x1004, 0xd65f03c0)
+
+			regFile.PC = 0x1000
+			regFile.X[30] = 0 // Return address
+
+			// Run enough cycles to complete instructions
+			pipe.RunCycles(20)
+
+			stats := pipe.Stats()
+			cpi := stats.CPI()
+			// CPI should be positive and finite
+			Expect(cpi).To(BeNumerically(">", 0.0))
+		})
 	})
 
 	Describe("ExitCode", func() {

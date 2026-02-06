@@ -251,6 +251,46 @@ var _ = Describe("Pipeline Stages", func() {
 				Expect(result.BranchTaken).To(BeFalse())
 			})
 
+			It("should execute ADD immediate with shift (64-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					PC:    0x1000,
+					Inst: &insts.Instruction{
+						Op:      insts.OpADD,
+						Format:  insts.FormatDPImm,
+						Is64Bit: true,
+						Imm:     0x100,
+						Shift:   12, // Shift left by 12 bits
+					},
+					RnValue: 100,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, 0)
+
+				// 0x100 << 12 = 0x100000, + 100 = 0x100064
+				Expect(result.ALUResult).To(Equal(uint64(0x100064)))
+			})
+
+			It("should execute ADD immediate with shift (32-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					PC:    0x1000,
+					Inst: &insts.Instruction{
+						Op:      insts.OpADD,
+						Format:  insts.FormatDPImm,
+						Is64Bit: false,
+						Imm:     0x10,
+						Shift:   12, // Shift left by 12 bits
+					},
+					RnValue: 100,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, 0)
+
+				// 0x10 << 12 = 0x10000, + 100 = 0x10064
+				Expect(result.ALUResult).To(Equal(uint64(0x10064)))
+			})
+
 			It("should execute ADD register (64-bit)", func() {
 				idex := &pipeline.IDEXRegister{
 					Valid: true,
@@ -283,6 +323,44 @@ var _ = Describe("Pipeline Stages", func() {
 				result := executeStage.Execute(idex, idex.RnValue, idex.RmValue)
 
 				Expect(result.ALUResult).To(Equal(uint64(70)))
+			})
+
+			It("should execute SUB immediate with shift (64-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:      insts.OpSUB,
+						Format:  insts.FormatDPImm,
+						Is64Bit: true,
+						Imm:     0x10,
+						Shift:   12, // Shift left by 12 bits
+					},
+					RnValue: 0x20000,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, 0)
+
+				// 0x20000 - (0x10 << 12) = 0x20000 - 0x10000 = 0x10000
+				Expect(result.ALUResult).To(Equal(uint64(0x10000)))
+			})
+
+			It("should execute SUB immediate with shift (32-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:      insts.OpSUB,
+						Format:  insts.FormatDPImm,
+						Is64Bit: false,
+						Imm:     0x10,
+						Shift:   12, // Shift left by 12 bits
+					},
+					RnValue: 0x30000,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, 0)
+
+				// 0x30000 - (0x10 << 12) = 0x30000 - 0x10000 = 0x20000
+				Expect(result.ALUResult).To(Equal(uint64(0x20000)))
 			})
 
 			It("should execute AND (64-bit)", func() {
@@ -334,6 +412,57 @@ var _ = Describe("Pipeline Stages", func() {
 				result := executeStage.Execute(idex, idex.RnValue, idex.RmValue)
 
 				Expect(result.ALUResult).To(Equal(uint64(0x00FFFF00)))
+			})
+
+			It("should execute AND (32-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:      insts.OpAND,
+						Format:  insts.FormatDPReg,
+						Is64Bit: false,
+					},
+					RnValue: 0xABCDEF01_FF00FF00,
+					RmValue: 0x12345678_0F0F0F0F,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(result.ALUResult).To(Equal(uint64(0x0F000F00))) // Only lower 32 bits
+			})
+
+			It("should execute ORR (32-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:      insts.OpORR,
+						Format:  insts.FormatDPReg,
+						Is64Bit: false,
+					},
+					RnValue: 0xABCDEF01_F0F0F0F0,
+					RmValue: 0x12345678_0F0F0F0F,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(result.ALUResult).To(Equal(uint64(0xFFFFFFFF))) // Only lower 32 bits
+			})
+
+			It("should execute EOR (32-bit)", func() {
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:      insts.OpEOR,
+						Format:  insts.FormatDPReg,
+						Is64Bit: false,
+					},
+					RnValue: 0xABCDEF01_FFFF0000,
+					RmValue: 0x12345678_FF00FF00,
+				}
+
+				result := executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(result.ALUResult).To(Equal(uint64(0x00FFFF00))) // Only lower 32 bits
 			})
 
 			It("should handle 32-bit operations", func() {
@@ -712,6 +841,88 @@ var _ = Describe("Pipeline Stages", func() {
 				Expect(result.ALUResult).To(Equal(uint64(0))) // 32-bit wraps
 				Expect(regFile.PSTATE.Z).To(BeTrue())         // Result is zero
 				Expect(regFile.PSTATE.C).To(BeTrue())         // Carry occurred
+			})
+
+			It("should handle 32-bit SUBS flags - negative result", func() {
+				regFile.PSTATE.N = false
+				regFile.PSTATE.C = true
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:       insts.OpSUB,
+						Format:   insts.FormatDPReg,
+						Is64Bit:  false, // 32-bit
+						SetFlags: true,  // SUBS
+					},
+					RnValue: 10,
+					RmValue: 20,
+				}
+
+				executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(regFile.PSTATE.N).To(BeTrue())  // 10 - 20 is negative
+				Expect(regFile.PSTATE.C).To(BeFalse()) // Borrow occurred
+			})
+
+			It("should handle 32-bit SUBS flags - zero result", func() {
+				regFile.PSTATE.Z = false
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:       insts.OpSUB,
+						Format:   insts.FormatDPReg,
+						Is64Bit:  false, // 32-bit
+						SetFlags: true,  // SUBS
+					},
+					RnValue: 100,
+					RmValue: 100,
+				}
+
+				executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(regFile.PSTATE.Z).To(BeTrue()) // Result is zero
+				Expect(regFile.PSTATE.C).To(BeTrue()) // No borrow
+			})
+
+			It("should handle 32-bit SUBS flags - overflow", func() {
+				regFile.PSTATE.V = false
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:       insts.OpSUB,
+						Format:   insts.FormatDPReg,
+						Is64Bit:  false, // 32-bit
+						SetFlags: true,  // SUBS
+					},
+					RnValue: 0x80000000, // INT32_MIN
+					RmValue: 1,          // Subtracting positive from negative min
+				}
+
+				executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(regFile.PSTATE.V).To(BeTrue()) // Signed overflow
+			})
+
+			It("should handle 32-bit CMP correctly (SUB with flags)", func() {
+				regFile.PSTATE.Z = false
+				regFile.PSTATE.N = true
+				idex := &pipeline.IDEXRegister{
+					Valid: true,
+					Inst: &insts.Instruction{
+						Op:       insts.OpSUB,
+						Format:   insts.FormatDPReg,
+						Is64Bit:  false, // 32-bit (like CMP W)
+						SetFlags: true,
+					},
+					RnValue: 50,
+					RmValue: 50,
+				}
+
+				executeStage.Execute(idex, idex.RnValue, idex.RmValue)
+
+				Expect(regFile.PSTATE.Z).To(BeTrue())  // Equal
+				Expect(regFile.PSTATE.N).To(BeFalse()) // Not negative
+				Expect(regFile.PSTATE.C).To(BeTrue())  // No borrow
 			})
 		})
 
