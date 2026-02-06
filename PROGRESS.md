@@ -1,38 +1,39 @@
 # M2Sim Progress Report
 
-**Last updated:** 2026-02-06 15:55 EST (Cycle 303)
+**Last updated:** 2026-02-06 16:20 EST (Cycle 304)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Total PRs Merged | **125** 🎉 |
-| Open PRs | 0 |
-| Open Issues | 6 (excl. tracker) |
+| Total PRs Merged | **126** 🎉 |
+| Open PRs | 1 |
+| Open Issues | 11 (excl. tracker) |
 | Pipeline Coverage | **70.5%** ✅ |
 | Emu Coverage | 79.9% ✅ |
 
 ## 🎉🎉🎉 15 BENCHMARKS READY — PUBLICATION TARGET MET! 🎉🎉🎉
 
-### Cycle 303 Status
+### Cycle 304 Status
 
 All milestones achieved — syscall work progressing for SPEC support:
 - **15 benchmarks ready** — target met! 🎯
 - **Coverage targets met** — emu 79.9%, pipeline 70.5% ✅
-- **Syscalls implemented:** exit (93), write (64), read (63), close (57), openat (56) ✅
-- **125 PRs merged total** 🎉
-- **0 open PRs** — queue is clean!
-- **6 open issues** (excl. tracker)
+- **Syscalls implemented:** exit (93), write (64), read (63), close (57), openat (56), brk (214) ✅
+- **126 PRs merged total** 🎉
+- **1 open PR** — mmap (#276, needs rebase)
+- **11 open issues** (excl. tracker)
 
-**Recent Updates (Cycle 303):**
+**Recent Updates (Cycle 304):**
+- ✅ PR #275 merged — brk syscall (214) implemented
+- 6 syscalls now working: exit, write, read, close, openat, brk
+- PR #276 (mmap) has merge conflicts, waiting for Bob to rebase
+- Eric created 6 new issues (#269-#274) for syscall roadmap
+
+**Previous Updates (Cycle 303):**
 - ✅ PR #266 merged — File descriptor table implemented
 - ✅ PR #267 merged — close syscall (57) implemented
 - ✅ PR #268 merged — openat syscall (56) implemented
-- 5 syscalls now working: exit, write, read, close, openat
-
-**Previous Updates (Cycles 301-302):**
-- ✅ PR #264 merged — read syscall (63) implemented
-- ✅ Issues #257-#263 created — syscall implementation roadmap
 
 **Infrastructure Ready:**
 - Self-hosted runner guide: `docs/m2-runner-setup.md`
@@ -111,7 +112,9 @@ Initial native timing on marin-2 (M2 Mac Mini):
 
 ## Open PRs
 
-None — PR queue is clean! 🎉
+| # | Title | Status |
+|---|-------|--------|
+| 276 | [Bob] Implement mmap syscall (222) | Needs rebase (cathy-approved) |
 
 ## Syscall Implementation Status
 
@@ -124,21 +127,27 @@ Critical path for SPEC benchmark support:
 | read | 63 | ✅ Implemented | #264 |
 | close | 57 | ✅ Implemented | #267 |
 | openat | 56 | ✅ Implemented | #268 |
-| brk | 214 | 📋 Planned | #260 |
-| mmap | 222 | 📋 Planned | #261 |
+| brk | 214 | ✅ Implemented | #275 |
+| mmap | 222 | 🔄 In Review | #276 |
 | fstat | 80 | 📋 Planned | #263 |
 
 **Completed:** File descriptor table (#262) → PR #266 merged ✅
+**Completed:** brk syscall (#260) → PR #275 merged ✅
 
 ---
 
-## Open Issues (6 excl. tracker)
+## Open Issues (11 excl. tracker)
 
 | # | Title | Priority |
 |---|-------|----------|
-| 260 | brk syscall (214) | high |
 | 261 | mmap syscall (222) | high |
 | 263 | fstat syscall (80) | medium |
+| 269 | Extend read/write for FDTable | medium |
+| 270 | lseek syscall (62) | medium |
+| 271 | munmap syscall (215) | medium |
+| 272 | exit_group syscall (94) | medium |
+| 273 | getpid/getuid/gettid syscalls | low |
+| 274 | clock_gettime syscall (113) | low |
 | 139 | Multi-core execution | low |
 | 138 | SPEC benchmark execution | medium |
 | 107 | SPEC benchmark suite | low |
@@ -147,13 +156,14 @@ Critical path for SPEC benchmark support:
 - #257 — read syscall (63) ✅
 - #258 — close syscall (57) → PR #267 merged ✅
 - #259 — openat syscall (56) → PR #268 merged ✅
+- #260 — brk syscall (214) → PR #275 merged ✅
 - #262 — FD table → PR #266 merged ✅
 
 ---
 
 ## Key Achievements
 
-**125 PRs Merged!** 🎉🎉🎉
+**126 PRs Merged!** 🎉🎉🎉
 
 **Both Coverage Targets MET!**
 - emu: 79.9% ✅ (exceeded)
