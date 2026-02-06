@@ -1,0 +1,12 @@
+{
+  "name": "m2sim-orchestrator",
+  "version": "1.0.0",
+  "description": "Multi-agent orchestrator for M2Sim development",
+  "type": "module",
+  "main": "orchestrator.js",
+  "scripts": {
+    "start": "node orchestrator.js"
+  },
+  "keywords": ["m2sim", "orchestrator", "claude", "multi-agent"],
+  "license": "MIT"
+}
