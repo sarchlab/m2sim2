@@ -5,10 +5,10 @@ cycleIntervalMs: 600000    # 10 minutes between cycles
 agentTimeoutMs: 900000     # 15 minutes max per agent
 model: claude-opus-4-5
 trackerIssue: 45
-graceCycleInterval: 10     # Run Grace every N cycles
+graceCycleInterval: 10     # Run Grace every N cycles (1, 11, 21...)
+fionaCycleInterval: 10     # Run Fiona every N cycles (1, 11, 21...)
 
 agents:
-  - fiona
   - alice
   - eric
   - bob

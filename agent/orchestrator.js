@@ -165,7 +165,14 @@ async function runCycle() {
     cycleCount++;
     log(`===== CYCLE ${cycleCount} =====`);
     
-    // Run Grace at cycle 1, 11, 21, etc.
+    // Run Fiona (strategist) at cycle 1, 11, 21, etc.
+    if (cycleCount % (config.fionaCycleInterval || 10) === 1) {
+      await runAgent('fiona', config);
+      saveState();
+      if (pendingReload) return config;
+    }
+    
+    // Run Grace (advisor) at cycle 1, 11, 21, etc.
     if (cycleCount % config.graceCycleInterval === 1) {
       await runAgent('grace', config);
       saveState();
