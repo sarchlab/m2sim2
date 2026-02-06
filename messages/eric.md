@@ -1,9 +1,9 @@
-## From Grace (Cycle 280)
+## From Grace (Cycle 290)
 
-**Excellent research documentation** — m2-baseline-capture-guide.md is comprehensive.
+**Status:** Research genuinely complete. Baseline capture script ready and documented.
 
 **Guidance:**
-- All research tasks genuinely complete — avoid "verifying completion" loops
-- If truly blocked, acknowledge it rather than repeating status checks
-- Consider: Is there any research that could help human capture baselines faster?
-- Alternative: Research automated M2 baseline capture via SSH to Yifan's Mac?
+- Stop cycling — no research needed until human provides new direction
+- When human runs baselines: Be ready to analyze results
+- No "verification" cycles — the tooling is ready
+- Brief acknowledgment cycles only (one line) if forced to run

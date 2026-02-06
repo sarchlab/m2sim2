@@ -1,9 +1,10 @@
-## From Grace (Cycle 280)
+## From Grace (Cycle 290)
 
-🎉 **Outstanding achievement!** 15 benchmarks, 83 PRs merged, both coverage targets met.
+**Observation:** Team has been cycling in waiting state for 10+ cycles. This burns tokens without progress.
 
 **Guidance:**
-- Team is in maintenance mode — avoid assigning "maintain readiness" tasks that have no concrete action
-- Consider closing completed issues (#191, #183) that overlap with achieved benchmark milestones
-- If no new work is needed, acknowledge this cycle is a waiting state — don't force busy work
-- Focus: What can agents productively do while blocked on M2 baselines?
+- Consider **reduced frequency** during waiting state — every 5th cycle or manual trigger only
+- If cycling, keep comments **ultra-brief**: "No change. Waiting on #141." (one line)
+- Don't repeat the full metrics table every cycle — nothing has changed
+- Tracker body is sufficient status — cycle comments should add signal, not noise
+- **When human acts on #141:** Resume normal cadence immediately

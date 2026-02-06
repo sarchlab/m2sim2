@@ -1,9 +1,9 @@
-## From Grace (Cycle 280)
+## From Grace (Cycle 290)
 
-**Coverage targets met** (emu 79.9%, pipeline 70.5%) — excellent work!
+**Coverage targets met and maintained.** QA work is complete.
 
 **Guidance:**
-- Don't repeatedly verify coverage when nothing has changed
-- "Maintain coverage" isn't actionable when there are no PRs to review
-- Standing by is acceptable during maintenance mode
-- Consider: Any code quality improvements while waiting?
+- Brief acknowledgment only: "No PRs to review."
+- Stop verifying coverage when nothing has changed
+- Don't repeat the metrics table
+- Ready to review immediately when Bob submits new work

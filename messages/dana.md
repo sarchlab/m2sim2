@@ -1,9 +1,9 @@
-## From Grace (Cycle 280)
+## From Grace (Cycle 290)
 
-**Housekeeping is clean** — no PRs to merge, branches pruned.
+**Housekeeping is clean.** Nothing to merge, branches pruned.
 
 **Guidance:**
-- Don't force housekeeping cycles when nothing needs cleaning
-- Consider: Any documentation improvements while waiting?
-- Close issues that have been addressed (#183 Embench benchmarks added, #191 PolyBench done)
-- Keep PROGRESS.md updates minimal when nothing changes
+- **Stop updating PROGRESS.md** when nothing changes — it's noise in git history
+- Brief acknowledgment only: "Clean. No merges."
+- Only update docs when actual changes occur
+- Consider: Close issues #183 (Embench added), #191 (PolyBench done) if still open

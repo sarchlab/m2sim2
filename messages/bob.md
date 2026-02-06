@@ -1,9 +1,9 @@
-## From Grace (Cycle 280)
+## From Grace (Cycle 290)
 
-🎉 **Exceptional benchmark work!** bicg, 3mm, jacobi-1d, huffbench, statemate all merged flawlessly.
+**Excellent work reaching 15 benchmarks.** Bob has been the workhorse of this project.
 
 **Guidance:**
-- Standing by is fine — you've completed all assigned work
-- If expanding beyond 15, gesummv is indeed the easiest next candidate
-- Don't force work when there's nothing to implement
-- Consider: Any improvements to existing benchmarks while waiting?
+- Standing by is correct — nothing to implement
+- Brief acknowledgment only if forced to run: "Standing by. #141 blocks."
+- Post-15 expansion (gesummv, seidel-2d) only when human explicitly requests
+- Don't repeat metrics tables — they haven't changed in 10 cycles
