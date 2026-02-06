@@ -6,7 +6,7 @@
  */
 
 import { spawn, execSync } from 'child_process';
-import { existsSync, mkdirSync, appendFileSync, readFileSync, writeFileSync, watch } from 'fs';
+import { existsSync, readFileSync, writeFileSync, watch } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import YAML from 'yaml';
@@ -14,7 +14,6 @@ import YAML from 'yaml';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_DIR = join(__dirname, '..');
 const SKILL_PATH = join(__dirname, 'skills');
-const LOGS_DIR = join(__dirname, 'logs');
 const CONFIG_PATH = join(__dirname, 'config.yaml');
 const ORCHESTRATOR_PATH = join(__dirname, 'orchestrator.js');
 const STATE_PATH = join(__dirname, 'state.json');
@@ -53,7 +52,7 @@ function loadConfig() {
   try {
     const raw = readFileSync(CONFIG_PATH, 'utf-8');
     const config = YAML.parse(raw);
-    log(`Config loaded: interval=${config.cycleIntervalMs/1000}s, agents=${config.agents.join('→')}, model=${config.model}`);
+    log(`Config: interval=${config.cycleIntervalMs/1000}s, model=${config.model}`);
     return config;
   } catch (e) {
     log(`Error loading config: ${e.message}, using defaults`);
@@ -95,10 +94,7 @@ function loadSkill(filename) {
 }
 
 async function runAgent(agent, config) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const logFile = join(LOGS_DIR, `${agent}-${timestamp}.log`);
-  
-  log(`Running agent: ${agent}`);
+  log(`Running: ${agent}`);
   
   // Pull latest before each agent
   exec('git pull --rebase --quiet');
@@ -107,7 +103,7 @@ async function runAgent(agent, config) {
   const everyoneSkill = loadSkill('everyone.md');
   const agentSkill = loadSkill(`${agent}.md`);
   
-  const prompt = `You are [${agent}] working on the M2Sim project.
+  const prompt = `You are ${agent} working on the M2Sim project.
 
 **Config:**
 - GitHub Repo: sarchlab/m2sim  
@@ -131,34 +127,22 @@ Execute your full cycle as described above. Work autonomously. Complete your tas
       prompt
     ], {
       cwd: REPO_DIR,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'ignore', 'ignore']
     });
 
     currentAgentProcess = proc;
     currentAgentName = agent;
 
     const timeout = setTimeout(() => {
-      log(`Agent ${agent} timed out, killing...`);
+      log(`${agent} timed out, killing...`);
       proc.kill('SIGTERM');
     }, config.agentTimeoutMs);
-
-    proc.stdout.on('data', (data) => {
-      const text = data.toString();
-      process.stdout.write(text);
-      appendFileSync(logFile, text);
-    });
-
-    proc.stderr.on('data', (data) => {
-      const text = data.toString();
-      process.stderr.write(text);
-      appendFileSync(logFile, text);
-    });
 
     proc.on('close', (code) => {
       clearTimeout(timeout);
       currentAgentProcess = null;
       currentAgentName = null;
-      log(`Agent ${agent} finished with code ${code}`);
+      log(`${agent} done (code ${code})`);
       resolve(code);
     });
 
@@ -166,7 +150,7 @@ Execute your full cycle as described above. Work autonomously. Complete your tas
       clearTimeout(timeout);
       currentAgentProcess = null;
       currentAgentName = null;
-      log(`Agent ${agent} error: ${err.message}`);
+      log(`${agent} error: ${err.message}`);
       resolve(1);
     });
   });
@@ -179,17 +163,16 @@ async function runCycle() {
   // If starting fresh (agentIndex=0), increment cycle
   if (currentAgentIndex === 0) {
     cycleCount++;
-    log(`========== CYCLE ${cycleCount} START ==========`);
+    log(`===== CYCLE ${cycleCount} =====`);
     
     // Run Grace at cycle 1, 11, 21, etc.
     if (cycleCount % config.graceCycleInterval === 1) {
-      log('Running Grace (advisor)');
       await runAgent('grace', config);
       saveState();
       if (pendingReload) return config;
     }
   } else {
-    log(`========== CYCLE ${cycleCount} RESUMING (agent ${currentAgentIndex}/${config.agents.length}) ==========`);
+    log(`===== CYCLE ${cycleCount} (resuming ${currentAgentIndex}/${config.agents.length}) =====`);
   }
   
   // Run agents sequentially, starting from saved index
@@ -207,20 +190,11 @@ async function runCycle() {
   currentAgentIndex = 0;
   saveState();
   
-  log(`========== CYCLE ${cycleCount} END ==========`);
-  
   return config;
 }
 
 async function main() {
-  log('M2Sim Orchestrator started (Node.js, standalone)');
-  log(`Config path: ${CONFIG_PATH}`);
-  log(`Repo: ${REPO_DIR}`);
-  
-  // Create logs directory
-  if (!existsSync(LOGS_DIR)) {
-    mkdirSync(LOGS_DIR, { recursive: true });
-  }
+  log('Orchestrator started');
   
   // Load saved state (cycle count, agent index)
   loadState();
@@ -231,12 +205,11 @@ async function main() {
     if (eventType === 'change') {
       clearTimeout(debounce);
       debounce = setTimeout(() => {
-        log('⚡ orchestrator.js changed — will reload after current agent finishes');
+        log('⚡ Code changed — reloading after current agent');
         pendingReload = true;
       }, 500);
     }
   });
-  log('Watching orchestrator.js for hot reload (edit file to trigger)');
   
   // Main loop
   while (true) {
@@ -244,11 +217,11 @@ async function main() {
     
     // Check for pending reload
     if (pendingReload) {
-      log('⚡ Reloading orchestrator (exit code 75)...');
-      process.exit(75); // Special code: wrapper should restart
+      log('⚡ Reloading...');
+      process.exit(75);
     }
     
-    log(`Sleeping ${config.cycleIntervalMs / 1000}s until next cycle...`);
+    log(`Sleeping ${config.cycleIntervalMs / 1000}s...`);
     await sleep(config.cycleIntervalMs);
   }
 }
@@ -256,25 +229,18 @@ async function main() {
 // Handle graceful shutdown
 process.on('SIGINT', () => {
   log('Shutting down...');
-  if (currentAgentProcess) {
-    log(`Killing agent ${currentAgentName}...`);
-    currentAgentProcess.kill('SIGTERM');
-  }
+  if (currentAgentProcess) currentAgentProcess.kill('SIGTERM');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   log('Shutting down...');
-  if (currentAgentProcess) {
-    log(`Killing agent ${currentAgentName}...`);
-    currentAgentProcess.kill('SIGTERM');
-  }
+  if (currentAgentProcess) currentAgentProcess.kill('SIGTERM');
   process.exit(0);
 });
 
-// SIGHUP = manual reload request
 process.on('SIGHUP', () => {
-  log('⚡ SIGHUP received — will reload after current agent finishes');
+  log('⚡ SIGHUP — reloading after current agent');
   pendingReload = true;
 });
 
