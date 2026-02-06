@@ -1,0 +1,150 @@
+name: Run Benchmark
+
+# Benchmark execution workflow for M2 timing validation
+# Uses self-hosted M2 runners (marin-6, marin-10) when available
+# Related: #254, #224
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Benchmark suite to run'
+        type: choice
+        required: true
+        default: 'polybench'
+        options:
+          - polybench
+          - embench
+          - all
+      benchmark:
+        description: 'Specific benchmark (blank = all in suite)'
+        type: string
+        required: false
+        default: ''
+      dataset:
+        description: 'Dataset size for PolyBench'
+        type: choice
+        required: false
+        default: 'MINI'
+        options:
+          - MINI
+          - SMALL
+          - MEDIUM
+          - LARGE
+
+# Only one benchmark run at a time
+concurrency:
+  group: benchmark-run
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Run ${{ inputs.suite }} Benchmark
+    # Self-hosted M2 runner (marin-6 or marin-10)
+    # Falls back to macos-14 if no self-hosted available
+    runs-on: [self-hosted, m2-chip]
+    timeout-minutes: 360  # 6 hours max
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Build M2Sim
+        run: go build -v ./...
+
+      - name: Verify M2 hardware
+        id: verify
+        run: |
+          # Check we're on Apple Silicon
+          ARCH=$(uname -m)
+          if [ "$ARCH" != "arm64" ]; then
+            echo "::warning::Not running on ARM64 (got $ARCH) - timing data may not be accurate"
+          fi
+          
+          # Check for M2 chip specifically
+          CHIP=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo "Unknown")
+          echo "Running on: $CHIP"
+          echo "chip=$CHIP" >> $GITHUB_OUTPUT
+          
+          # Create results directory
+          mkdir -p results
+
+      - name: Run PolyBench
+        if: inputs.suite == 'polybench' || inputs.suite == 'all'
+        run: |
+          echo "Running PolyBench benchmarks..."
+          BENCHMARK="${{ inputs.benchmark }}"
+          DATASET="${{ inputs.dataset }}"
+          
+          if [ -z "$BENCHMARK" ]; then
+            BENCHMARK="all"
+          fi
+          
+          # Run baseline capture script if it exists
+          if [ -f "./scripts/capture-m2-baselines.sh" ]; then
+            POLYBENCH_DATASET=$DATASET ./scripts/capture-m2-baselines.sh $BENCHMARK
+          else
+            echo "::warning::Baseline capture script not found, running Go tests"
+            go test -v -timeout 2h ./benchmarks/polybench/... -run "Test.*" 2>&1 | tee results/polybench-output.txt
+          fi
+
+      - name: Run Embench
+        if: inputs.suite == 'embench' || inputs.suite == 'all'
+        run: |
+          echo "Running Embench benchmarks..."
+          BENCHMARK="${{ inputs.benchmark }}"
+          
+          if [ -z "$BENCHMARK" ]; then
+            # Run all Embench tests
+            go test -v -timeout 2h ./benchmarks/embench/... 2>&1 | tee results/embench-output.txt
+          else
+            # Run specific benchmark
+            go test -v -timeout 1h ./benchmarks/embench/... -run "Test${BENCHMARK^}" 2>&1 | tee results/embench-${BENCHMARK}-output.txt
+          fi
+
+      - name: Generate timing report
+        if: always()
+        run: |
+          cat > results/benchmark-report.md << EOF
+          # Benchmark Execution Report
+          
+          **Date:** $(date -u +"%Y-%m-%d %H:%M UTC")
+          **Runner:** $(hostname)
+          **Chip:** ${{ steps.verify.outputs.chip }}
+          **Suite:** ${{ inputs.suite }}
+          **Benchmark:** ${{ inputs.benchmark || 'all' }}
+          **Dataset:** ${{ inputs.dataset }}
+          
+          ## Files Generated
+          
+          $(ls -la results/ 2>/dev/null || echo "No results files")
+          
+          ## Summary
+          
+          See individual output files for detailed timing data.
+          EOF
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: results/
+          retention-days: 30
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## Benchmark Run Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Suite:** ${{ inputs.suite }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Benchmark:** ${{ inputs.benchmark || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dataset:** ${{ inputs.dataset }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chip:** ${{ steps.verify.outputs.chip }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts for detailed results." >> $GITHUB_STEP_SUMMARY
