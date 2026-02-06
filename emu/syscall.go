@@ -14,6 +14,7 @@ const (
 	SyscallWrite  uint64 = 64  // write(fd, buf, count)
 	SyscallExit   uint64 = 93  // exit(status)
 	SyscallBrk    uint64 = 214 // brk(addr)
+	SyscallMmap   uint64 = 222 // mmap(addr, length, prot, flags, fd, offset)
 )
 
 // Linux error codes.
@@ -21,8 +22,26 @@ const (
 	ENOENT = 2  // No such file or directory
 	EIO    = 5  // I/O error
 	EBADF  = 9  // Bad file descriptor
+	ENOMEM = 12 // Out of memory
 	EACCES = 13 // Permission denied
+	EINVAL = 22 // Invalid argument
 	ENOSYS = 38 // Function not implemented
+)
+
+// Linux mmap protection flags.
+const (
+	PROT_NONE  = 0x0
+	PROT_READ  = 0x1
+	PROT_WRITE = 0x2
+	PROT_EXEC  = 0x4
+)
+
+// Linux mmap flags.
+const (
+	MAP_SHARED    = 0x1
+	MAP_PRIVATE   = 0x2
+	MAP_FIXED     = 0x10
+	MAP_ANONYMOUS = 0x20
 )
 
 // Linux open flags.
@@ -61,6 +80,14 @@ type SyscallHandler interface {
 	Handle() SyscallResult
 }
 
+// MmapRegion represents a mapped memory region.
+type MmapRegion struct {
+	Addr   uint64 // Start address
+	Length uint64 // Length in bytes
+	Prot   int    // Protection flags
+	Flags  int    // Mapping flags
+}
+
 // DefaultSyscallHandler provides a basic syscall handler implementation.
 type DefaultSyscallHandler struct {
 	regFile      *RegFile
@@ -69,12 +96,18 @@ type DefaultSyscallHandler struct {
 	stdin        io.Reader
 	stdout       io.Writer
 	stderr       io.Writer
-	programBreak uint64 // Current program break (heap end)
+	programBreak uint64       // Current program break (heap end)
+	nextMmapAddr uint64       // Next address for anonymous mmap
+	mmapRegions  []MmapRegion // Tracked mmap regions
 }
 
 // DefaultProgramBreak is the initial program break address.
 // This is set to a reasonable default for the heap start.
 const DefaultProgramBreak uint64 = 0x10000000 // 256MB mark
+
+// DefaultMmapBase is the starting address for anonymous mmap allocations.
+// This is placed well above the heap to avoid collisions.
+const DefaultMmapBase uint64 = 0x40000000 // 1GB mark
 
 // NewDefaultSyscallHandler creates a default syscall handler.
 func NewDefaultSyscallHandler(regFile *RegFile, memory *Memory, stdout, stderr io.Writer) *DefaultSyscallHandler {
@@ -86,6 +119,8 @@ func NewDefaultSyscallHandler(regFile *RegFile, memory *Memory, stdout, stderr i
 		stdout:       stdout,
 		stderr:       stderr,
 		programBreak: DefaultProgramBreak,
+		nextMmapAddr: DefaultMmapBase,
+		mmapRegions:  make([]MmapRegion, 0),
 	}
 }
 
@@ -131,6 +166,8 @@ func (h *DefaultSyscallHandler) Handle() SyscallResult {
 		return h.handleExit()
 	case SyscallBrk:
 		return h.handleBrk()
+	case SyscallMmap:
+		return h.handleMmap()
 	default:
 		return h.handleUnknown()
 	}
@@ -341,4 +378,76 @@ func (h *DefaultSyscallHandler) handleBrk() SyscallResult {
 	h.programBreak = addr
 	h.regFile.WriteReg(0, h.programBreak)
 	return SyscallResult{}
+}
+
+// handleMmap handles the mmap syscall (222).
+// mmap maps memory regions. Currently only supports anonymous mappings.
+// Arguments:
+//   - X0: addr (hint address, or 0 for kernel to choose)
+//   - X1: length (size of mapping)
+//   - X2: prot (protection flags)
+//   - X3: flags (mapping flags)
+//   - X4: fd (file descriptor, -1 for anonymous)
+//   - X5: offset (offset in file)
+func (h *DefaultSyscallHandler) handleMmap() SyscallResult {
+	addr := h.regFile.ReadReg(0)
+	length := h.regFile.ReadReg(1)
+	prot := int(h.regFile.ReadReg(2))
+	flags := int(h.regFile.ReadReg(3))
+	fd := int64(h.regFile.ReadReg(4))
+	// offset := h.regFile.ReadReg(5) // Not used for anonymous mappings
+
+	// Validate length
+	if length == 0 {
+		h.setError(EINVAL)
+		return SyscallResult{}
+	}
+
+	// Check if anonymous mapping
+	isAnonymous := (flags & MAP_ANONYMOUS) != 0
+
+	// For now, only support anonymous mappings
+	// fd should be -1 for anonymous mappings
+	if !isAnonymous || (fd != -1 && !isAnonymous) {
+		h.setError(ENOSYS) // File mappings not implemented
+		return SyscallResult{}
+	}
+
+	// Page-align the length (4KB pages)
+	const pageSize uint64 = 4096
+	alignedLength := (length + pageSize - 1) & ^(pageSize - 1)
+
+	var mappedAddr uint64
+
+	// Handle MAP_FIXED
+	if flags&MAP_FIXED != 0 {
+		if addr == 0 {
+			h.setError(EINVAL)
+			return SyscallResult{}
+		}
+		// Use the requested address (page-aligned)
+		mappedAddr = addr & ^(pageSize - 1)
+	} else {
+		// Allocate from next available mmap address
+		mappedAddr = h.nextMmapAddr
+		h.nextMmapAddr += alignedLength
+	}
+
+	// Track the mapping
+	region := MmapRegion{
+		Addr:   mappedAddr,
+		Length: alignedLength,
+		Prot:   prot,
+		Flags:  flags,
+	}
+	h.mmapRegions = append(h.mmapRegions, region)
+
+	// Return the mapped address
+	h.regFile.WriteReg(0, mappedAddr)
+	return SyscallResult{}
+}
+
+// GetMmapRegions returns the list of mmap'd regions.
+func (h *DefaultSyscallHandler) GetMmapRegions() []MmapRegion {
+	return h.mmapRegions
 }

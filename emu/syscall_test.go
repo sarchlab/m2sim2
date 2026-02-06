@@ -465,4 +465,150 @@ var _ = Describe("Syscall Handler", func() {
 			Expect(regFile.ReadReg(0)).To(Equal(customBreak))
 		})
 	})
+
+	Describe("Mmap syscall", func() {
+		It("should allocate anonymous memory", func() {
+			// mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)
+			regFile.WriteReg(8, 222)                               // SyscallMmap
+			regFile.WriteReg(0, 0)                                 // addr (NULL = kernel chooses)
+			regFile.WriteReg(1, 4096)                              // length
+			regFile.WriteReg(2, emu.PROT_READ|emu.PROT_WRITE)      // prot
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS) // flags
+			regFile.WriteReg(4, ^uint64(0))                        // fd = -1
+			regFile.WriteReg(5, 0)                                 // offset
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// Should return an address >= DefaultMmapBase
+			addr := regFile.ReadReg(0)
+			Expect(addr).To(BeNumerically(">=", emu.DefaultMmapBase))
+
+			// Verify region was tracked
+			regions := handler.GetMmapRegions()
+			Expect(regions).To(HaveLen(1))
+			Expect(regions[0].Addr).To(Equal(addr))
+			Expect(regions[0].Length).To(Equal(uint64(4096)))
+		})
+
+		It("should page-align allocation length", func() {
+			// Request 100 bytes, should be aligned to 4096
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, 0)
+			regFile.WriteReg(1, 100) // Non-aligned length
+			regFile.WriteReg(2, emu.PROT_READ)
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS)
+			regFile.WriteReg(4, ^uint64(0))
+			regFile.WriteReg(5, 0)
+
+			handler.Handle()
+
+			regions := handler.GetMmapRegions()
+			Expect(regions).To(HaveLen(1))
+			Expect(regions[0].Length).To(Equal(uint64(4096))) // Aligned to page
+		})
+
+		It("should allocate sequential regions", func() {
+			// First allocation
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, 0)
+			regFile.WriteReg(1, 4096)
+			regFile.WriteReg(2, emu.PROT_READ|emu.PROT_WRITE)
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS)
+			regFile.WriteReg(4, ^uint64(0))
+			regFile.WriteReg(5, 0)
+			handler.Handle()
+			addr1 := regFile.ReadReg(0)
+
+			// Second allocation
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, 0)
+			regFile.WriteReg(1, 8192)
+			regFile.WriteReg(2, emu.PROT_READ)
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS)
+			regFile.WriteReg(4, ^uint64(0))
+			regFile.WriteReg(5, 0)
+			handler.Handle()
+			addr2 := regFile.ReadReg(0)
+
+			// Second allocation should start after first
+			Expect(addr2).To(Equal(addr1 + 4096))
+
+			regions := handler.GetMmapRegions()
+			Expect(regions).To(HaveLen(2))
+		})
+
+		It("should handle MAP_FIXED", func() {
+			fixedAddr := uint64(0x50000000) // Some page-aligned address
+
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, fixedAddr)
+			regFile.WriteReg(1, 4096)
+			regFile.WriteReg(2, emu.PROT_READ|emu.PROT_WRITE)
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS|emu.MAP_FIXED)
+			regFile.WriteReg(4, ^uint64(0))
+			regFile.WriteReg(5, 0)
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			Expect(regFile.ReadReg(0)).To(Equal(fixedAddr))
+		})
+
+		It("should return EINVAL for zero length", func() {
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, 0)
+			regFile.WriteReg(1, 0) // Invalid: zero length
+			regFile.WriteReg(2, emu.PROT_READ)
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS)
+			regFile.WriteReg(4, ^uint64(0))
+			regFile.WriteReg(5, 0)
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain -EINVAL (22)
+			x0 := regFile.ReadReg(0)
+			var einval int64 = 22
+			expectedError := uint64(-einval)
+			Expect(x0).To(Equal(expectedError))
+		})
+
+		It("should return EINVAL for MAP_FIXED with NULL address", func() {
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, 0) // NULL with MAP_FIXED is invalid
+			regFile.WriteReg(1, 4096)
+			regFile.WriteReg(2, emu.PROT_READ)
+			regFile.WriteReg(3, emu.MAP_PRIVATE|emu.MAP_ANONYMOUS|emu.MAP_FIXED)
+			regFile.WriteReg(4, ^uint64(0))
+			regFile.WriteReg(5, 0)
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			x0 := regFile.ReadReg(0)
+			var einval int64 = 22
+			expectedError := uint64(-einval)
+			Expect(x0).To(Equal(expectedError))
+		})
+
+		It("should return ENOSYS for file mappings", func() {
+			regFile.WriteReg(8, 222)
+			regFile.WriteReg(0, 0)
+			regFile.WriteReg(1, 4096)
+			regFile.WriteReg(2, emu.PROT_READ)
+			regFile.WriteReg(3, emu.MAP_PRIVATE) // No MAP_ANONYMOUS
+			regFile.WriteReg(4, 5)               // Valid fd (file mapping)
+			regFile.WriteReg(5, 0)
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain -ENOSYS (38)
+			x0 := regFile.ReadReg(0)
+			var enosys int64 = 38
+			expectedError := uint64(-enosys)
+			Expect(x0).To(Equal(expectedError))
+		})
+	})
 })
