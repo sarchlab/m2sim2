@@ -154,16 +154,62 @@ print(f"Average error: {avg_error:.1f}%")
 | statemate | Cycles for ~1.04M instructions |
 | huffbench | Cycles |
 
-## Current Blocker
+## Current Status: Script Fixed! (Cycle 290)
+
+The capture script has been fixed and tested:
+
+```bash
+./scripts/capture-m2-baselines.sh all
+```
+
+**However**, wall-clock timing results show CPI values of 1000-30000x expected values!
+
+### Why Wall-Clock Timing Fails for MINI Dataset
+
+The MINI dataset benchmarks (16x16 matrices) execute in **microseconds**, but:
+- Python subprocess calls for timing add ~35-40ms overhead
+- Shell startup/cleanup adds additional overhead
+- Actual benchmark execution time is negligible
+
+**Result:** Timing is dominated by measurement overhead, not benchmark execution.
+
+### Solutions for Accurate Baselines
+
+| Approach | Effort | Accuracy |
+|----------|--------|----------|
+| 1. Increase dataset size (MEDIUM/LARGE) | Modify polybench.h | Good |
+| 2. Use xctrace/Instruments | Moderate | Excellent |
+| 3. Internal iteration loops | Modify benchmarks | Good |
+| 4. hyperfine tool (statistical) | Easy | Good |
+
+**Recommended approach:** Use MEDIUM or LARGE dataset sizes in polybench.h, which would:
+- Increase execution time to seconds (measurable)
+- Match typical academic validation methodology
+- Reduce measurement noise to acceptable levels
+
+### Modifying Dataset Size
+
+In `benchmarks/polybench/common/polybench.h`, change:
+```c
+// From:
+#define MINI_DATASET
+
+// To:
+#define MEDIUM_DATASET  // or LARGE_DATASET
+```
+
+Then add MEDIUM/LARGE dimensions for each kernel (see PolyBench documentation).
+
+## Original Blocker
 
 The agent team **cannot capture M2 baselines autonomously** because:
 
-1. Requires physical access to M2 hardware
-2. Requires native macOS builds (not bare-metal ELFs)
-3. Requires Apple's performance counter APIs or Instruments
-4. May require sudo/admin for some performance counters
+1. ~~Requires physical access to M2 hardware~~ ✅ Running on M2!
+2. ~~Requires native macOS builds~~ ✅ Script builds natively!
+3. Requires larger dataset sizes for meaningful timing
+4. May require Apple Instruments for precise cycle counts
 
-**Estimated human effort:** 2-4 hours for all 15 benchmarks
+**Estimated human effort:** 1-2 hours (dataset size config + re-run)
 
 ## Fallback: Microbenchmark Extrapolation
 
