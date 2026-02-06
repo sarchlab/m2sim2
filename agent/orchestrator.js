@@ -6,7 +6,7 @@
  */
 
 import { spawn, execSync } from 'child_process';
-import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, appendFileSync, readFileSync, watch } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import YAML from 'yaml';
@@ -16,11 +16,13 @@ const REPO_DIR = join(__dirname, '..');
 const SKILL_PATH = join(__dirname, 'skills');
 const LOGS_DIR = join(__dirname, 'logs');
 const CONFIG_PATH = join(__dirname, 'config.yaml');
+const ORCHESTRATOR_PATH = join(__dirname, 'orchestrator.js');
 
 // Track currently running agent
 let currentAgentProcess = null;
 let currentAgentName = null;
 let cycleCount = 0;
+let pendingReload = false;
 
 function log(message) {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -184,9 +186,28 @@ async function main() {
     mkdirSync(LOGS_DIR, { recursive: true });
   }
   
+  // Watch orchestrator.js for changes (hot reload)
+  let debounce = null;
+  watch(ORCHESTRATOR_PATH, (eventType) => {
+    if (eventType === 'change') {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        log('⚡ orchestrator.js changed — will reload after current agent finishes');
+        pendingReload = true;
+      }, 500);
+    }
+  });
+  log('Watching orchestrator.js for hot reload (edit file to trigger)');
+  
   // Main loop
   while (true) {
     const config = await runCycle();
+    
+    // Check for pending reload
+    if (pendingReload) {
+      log('⚡ Reloading orchestrator (exit code 75)...');
+      process.exit(75); // Special code: wrapper should restart
+    }
     
     log(`Sleeping ${config.cycleIntervalMs / 1000}s until next cycle...`);
     await sleep(config.cycleIntervalMs);
@@ -210,6 +231,12 @@ process.on('SIGTERM', () => {
     currentAgentProcess.kill('SIGTERM');
   }
   process.exit(0);
+});
+
+// SIGHUP = manual reload request
+process.on('SIGHUP', () => {
+  log('⚡ SIGHUP received — will reload after current agent finishes');
+  pendingReload = true;
 });
 
 main().catch(console.error);
