@@ -54,7 +54,15 @@ Before starting work, gather context from:
 
 When finishing your cycle:
 
-1. **Comment on tracker** with what you noticed and what you did
+1. **Comment on tracker** using this template:
+```
+# [AgentName]
+
+**Noticed:** (issues, PRs, CI failures, messages you saw)
+
+**Actions:** (what you did)
+```
+
 2. **Remove your active label**
 
 ---
