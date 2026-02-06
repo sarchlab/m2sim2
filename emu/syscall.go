@@ -191,24 +191,29 @@ func (h *DefaultSyscallHandler) handleRead() SyscallResult {
 	bufPtr := h.regFile.ReadReg(1)
 	count := h.regFile.ReadReg(2)
 
-	// Only stdin (fd=0) is supported for now
-	if fd != 0 {
-		h.setError(EBADF)
-		return SyscallResult{}
-	}
-
-	// If no stdin is configured, return EOF
-	if h.stdin == nil {
-		h.regFile.WriteReg(0, 0)
-		return SyscallResult{}
-	}
-
-	// Read from stdin
+	var n int
+	var err error
 	buf := make([]byte, count)
-	n, err := h.stdin.Read(buf)
+
+	if fd == 0 {
+		// stdin: use configured stdin reader
+		if h.stdin == nil {
+			h.regFile.WriteReg(0, 0) // EOF
+			return SyscallResult{}
+		}
+		n, err = h.stdin.Read(buf)
+	} else {
+		// File descriptor: use FDTable
+		n, err = h.fdTable.Read(fd, buf)
+	}
+
 	if err != nil && n == 0 {
-		// EOF or error with no bytes read
-		h.regFile.WriteReg(0, 0)
+		if err == os.ErrInvalid {
+			h.setError(EBADF)
+		} else {
+			// EOF or other error with no bytes read
+			h.regFile.WriteReg(0, 0)
+		}
 		return SyscallResult{}
 	}
 
@@ -228,28 +233,33 @@ func (h *DefaultSyscallHandler) handleWrite() SyscallResult {
 	bufPtr := h.regFile.ReadReg(1)
 	count := h.regFile.ReadReg(2)
 
-	// Select output based on file descriptor
-	var writer io.Writer
-	switch fd {
-	case 1:
-		writer = h.stdout
-	case 2:
-		writer = h.stderr
-	default:
-		h.setError(EBADF)
-		return SyscallResult{}
-	}
-
 	// Read buffer from memory
 	buf := make([]byte, count)
 	for i := uint64(0); i < count; i++ {
 		buf[i] = h.memory.Read8(bufPtr + i)
 	}
 
-	// Write to output
-	n, err := writer.Write(buf)
+	var n int
+	var err error
+
+	switch fd {
+	case 1:
+		// stdout
+		n, err = h.stdout.Write(buf)
+	case 2:
+		// stderr
+		n, err = h.stderr.Write(buf)
+	default:
+		// File descriptor: use FDTable
+		n, err = h.fdTable.Write(fd, buf)
+	}
+
 	if err != nil {
-		h.setError(EIO)
+		if err == os.ErrInvalid {
+			h.setError(EBADF)
+		} else {
+			h.setError(EIO)
+		}
 		return SyscallResult{}
 	}
 

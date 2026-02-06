@@ -743,4 +743,168 @@ var _ = Describe("Syscall Handler", func() {
 			handler.Handle()
 		})
 	})
+
+	Describe("File I/O via read/write syscalls", func() {
+		var tempDir string
+
+		BeforeEach(func() {
+			var err error
+			tempDir, err = os.MkdirTemp("", "fileio_test")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(tempDir)
+		})
+
+		writePathToMemory := func(path string, addr uint64) {
+			for i, c := range []byte(path) {
+				memory.Write8(addr+uint64(i), c)
+			}
+			memory.Write8(addr+uint64(len(path)), 0) // null terminator
+		}
+
+		It("should read from opened file", func() {
+			// Create a test file with known content
+			testFile := filepath.Join(tempDir, "test.txt")
+			content := []byte("hello file")
+			err := os.WriteFile(testFile, content, 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Open the file
+			writePathToMemory(testFile, 0x1000)
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 0)                // O_RDONLY
+			regFile.WriteReg(3, 0)                // mode
+			handler.Handle()
+			fd := regFile.ReadReg(0)
+			Expect(fd).To(BeNumerically(">=", 3))
+
+			// Read from the file
+			bufAddr := uint64(0x2000)
+			regFile.WriteReg(8, 63)      // SyscallRead
+			regFile.WriteReg(0, fd)      // fd
+			regFile.WriteReg(1, bufAddr) // buf pointer
+			regFile.WriteReg(2, 10)      // count
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should be bytes read
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(10)))
+
+			// Verify content in memory
+			var readBuf []byte
+			for i := uint64(0); i < 10; i++ {
+				readBuf = append(readBuf, memory.Read8(bufAddr+i))
+			}
+			Expect(string(readBuf)).To(Equal("hello file"))
+
+			// Clean up
+			regFile.WriteReg(8, 57) // SyscallClose
+			regFile.WriteReg(0, fd)
+			handler.Handle()
+		})
+
+		It("should write to opened file", func() {
+			// Open new file for writing
+			testFile := filepath.Join(tempDir, "output.txt")
+			writePathToMemory(testFile, 0x1000)
+
+			regFile.WriteReg(8, 56)               // SyscallOpenat
+			regFile.WriteReg(0, emu.AT_FDCWD_U64) // AT_FDCWD
+			regFile.WriteReg(1, 0x1000)           // pathname pointer
+			regFile.WriteReg(2, 1|0x40)           // O_WRONLY | O_CREAT
+			regFile.WriteReg(3, 0644)             // mode
+			handler.Handle()
+			fd := regFile.ReadReg(0)
+			Expect(fd).To(BeNumerically(">=", 3))
+
+			// Write "test data" to memory
+			content := []byte("test data")
+			bufAddr := uint64(0x2000)
+			for i, b := range content {
+				memory.Write8(bufAddr+uint64(i), b)
+			}
+
+			// Write to the file
+			regFile.WriteReg(8, 64)                   // SyscallWrite
+			regFile.WriteReg(0, fd)                   // fd
+			regFile.WriteReg(1, bufAddr)              // buf pointer
+			regFile.WriteReg(2, uint64(len(content))) // count
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should be bytes written
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(len(content))))
+
+			// Close the file
+			regFile.WriteReg(8, 57) // SyscallClose
+			regFile.WriteReg(0, fd)
+			handler.Handle()
+
+			// Verify file contents on disk
+			fileContent, err := os.ReadFile(testFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(fileContent)).To(Equal("test data"))
+		})
+
+		It("should return EBADF for read on invalid fd", func() {
+			bufAddr := uint64(0x2000)
+			regFile.WriteReg(8, 63)      // SyscallRead
+			regFile.WriteReg(0, 999)     // Invalid fd
+			regFile.WriteReg(1, bufAddr) // buf pointer
+			regFile.WriteReg(2, 10)      // count
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain -EBADF (9)
+			x0 := regFile.ReadReg(0)
+			var ebadf int64 = 9
+			expectedError := uint64(-ebadf)
+			Expect(x0).To(Equal(expectedError))
+		})
+
+		It("should return EBADF for write on invalid fd", func() {
+			// Write some data to memory
+			bufAddr := uint64(0x2000)
+			memory.Write8(bufAddr, 'x')
+
+			regFile.WriteReg(8, 64)      // SyscallWrite
+			regFile.WriteReg(0, 999)     // Invalid fd
+			regFile.WriteReg(1, bufAddr) // buf pointer
+			regFile.WriteReg(2, 1)       // count
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			// X0 should contain -EBADF (9)
+			x0 := regFile.ReadReg(0)
+			var ebadf int64 = 9
+			expectedError := uint64(-ebadf)
+			Expect(x0).To(Equal(expectedError))
+		})
+
+		It("should still write to stdout correctly", func() {
+			// Store "hi" in memory
+			memory.Write8(0x1000, 'h')
+			memory.Write8(0x1001, 'i')
+
+			// Write to stdout
+			regFile.WriteReg(8, 64)     // SyscallWrite
+			regFile.WriteReg(0, 1)      // stdout
+			regFile.WriteReg(1, 0x1000) // buf pointer
+			regFile.WriteReg(2, 2)      // count
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			Expect(stdout.String()).To(Equal("hi"))
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(2)))
+		})
+	})
 })
