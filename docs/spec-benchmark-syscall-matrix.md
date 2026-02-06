@@ -22,12 +22,11 @@ helping prioritize syscall implementation order.
 
 **Dependencies:** ✅ File descriptor table (#262) → PR #266 merged.
 
-**8 syscalls implemented:** exit, write, read, close, openat, brk, mmap, fstat
+**9 syscalls implemented:** exit, write, read (with FD table), close, openat, brk, mmap, fstat, read/write file I/O
 
 **PRs pending merge (after rebase):**
-- PR #280 (read/write FD extension)
-- PR #282 (lseek)
-- PR #283 (file I/O tests)
+- PR #282 (lseek) — needs rebase after #280 merged
+- PR #283 (file I/O tests) — needs rebase after #280 merged
 
 ## Benchmark Syscall Requirements Matrix
 
@@ -187,3 +186,4 @@ Once 548.exchange2_r is validated, the recommended progression is:
 *Updated by Eric (Cycle 306) — PRs #276, #279, #280 ready to merge; mprotect research added*
 *Updated by Eric (Cycle 308) — mmap merged (PR #276); 548.exchange2_r details expanded*
 *Updated by Eric (Cycle 312) — fstat merged (PR #279); 8 syscalls total; next benchmark targets added*
+*Updated by Eric (Cycle 316) — PR #280 (read/write FD extension) merged; 9 syscalls total; 505.mcf_r awaits lseek (#282)*

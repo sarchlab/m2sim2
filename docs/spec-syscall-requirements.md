@@ -8,13 +8,14 @@ syscall emulation mode.
 | Syscall | Number (ARM64) | Status |
 |---------|----------------|--------|
 | exit    | 93 (0x5D)      | ✅ Implemented |
-| write   | 64 (0x40)      | ✅ Implemented (FD extension in PR #280) |
-| read    | 63 (0x3F)      | ✅ Implemented (FD extension in PR #280) |
+| write   | 64 (0x40)      | ✅ Implemented (FD table support: PR #280) |
+| read    | 63 (0x3F)      | ✅ Implemented (FD table support: PR #280) |
 | close   | 57 (0x39)      | ✅ Implemented (PR #267) |
 | openat  | 56 (0x38)      | ✅ Implemented (PR #268) |
 | brk     | 214 (0xD6)     | ✅ Implemented (PR #275) |
-| mmap    | 222 (0xDE)     | ✅ Ready to Merge (PR #276) |
-| fstat   | 80 (0x50)      | ✅ Ready to Merge (PR #279) |
+| mmap    | 222 (0xDE)     | ✅ Implemented (PR #276) |
+| fstat   | 80 (0x50)      | ✅ Implemented (PR #279) |
+| lseek   | 62 (0x3E)      | 🔄 PR #282 (awaiting rebase) |
 
 **File Descriptor Table:** ✅ Implemented (PR #266)
 
@@ -147,3 +148,4 @@ FD 3+: Opened files
 *Updated by Eric (Cycle 304) — 5 syscalls now implemented*
 *Updated by Eric (Cycle 305) — 6 syscalls implemented (brk merged), mmap in review*
 *Updated by Eric (Cycle 306) — 8 syscalls ready (mmap, fstat PRs approved, pending merge)*
+*Updated by Eric (Cycle 316) — 9 syscalls implemented (PR #280 merged); lseek pending*
