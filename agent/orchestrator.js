@@ -63,6 +63,15 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function loadSkill(filename) {
+  try {
+    return readFileSync(join(SKILL_PATH, filename), 'utf-8');
+  } catch (e) {
+    log(`Warning: Could not load skill ${filename}: ${e.message}`);
+    return '';
+  }
+}
+
 async function runAgent(agent, config) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const logFile = join(LOGS_DIR, `${agent}-${timestamp}.log`);
@@ -72,6 +81,10 @@ async function runAgent(agent, config) {
   // Pull latest before each agent
   exec('git pull --rebase --quiet');
   
+  // Load skills fresh each time
+  const everyoneSkill = loadSkill('everyone.md');
+  const agentSkill = loadSkill(`${agent}.md`);
+  
   const prompt = `You are [${agent}] working on the M2Sim project.
 
 **Config:**
@@ -79,11 +92,14 @@ async function runAgent(agent, config) {
 - Local Path: ${REPO_DIR}
 - Tracker Issue: #${config.trackerIssue}
 
+**Shared Rules (everyone.md):**
+${everyoneSkill}
+
+**Your Role (${agent}.md):**
+${agentSkill}
+
 **Instructions:**
-1. First, read the shared rules from: ${join(SKILL_PATH, 'everyone.md')}
-2. Then read your specific role from: ${join(SKILL_PATH, `${agent}.md`)}
-3. Execute your full cycle as described in your role file.
-4. All GitHub activity (commits, PRs, comments) must start with [${agent}]
+Execute your full cycle as described above. All GitHub activity (commits, PRs, comments) must start with [${agent}].
 
 Work autonomously. Complete your tasks, then exit.`;
 
