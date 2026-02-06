@@ -87,7 +87,7 @@ jobs:
           git stash --include-untracked || true
           
           if git show-ref --verify --quiet refs/remotes/origin/reports; then
-            git checkout reports
+            git checkout reports --
             git pull origin reports
           else
             git checkout --orphan reports
