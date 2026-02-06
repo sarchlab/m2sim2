@@ -1166,11 +1166,11 @@ var _ = Describe("Pipeline Stages", func() {
 
 			It("should write memory data via WritebackSlot", func() {
 				memwb := &pipeline.MEMWBRegister{
-					Valid:     true,
-					RegWrite:  true,
-					Rd:        8,
-					MemToReg:  true,
-					MemData:   999,
+					Valid:    true,
+					RegWrite: true,
+					Rd:       8,
+					MemToReg: true,
+					MemData:  999,
 				}
 				result := writebackStage.WritebackSlot(memwb)
 				Expect(result).To(BeTrue())
