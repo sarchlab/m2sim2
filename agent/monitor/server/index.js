@@ -381,6 +381,35 @@ Do not ask questions, just create the issue based on the description provided.`;
   }
 });
 
+// GET /api/repo - Get GitHub repo URL
+app.get('/api/repo', (req, res) => {
+  res.json({ 
+    repo: REPO, 
+    url: REPO ? `https://github.com/${REPO}` : null 
+  });
+});
+
+// POST /api/bootstrap - Run bootstrap script
+app.post('/api/bootstrap', async (req, res) => {
+  try {
+    const bootstrapPath = path.join(AGENT_DIR, 'bootstrap.sh');
+    if (!fs.existsSync(bootstrapPath)) {
+      return res.status(404).json({ error: 'bootstrap.sh not found' });
+    }
+    
+    const output = execSync('bash bootstrap.sh', {
+      cwd: AGENT_DIR,
+      encoding: 'utf-8',
+      timeout: 60000
+    });
+    
+    res.json({ success: true, output });
+  } catch (e) {
+    console.error('Bootstrap error:', e.message);
+    res.status(500).json({ error: e.message, output: e.stdout || '' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Monitor API server running on http://localhost:${PORT}`);
 });

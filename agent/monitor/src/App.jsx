@@ -47,6 +47,8 @@ function App() {
   const [configError, setConfigError] = useState(null)
   const [configSaving, setConfigSaving] = useState(false)
   const [orchestratorStatus, setOrchestratorStatus] = useState(null)
+  const [repoUrl, setRepoUrl] = useState(null)
+  const [bootstrapDialog, setBootstrapDialog] = useState({ open: false, loading: false, result: null })
   const [lastUpdate, setLastUpdate] = useState(null)
   const [error, setError] = useState(null)
   const [comments, setComments] = useState([])
@@ -93,6 +95,11 @@ function App() {
         const statusData = await statusRes.json()
         setOrchestratorStatus(statusData.offline ? null : statusData)
       } catch { setOrchestratorStatus(null) }
+      try {
+        const repoRes = await fetch('/api/repo')
+        const repoData = await repoRes.json()
+        setRepoUrl(repoData.url)
+      } catch { /* ignore */ }
     } catch (err) { setError(err.message) }
   }
   
@@ -135,6 +142,22 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
     setConfigError(null)
   }
   
+  const runBootstrap = async () => {
+    setBootstrapDialog(prev => ({ ...prev, loading: true, result: null }))
+    try {
+      const res = await fetch('/api/bootstrap', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setBootstrapDialog({ open: true, loading: false, result: { success: true, output: data.output } })
+        await fetchData()
+      } else {
+        setBootstrapDialog({ open: true, loading: false, result: { success: false, error: data.error } })
+      }
+    } catch (err) {
+      setBootstrapDialog({ open: true, loading: false, result: { success: false, error: err.message } })
+    }
+  }
+
   const resetConfig = () => {
     if (config.config) {
       setConfigForm({
@@ -297,6 +320,17 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
             <p className="text-sm text-neutral-500">Orchestrator Dashboard</p>
           </div>
           <div className="flex items-center gap-3 text-sm text-neutral-500">
+            {repoUrl && (
+              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-neutral-200 hover:bg-neutral-300 rounded text-neutral-700 font-medium">
+                GitHub
+              </a>
+            )}
+            <button 
+              onClick={() => setBootstrapDialog({ open: true, loading: false, result: null })}
+              className="px-3 py-1 bg-red-100 hover:bg-red-200 rounded text-red-700 font-medium"
+            >
+              Bootstrap
+            </button>
             <RefreshCw className="w-4 h-4" />
             <span>Last update: {formatTime(lastUpdate)}</span>
             {error && <Badge variant="warning">Error: {error}</Badge>}
@@ -617,6 +651,64 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
             </div>
           ) : (
             <p className="text-neutral-400 text-center py-8">Failed to load agent details</p>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Bootstrap Confirmation Dialog */}
+      <Modal open={bootstrapDialog.open} onClose={() => setBootstrapDialog({ open: false, loading: false, result: null })}>
+        <ModalHeader onClose={() => setBootstrapDialog({ open: false, loading: false, result: null })}>
+          Bootstrap Agent System
+        </ModalHeader>
+        <ModalContent>
+          {bootstrapDialog.result ? (
+            <div className="space-y-4">
+              {bootstrapDialog.result.success ? (
+                <>
+                  <p className="text-green-600 font-semibold">✓ Bootstrap completed successfully</p>
+                  <pre className="bg-neutral-100 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">{bootstrapDialog.result.output}</pre>
+                </>
+              ) : (
+                <>
+                  <p className="text-red-600 font-semibold">✗ Bootstrap failed</p>
+                  <pre className="bg-red-50 p-3 rounded text-xs text-red-800">{bootstrapDialog.result.error}</pre>
+                </>
+              )}
+              <button 
+                onClick={() => setBootstrapDialog({ open: false, loading: false, result: null })}
+                className="w-full py-2 bg-neutral-200 hover:bg-neutral-300 rounded font-medium"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-neutral-600">This will reset the agent system:</p>
+              <ul className="list-disc list-inside text-sm text-neutral-500 space-y-1">
+                <li>Stop orchestrator and monitor processes</li>
+                <li>Remove temporary files (state.json, logs)</li>
+                <li>Clear all workers</li>
+                <li>Remove workspace</li>
+                <li>Create new tracker issue</li>
+              </ul>
+              <p className="text-red-600 font-semibold text-sm">⚠️ This action cannot be undone!</p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setBootstrapDialog({ open: false, loading: false, result: null })}
+                  className="flex-1 py-2 bg-neutral-200 hover:bg-neutral-300 rounded font-medium"
+                  disabled={bootstrapDialog.loading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={runBootstrap}
+                  disabled={bootstrapDialog.loading}
+                  className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded font-medium disabled:opacity-50"
+                >
+                  {bootstrapDialog.loading ? 'Running...' : 'Confirm Bootstrap'}
+                </button>
+              </div>
+            </div>
           )}
         </ModalContent>
       </Modal>
