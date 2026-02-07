@@ -81,7 +81,7 @@ Complete the set of Linux syscalls needed by SPEC benchmarks.
 - [x] mmap (222) — merged
 
 ##### H2.1.3: Remaining file syscalls 🚧 IN PROGRESS (~5-10 cycles)
-- [ ] lseek (62) — PR #282 open, cathy-approved, awaiting merge
+- [x] lseek (62) — merged (PR #282)
 - [ ] exit_group (94) — issue #272 open
 - [ ] mprotect (226) — issue #278 open, research done
 
@@ -91,30 +91,49 @@ Complete the set of Linux syscalls needed by SPEC benchmarks.
 - [ ] getpid/getuid/gettid — issue #273
 - [ ] newfstatat (79) — may be needed by some benchmarks
 
-#### H2.2: SPEC Binary Preparation (medium-level) 🚧 BLOCKED
+#### H2.2: Micro & Medium Benchmarks (medium-level) ⬜ NOT STARTED
 
-**Blocker (issue #285):** SPEC binaries on the host machine are Mach-O (macOS native), but M2Sim requires ARM64 Linux ELF format. **Requires human action** to cross-compile SPEC using `aarch64-linux-musl-gcc`.
+**Human guidance (issue #107):** Going directly to SPEC is too large a leap. We need more microbenchmarks and medium-sized benchmarks first. SPEC simulations are long-running and must not be run by agents directly — they should run in CI (GitHub Actions) with sufficient time limits, triggered periodically (e.g., every 24 hours).
 
-##### H2.2.1: Cross-compilation setup ⬜ BLOCKED ON HUMAN
-- [ ] Install ARM64 Linux cross-compiler with musl libc
+##### H2.2.1: Expand microbenchmark suite (~10-20 cycles)
+- [ ] Add microbenchmarks for memory access patterns (sequential, strided, random)
+- [ ] Add microbenchmarks for instruction mix (load-heavy, store-heavy, branch-heavy)
+- [ ] Add microbenchmarks for cache behavior (L1 hit, L2 hit, cache miss)
+- [ ] Collect M2 hardware CPI data for new microbenchmarks
+
+##### H2.2.2: Medium-sized benchmarks (~20-40 cycles)
+- [ ] Create or adopt small benchmark programs (100-1000 lines) that exercise multiple subsystems
+- [ ] Examples: matrix multiply, linked list traversal, sorting algorithms, simple parsers
+- [ ] Validate correct execution and timing against M2 hardware
+
+#### H2.3: SPEC Binary Preparation (medium-level) 🚧 IN PROGRESS
+
+**Issue #285:** SPEC binaries on the host machine are Mach-O (macOS native), but M2Sim requires ARM64 Linux ELF format. Per human direction (issue #289), **workers should compile ELF binaries via tool calls** — this is not blocked on human action.
+
+##### H2.3.1: Cross-compilation setup (~5-10 cycles)
+- [ ] Workers install/use ARM64 Linux cross-compiler (aarch64-linux-musl-gcc)
 - [ ] Create SPEC config for ARM64 Linux static ELF
-- [ ] Rebuild SPEC benchmarks
+- [ ] Rebuild SPEC benchmarks as ELF
 
-##### H2.2.2: Benchmark validation (~10-20 cycles per benchmark)
+##### H2.3.2: Benchmark validation (~10-20 cycles per benchmark)
 - [ ] 548.exchange2_r — Sudoku solver, pure computation, easiest target
 - [ ] 505.mcf_r — vehicle scheduling, tests file I/O path
 - [ ] 541.leela_r — Go AI, minimal I/O
 - [ ] 531.deepsjeng_r — chess engine, larger memory
 
-#### H2.3: Instruction Coverage Gaps ⬜ NOT STARTED
+**Important:** SPEC simulation runs must go through CI/GitHub Actions, not be run by agents directly.
 
-SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Expect to discover and fix gaps during validation (H2.2.2).
+#### H2.4: Instruction Coverage Gaps ⬜ NOT STARTED
+
+SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Expect to discover and fix gaps during validation (H2.3.2).
 
 ---
 
 ### H3: Accuracy Calibration ⬜ NOT STARTED
 
 **Goal:** Achieve <20% average CPI error on SPEC benchmarks vs real M2 hardware.
+
+**Strategy:** Start calibration on microbenchmarks first (can begin in parallel with H2), then expand to medium benchmarks, then SPEC. Per human guidance, going directly to SPEC calibration is too large a step.
 
 **Current microbenchmark baseline (cycle 230):**
 
@@ -125,13 +144,19 @@ SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Exp
 | branch_taken_conditional | 1.600 | 1.190 | 34.5% |
 | **Average** | — | — | **34.2%** |
 
-#### H3.1: Pipeline tuning (~50-100 cycles)
+#### H3.1: Microbenchmark calibration (~50-100 cycles)
 - [ ] Full 8-wide execution (expected: 49.3% → ~28% arithmetic error)
 - [ ] Out-of-order execution modeling
 - [ ] Memory latency calibration
+- [ ] Target: <20% average error on microbenchmark suite
 
-#### H3.2: SPEC-level calibration (~100+ cycles)
-- [ ] Run SPEC benchmarks with timing, compare to M2 hardware
+#### H3.2: Medium benchmark calibration (~50-100 cycles)
+- [ ] Run medium benchmarks with timing, compare to M2 hardware
+- [ ] Tune parameters across diverse workloads
+- [ ] Identify systematic error patterns
+
+#### H3.3: SPEC-level calibration (~100+ cycles)
+- [ ] Run SPEC benchmarks in CI with timing, compare to M2 hardware
 - [ ] Tune parameters to minimize error
 - [ ] All benchmarks <30% individual error, <20% average
 

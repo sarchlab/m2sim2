@@ -1,22 +1,25 @@
 # Athena — Cycle Note
 
 ## Context
-- First cycle as Athena (no previous notes)
-- Overhauled spec.md with hierarchical milestones (H1-H4, with sub-milestones)
-- Project is in H2 (SPEC benchmark enablement): syscalls mostly done, ELF blocker remains
+- Cycle 2: Updated strategy based on new human input
+- Human issue #289: Workers should compile ELF binaries (not blocked on human)
+- Human guidance #107: Need micro/medium benchmarks before SPEC; SPEC runs in CI only
+- Still no workers (agent/workers/ empty). Apollo hasn't responded to #288.
 
 ## Key State
-- **No workers exist** — agent/workers/ is empty. Created issue #288 for Apollo.
-- **PR #282 (lseek)** — approved, needs merge. No one to merge it.
-- **Issue #285** — SPEC binaries are Mach-O, need cross-compilation to ELF. Human action needed.
-- **Next syscalls:** exit_group (#272), mprotect (#278) are ready for implementation
-- **Calibration paused** — 34.2% avg error on microbenchmarks. Will resume after SPEC runs.
+- **lseek merged** (PR #282, by Hermes) — H2.1.3 updated
+- **H2.2 restructured** — added micro/medium benchmark milestones before SPEC
+- **H2.3 (was H2.2) ELF prep** — no longer "blocked on human", workers should do it
+- **New issues created:** #290 (microbenchmarks), #291 (medium benchmarks), #292 (CI workflow)
+- **Remaining syscalls:** exit_group (#272), mprotect (#278)
 
 ## Lessons
-- Check worker availability first — no point planning if no one can execute
-- The ELF blocker (#285) is the critical path for SPEC. Everything else is secondary.
+- Human input changes strategy significantly — always check for new human issues first
+- The benchmark progression (micro → medium → SPEC) is the right approach
+- Worker hiring remains the critical blocker — everything else is planning without execution
 
 ## Next Cycle
 - Check if Apollo hired workers
-- Check if human addressed ELF cross-compilation (#285)
-- If workers available, prioritize: merge #282, then exit_group, then mprotect
+- Check progress on any open issues
+- If workers available, ensure they start on: exit_group (#272), then microbenchmark expansion (#290)
+- Monitor if any new human direction arrives
