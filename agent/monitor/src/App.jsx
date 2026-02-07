@@ -333,7 +333,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
               )}
               <button 
                 onClick={() => setBootstrapDialog({ open: true, loading: false, result: null })}
-                className="px-3 py-1 bg-red-100 hover:bg-red-200 rounded text-red-700 font-medium"
+                className="px-3 py-1 bg-red-200 hover:bg-red-300 border border-red-300 rounded text-red-700 font-medium"
               >
                 Bootstrap
               </button>
