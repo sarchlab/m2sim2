@@ -20,8 +20,8 @@ func TestHarnessRunsAllBenchmarks(t *testing.T) {
 
 	results := harness.RunAll()
 
-	if len(results) != 12 {
-		t.Errorf("expected 12 benchmark results, got %d", len(results))
+	if len(results) != 16 {
+		t.Errorf("expected 16 benchmark results, got %d", len(results))
 	}
 
 	// Verify each benchmark completed
@@ -185,6 +185,102 @@ func TestMixedOperations(t *testing.T) {
 
 	t.Logf("mixed_operations: cycles=%d, insts=%d, CPI=%.3f",
 		r.SimulatedCycles, r.InstructionsRetired, r.CPI)
+}
+
+func TestMemoryStrided(t *testing.T) {
+	config := DefaultConfig()
+	config.Output = &bytes.Buffer{}
+	config.EnableICache = false
+	config.EnableDCache = false
+
+	harness := NewHarness(config)
+	harness.AddBenchmark(memoryStrided())
+
+	results := harness.RunAll()
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	r := results[0]
+	if r.ExitCode != 7 {
+		t.Errorf("expected exit code 7, got %d", r.ExitCode)
+	}
+
+	t.Logf("memory_strided: cycles=%d, insts=%d, CPI=%.3f",
+		r.SimulatedCycles, r.InstructionsRetired, r.CPI)
+}
+
+func TestLoadHeavy(t *testing.T) {
+	config := DefaultConfig()
+	config.Output = &bytes.Buffer{}
+	config.EnableICache = false
+	config.EnableDCache = false
+
+	harness := NewHarness(config)
+	harness.AddBenchmark(loadHeavy())
+
+	results := harness.RunAll()
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	r := results[0]
+	if r.ExitCode != 20 {
+		t.Errorf("expected exit code 20, got %d", r.ExitCode)
+	}
+
+	t.Logf("load_heavy: cycles=%d, insts=%d, CPI=%.3f",
+		r.SimulatedCycles, r.InstructionsRetired, r.CPI)
+}
+
+func TestStoreHeavy(t *testing.T) {
+	config := DefaultConfig()
+	config.Output = &bytes.Buffer{}
+	config.EnableICache = false
+	config.EnableDCache = false
+
+	harness := NewHarness(config)
+	harness.AddBenchmark(storeHeavy())
+
+	results := harness.RunAll()
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	r := results[0]
+	if r.ExitCode != 3 {
+		t.Errorf("expected exit code 3, got %d", r.ExitCode)
+	}
+
+	t.Logf("store_heavy: cycles=%d, insts=%d, CPI=%.3f",
+		r.SimulatedCycles, r.InstructionsRetired, r.CPI)
+}
+
+func TestBranchHeavy(t *testing.T) {
+	config := DefaultConfig()
+	config.Output = &bytes.Buffer{}
+	config.EnableICache = false
+	config.EnableDCache = false
+
+	harness := NewHarness(config)
+	harness.AddBenchmark(branchHeavy())
+
+	results := harness.RunAll()
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	r := results[0]
+	if r.ExitCode != 10 {
+		t.Errorf("expected exit code 10, got %d", r.ExitCode)
+	}
+
+	t.Logf("branch_heavy: cycles=%d, insts=%d, CPI=%.3f, flushes=%d",
+		r.SimulatedCycles, r.InstructionsRetired, r.CPI, r.PipelineFlushes)
 }
 
 func TestPrintResults(t *testing.T) {

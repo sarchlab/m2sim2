@@ -16,10 +16,14 @@ func GetMicrobenchmarks() []Benchmark {
 		arithmetic8Wide(),
 		dependencyChain(),
 		memorySequential(),
-		functionCalls(),
+		memoryStrided(),
+		loadHeavy(),
+		storeHeavy(),
 		branchTaken(),
 		branchTakenConditional(),
 		branchHotLoop(),
+		branchHeavy(),
+		functionCalls(),
 		mixedOperations(),
 		matrixMultiply2x2(),
 		loopSimulation(),
@@ -546,6 +550,205 @@ func loopSimulation() Benchmark {
 		),
 		ExpectedExit: 45,
 	}
+}
+
+// 9. Memory Strided - Tests strided access pattern (stride = 4 elements = 32 bytes)
+// Strided access is common in scientific code (e.g., column access in row-major arrays).
+func memoryStrided() Benchmark {
+	return Benchmark{
+		Name:        "memory_strided",
+		Description: "10 store/load pairs with stride-4 access - measures strided memory latency",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(0, 7)      // X0 = value to store/load
+		},
+		Program: BuildProgram(
+			// Store/load at offsets 0, 4, 8, 12, 16, 20, 24, 28, 32, 36
+			// (each offset unit = 8 bytes, so stride = 32 bytes between accesses)
+			EncodeSTR64(0, 1, 0), EncodeLDR64(0, 1, 0),
+			EncodeSTR64(0, 1, 4), EncodeLDR64(0, 1, 4),
+			EncodeSTR64(0, 1, 8), EncodeLDR64(0, 1, 8),
+			EncodeSTR64(0, 1, 12), EncodeLDR64(0, 1, 12),
+			EncodeSTR64(0, 1, 16), EncodeLDR64(0, 1, 16),
+			EncodeSTR64(0, 1, 20), EncodeLDR64(0, 1, 20),
+			EncodeSTR64(0, 1, 24), EncodeLDR64(0, 1, 24),
+			EncodeSTR64(0, 1, 28), EncodeLDR64(0, 1, 28),
+			EncodeSTR64(0, 1, 32), EncodeLDR64(0, 1, 32),
+			EncodeSTR64(0, 1, 36), EncodeLDR64(0, 1, 36),
+			EncodeSVC(0),
+		),
+		ExpectedExit: 7,
+	}
+}
+
+// 10. Load Heavy - Instruction mix dominated by loads
+// Tests load unit throughput and memory subsystem pressure.
+func loadHeavy() Benchmark {
+	return Benchmark{
+		Name:        "load_heavy",
+		Description: "20 loads from sequential addresses - measures load throughput",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			// Pre-fill memory with known values
+			for i := uint64(0); i < 20; i++ {
+				memory.Write64(0x8000+i*8, i+1)
+			}
+		},
+		Program: BuildProgram(
+			// 20 loads to independent registers (no RAW hazards between loads)
+			EncodeLDR64(0, 1, 0),
+			EncodeLDR64(2, 1, 1),
+			EncodeLDR64(3, 1, 2),
+			EncodeLDR64(4, 1, 3),
+			EncodeLDR64(5, 1, 4),
+			EncodeLDR64(6, 1, 5),
+			EncodeLDR64(7, 1, 6),
+			EncodeLDR64(9, 1, 7),
+			EncodeLDR64(10, 1, 8),
+			EncodeLDR64(11, 1, 9),
+			EncodeLDR64(12, 1, 10),
+			EncodeLDR64(13, 1, 11),
+			EncodeLDR64(14, 1, 12),
+			EncodeLDR64(15, 1, 13),
+			EncodeLDR64(16, 1, 14),
+			EncodeLDR64(17, 1, 15),
+			EncodeLDR64(18, 1, 16),
+			EncodeLDR64(19, 1, 17),
+			EncodeLDR64(20, 1, 18),
+			EncodeLDR64(0, 1, 19), // X0 = last value (20) for exit code
+			EncodeSVC(0),
+		),
+		ExpectedExit: 20,
+	}
+}
+
+// 11. Store Heavy - Instruction mix dominated by stores
+// Tests store unit throughput and write buffer behavior.
+func storeHeavy() Benchmark {
+	return Benchmark{
+		Name:        "store_heavy",
+		Description: "20 stores to sequential addresses - measures store throughput",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(0, 3)      // X0 = exit code (also stored)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(2, 99)     // X2 = value to store
+		},
+		Program: BuildProgram(
+			// 20 stores to sequential addresses (no data dependencies)
+			EncodeSTR64(2, 1, 0),
+			EncodeSTR64(2, 1, 1),
+			EncodeSTR64(2, 1, 2),
+			EncodeSTR64(2, 1, 3),
+			EncodeSTR64(2, 1, 4),
+			EncodeSTR64(2, 1, 5),
+			EncodeSTR64(2, 1, 6),
+			EncodeSTR64(2, 1, 7),
+			EncodeSTR64(2, 1, 8),
+			EncodeSTR64(2, 1, 9),
+			EncodeSTR64(2, 1, 10),
+			EncodeSTR64(2, 1, 11),
+			EncodeSTR64(2, 1, 12),
+			EncodeSTR64(2, 1, 13),
+			EncodeSTR64(2, 1, 14),
+			EncodeSTR64(2, 1, 15),
+			EncodeSTR64(2, 1, 16),
+			EncodeSTR64(2, 1, 17),
+			EncodeSTR64(2, 1, 18),
+			EncodeSTR64(2, 1, 19),
+			EncodeSVC(0),
+		),
+		ExpectedExit: 3,
+	}
+}
+
+// 12. Branch Heavy - High branch density to stress branch prediction
+// Alternating taken/not-taken conditional branches.
+func branchHeavy() Benchmark {
+	return Benchmark{
+		Name:        "branch_heavy",
+		Description: "10 conditional branches (alternating taken/not-taken) - stresses branch predictor",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
+			regFile.WriteReg(0, 0)  // X0 = 0 (result counter)
+			regFile.WriteReg(1, 5)  // X1 = 5 (comparison value)
+		},
+		Program: BuildProgram(
+			// Pattern: CMP X0, X1; B.LT +8 (taken while X0 < 5)
+			// Then increment X0, so first 5 branches taken, last 5 not taken
+
+			// Branch 1: X0=0 < 5, taken (skip ADD X1)
+			EncodeCMPReg(0, 1),            // CMP X0, X1
+			EncodeBCond(8, 11),            // B.LT +8 (CondLT = 11)
+			EncodeADDImm(1, 1, 99, false), // skipped (would corrupt X1)
+			EncodeADDImm(0, 0, 1, false),  // X0 += 1
+
+			// Branch 2: X0=1 < 5, taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(1, 1, 99, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 3: X0=2 < 5, taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(1, 1, 99, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 4: X0=3 < 5, taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(1, 1, 99, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 5: X0=4 < 5, taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(1, 1, 99, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 6: X0=5 >= 5, NOT taken (falls through to corrupt + add)
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(3, 3, 1, false), // X3 += 1 (not-taken counter)
+			EncodeADDImm(0, 0, 1, false), // X0 += 1
+
+			// Branch 7: X0=6 >= 5, NOT taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 8: X0=7 >= 5, NOT taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 9: X0=8 >= 5, NOT taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			// Branch 10: X0=9 >= 5, NOT taken
+			EncodeCMPReg(0, 1),
+			EncodeBCond(8, 11),
+			EncodeADDImm(3, 3, 1, false),
+			EncodeADDImm(0, 0, 1, false),
+
+			EncodeSVC(0), // exit with X0 = 10
+		),
+		ExpectedExit: 10,
+	}
+}
+
+// EncodeCMPReg encodes compare register: CMP Xn, Xm
+// This is an alias for SUBS XZR, Xn, Xm (sets flags, discards result)
+func EncodeCMPReg(rn, rm uint8) uint32 {
+	return EncodeSUBReg(31, rn, rm, true)
 }
 
 // Note: encodeMUL removed - scalar MUL/MADD not yet implemented in simulator
