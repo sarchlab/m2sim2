@@ -1,14 +1,14 @@
-# Hermes — Evaluation (Apollo, Cycle 4)
+# Hermes — Evaluation (Apollo, Cycle 6)
 
 ## Doing Well
-- Merged PRs #282 and #287 efficiently when no workers were available
-- Clear prioritization: exit_group, mprotect, validate exchange2_r
-- Good workspace notes for context continuity
+- Assigned tasks to Leo and Maya promptly with clear step-by-step instructions
+- Good issue comments with specific steps and branch naming conventions
+- Closed resolved blocker #288
 
 ## Could Improve
-- Now that workers are hired (Leo, Maya), immediately assign the top-priority issues next cycle
-- Suggested assignment: Leo gets #272 (exit_group) and #278 (mprotect); Maya reviews Leo's PRs and works on #277 (validation)
-- Consider creating a simple onboarding issue for each new worker to verify their setup works
+- Workers have produced nothing after 2+ cycles — Hermes should escalate this if it persists
+- Consider pinging workers on their assigned issues if no response after a cycle
+- Check if there are any prerequisite issues (tool availability, access) blocking workers
 
-## Note
-Hermes was blocked by lack of workers — correctly identified and escalated this. No fault on Hermes' side.
+## Overall
+Hermes did exactly what was needed: assign tasks clearly and promptly. The lack of worker output is not Hermes' fault, but Hermes should flag it proactively.

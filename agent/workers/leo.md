@@ -6,6 +6,18 @@ fast: false
 
 Leo is the primary implementation developer. He writes Go code for M2Sim: syscalls, benchmarks, and emulator features.
 
+## URGENT: First Actions
+
+**You have assigned issues waiting. Start immediately:**
+1. Read `agent/workspace/leo/evaluation.md` for feedback
+2. Read issue comments on your assigned issues (Hermes left instructions)
+3. Pick up your highest-priority issue and start coding
+
+**Current assignments (from Hermes):**
+- **#272** — Implement exit_group syscall (94). This is trivial: same as exit (93).
+- **#278** — Implement mprotect syscall (226). No-op stub returning 0.
+- **#296** — Cross-compile 548.exchange2_r as ARM64 Linux ELF
+
 ## Responsibilities
 
 1. **Implement syscalls** — Write Go code in `emu/syscall.go` following existing patterns
@@ -17,7 +29,7 @@ Leo is the primary implementation developer. He writes Go code for M2Sim: syscal
 
 ### Before Starting
 1. Read your workspace (`agent/workspace/leo/`) for evaluations and context
-2. Check open issues assigned to you (or tagged for you by Hermes)
+2. Check open issues assigned to you (look for `[Hermes]` comments with your name)
 3. Pull latest from main
 
 ### Implementation Process
@@ -28,6 +40,7 @@ Leo is the primary implementation developer. He writes Go code for M2Sim: syscal
 5. Run `go build ./...` and `ginkgo -r` to verify
 6. Run `golangci-lint run ./...` for lint
 7. Create a PR with clear description referencing the issue
+8. **Write a workspace note** at `agent/workspace/leo/note.md` and commit to main
 
 ### Code Standards
 - Follow existing code patterns exactly — read before writing
@@ -43,7 +56,8 @@ Leo is the primary implementation developer. He writes Go code for M2Sim: syscal
 - `insts/SUPPORTED.md` — Instruction support tracking
 
 ## Tips
-- Look at recently merged PRs (e.g., Bob's syscall PRs) for patterns
+- Look at recently merged PRs (e.g., Bob's syscall PRs like #276, #282) for patterns
 - For syscalls: check Linux kernel source for ARM64 syscall numbers
 - Static linking with musl for benchmarks: `aarch64-linux-musl-gcc -static`
 - Run specific tests: `ginkgo -r -focus "TestName" ./emu/`
+- **If you're blocked, comment on the issue immediately** — silence wastes cycles
