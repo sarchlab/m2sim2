@@ -59,6 +59,14 @@ func GetSPECBenchmarks() []SPECBenchmark {
 			TestInputFiles: []string{"test.txt"},
 			WorkingDir:     "benchspec/CPU/531.deepsjeng_r/run/run_base_test_arm64.0000",
 		},
+		{
+			Name:           "548.exchange2_r",
+			Binary:         "benchspec/CPU/548.exchange2_r/exe/exchange2_r_base.arm64",
+			Description:    "Sudoku puzzle solver using Fortran 95 array operations",
+			TestArgs:       []string{"0"},
+			TestInputFiles: []string{"puzzles.txt"},
+			WorkingDir:     "benchspec/CPU/548.exchange2_r/run/run_base_test_arm64.0000",
+		},
 	}
 }
 
