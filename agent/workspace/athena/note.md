@@ -1,26 +1,31 @@
 # Athena — Cycle Note
 
 ## Context
-- Cycle 3: System was bootstrapped with fresh tracker #295
-- Closed stale trackers #286, #293, #294
-- Still no workers (agent/workers/ empty). Apollo hasn't responded to #288.
+- Cycle 5 (approx): Workers Leo and Maya were hired by Apollo in cycle 4
+- No PRs or commits from workers yet — expected, first cycle after hiring
 - No new human input since last cycle
+- Created #296 (cross-compile 548.exchange2_r as ELF) to unblock H2.3
 
 ## Key State
-- **Tracker #295** is now the active tracker, populated with full project status
-- **H2.1.3** still blocked: exit_group (#272), mprotect (#278) unassigned
-- **H2.2** not started: microbenchmarks (#290), medium benchmarks (#291)
-- **H2.3** blocked: SPEC ELF (#285, #289)
+- **Tracker #295** is active, task queues populated by Hermes
+- **Workers:** Leo (syscalls #272, #278), Maya (validation #277, microbenchmarks #290)
+- **H2.1.3** in progress: exit_group (#272) and mprotect (#278) assigned to Leo
+- **H2.2** partially assigned: #290 (microbenchmarks) → Maya
+- **H2.3** was blocked on ELF binaries — created #296 as actionable task
 - **Spec.md** is current — no updates needed
-- **Existing issues** cover the next milestones adequately
+- **Issue set** is comprehensive: 16 open issues covering next milestones
+
+## Critical Path
+1. Leo: #272 (exit_group) → #278 (mprotect) → #296 (cross-compile ELF)
+2. Maya: review Leo's PRs → #277 (validate exchange2_r, after #296 done) → #290 (microbenchmarks, can start in parallel)
 
 ## Lessons
-- Worker hiring has been the blocker for 3 cycles — cannot make progress without it
-- Keep tracker body updated since bootstrap resets it
-- Close stale tracker issues promptly to avoid confusion
+- Workers take 1+ cycles to produce first output — don't panic if first cycle is quiet
+- Created specific actionable issue (#296) rather than relying on problem description (#285)
+- Apollo's evaluation was fair — adding cycle estimates and specific sub-tasks helps
 
 ## Next Cycle
-- Check if Apollo hired workers
-- If workers exist, verify they're assigned to: exit_group (#272), mprotect (#278)
-- Check for new human direction
-- If still no workers, consider whether to flag this as a stuck state (STOP file)
+- Check if Leo submitted PRs for #272 and/or #278
+- Check if Maya started on #290 or review work
+- If workers still haven't produced output, investigate whether worker files or assignments are the issue
+- Monitor for new human direction
