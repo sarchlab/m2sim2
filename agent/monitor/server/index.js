@@ -19,6 +19,26 @@ app.use(express.json());
 
 const ORCHESTRATOR_URL = 'http://localhost:3002';
 
+// Get repo from git remote
+function getRepoFromGit() {
+  try {
+    const { execSync } = require('child_process');
+    const remoteUrl = execSync('git remote get-url origin', {
+      cwd: path.resolve(AGENT_DIR, '..'),
+      encoding: 'utf-8'
+    }).trim();
+    // Parse: https://github.com/owner/repo.git or git@github.com:owner/repo.git
+    const match = remoteUrl.match(/github\.com[:/]([^/]+\/[^/.]+)/);
+    return match ? match[1] : null;
+  } catch (e) {
+    console.error('Error getting repo from git:', e.message);
+    return null;
+  }
+}
+
+const REPO = getRepoFromGit();
+console.log(`Detected repo: ${REPO}`);
+
 // Proxy orchestrator API
 app.get('/api/orchestrator/status', async (req, res) => {
   try {
@@ -215,7 +235,7 @@ app.get('/api/comments', async (req, res) => {
     // Use gh CLI to fetch comments
     const { execSync } = await import('child_process');
     
-    let cmd = `gh api repos/sarchlab/m2sim/issues/${issueNumber}/comments --paginate -q '.[] | {id, author: .user.login, body, created_at, updated_at}'`;
+    let cmd = `gh api repos/${REPO}/issues/${issueNumber}/comments --paginate -q '.[] | {id, author: .user.login, body, created_at, updated_at}'`;
     
     const output = execSync(cmd, { 
       cwd: path.resolve(AGENT_DIR, '..'),
