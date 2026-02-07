@@ -43,6 +43,7 @@ function App() {
     trackerIssue: 1, athenaCycleInterval: 1, apolloCycleInterval: 1
   })
   const [configDirty, setConfigDirty] = useState(false)
+  const configDirtyRef = useRef(false) // Sync ref for immediate dirty check
   const [configError, setConfigError] = useState(null)
   const [configSaving, setConfigSaving] = useState(false)
   const [orchestratorStatus, setOrchestratorStatus] = useState(null)
@@ -75,7 +76,7 @@ function App() {
       setAgents(await agentsRes.json())
       const configData = await configRes.json()
       setConfig(configData)
-      if (!configDirty && configData.config) {
+      if (!configDirtyRef.current && configData.config) {
         setConfigForm({
           cycleIntervalMs: configData.config.cycleIntervalMs || 1800000,
           agentTimeoutMs: configData.config.agentTimeoutMs || 900000,
@@ -120,6 +121,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
+      configDirtyRef.current = false
       setConfigDirty(false)
       await fetchData()
     } catch (err) { setConfigError(err.message) }
@@ -127,6 +129,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
   }
   
   const updateConfigField = (field, value) => {
+    configDirtyRef.current = true // Immediate sync update
     setConfigForm(prev => ({ ...prev, [field]: value }))
     setConfigDirty(true)
     setConfigError(null)
@@ -143,6 +146,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
         apolloCycleInterval: config.config.apolloCycleInterval || 1
       })
     }
+    configDirtyRef.current = false
     setConfigDirty(false)
     setConfigError(null)
   }
