@@ -470,7 +470,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
             <CardContent>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {prs.map((pr) => (
-                  <a key={pr.number} href={`https://github.com/syifan/ml-perf-survey/pull/${pr.number}`} target="_blank" rel="noopener noreferrer"
+                  <a key={pr.number} href={`${repoUrl}/pull/${pr.number}`} target="_blank" rel="noopener noreferrer"
                     className="block p-2 bg-neutral-50 hover:bg-neutral-100 rounded cursor-pointer transition-colors">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-neutral-400">#{pr.number}</span>
@@ -549,7 +549,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
             <CardContent>
               <div className="space-y-2 max-h-[500px] overflow-y-auto mb-4">
                 {issues.map((issue) => (
-                  <a key={issue.number} href={`https://github.com/syifan/ml-perf-survey/issues/${issue.number}`} target="_blank" rel="noopener noreferrer"
+                  <a key={issue.number} href={`${repoUrl}/issues/${issue.number}`} target="_blank" rel="noopener noreferrer"
                     className="block p-2 bg-neutral-50 hover:bg-neutral-100 rounded cursor-pointer transition-colors">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-neutral-400">#{issue.number}</span>
