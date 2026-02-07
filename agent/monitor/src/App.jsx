@@ -319,21 +319,25 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
             <h1 className="text-2xl font-bold text-neutral-800">Agent Monitor</h1>
             <p className="text-sm text-neutral-500">Orchestrator Dashboard</p>
           </div>
-          <div className="flex items-center gap-3 text-sm text-neutral-500">
-            {repoUrl && (
-              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-neutral-200 hover:bg-neutral-300 rounded text-neutral-700 font-medium">
-                GitHub
-              </a>
-            )}
-            <button 
-              onClick={() => setBootstrapDialog({ open: true, loading: false, result: null })}
-              className="px-3 py-1 bg-red-100 hover:bg-red-200 rounded text-red-700 font-medium"
-            >
-              Bootstrap
-            </button>
-            <RefreshCw className="w-4 h-4" />
-            <span>Last update: {formatTime(lastUpdate)}</span>
-            {error && <Badge variant="warning">Error: {error}</Badge>}
+          <div className="flex flex-col items-end gap-2 text-sm text-neutral-500">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="w-4 h-4" />
+              <span>Last update: {formatTime(lastUpdate)}</span>
+              {error && <Badge variant="warning">Error: {error}</Badge>}
+            </div>
+            <div className="flex items-center gap-2">
+              {repoUrl && (
+                <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-neutral-200 hover:bg-neutral-300 rounded text-neutral-700 font-medium">
+                  GitHub
+                </a>
+              )}
+              <button 
+                onClick={() => setBootstrapDialog({ open: true, loading: false, result: null })}
+                className="px-3 py-1 bg-red-100 hover:bg-red-200 rounded text-red-700 font-medium"
+              >
+                Bootstrap
+              </button>
+            </div>
           </div>
         </div>
 
