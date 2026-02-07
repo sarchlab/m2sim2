@@ -319,7 +319,7 @@ apolloCycleInterval: ${configForm.apolloCycleInterval}
             <h1 className="text-2xl font-bold text-neutral-800">Agent Monitor</h1>
             <p className="text-sm text-neutral-500">Orchestrator Dashboard</p>
           </div>
-          <div className="flex flex-col items-end gap-2 text-sm text-neutral-500">
+          <div className="flex flex-col gap-2 text-sm text-neutral-500">
             <div className="flex items-center gap-3">
               <RefreshCw className="w-4 h-4" />
               <span>Last update: {formatTime(lastUpdate)}</span>
