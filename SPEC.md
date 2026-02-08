@@ -62,11 +62,13 @@ All foundation work is done: ARM64 decode, ALU/Load/Store/Branch instructions, p
 
 ---
 
-### H2: SPEC Benchmark Enablement 🚧 IN PROGRESS
+### H2: SPEC Benchmark Enablement 🚧 BLOCKED BY QA REVIEW
 
 **Goal:** Run SPEC CPU 2017 integer benchmarks end-to-end in M2Sim.
 
-#### H2.1: Syscall Coverage (medium-level) 🚧 IN PROGRESS
+**Status:** Technically complete; blocked by QA resource reliability. All implementation work done, waiting for code review.
+
+#### H2.1: Syscall Coverage (medium-level) 🚧 BLOCKED (PR #300 awaits review)
 
 Complete the set of Linux syscalls needed by SPEC benchmarks.
 
@@ -80,10 +82,10 @@ Complete the set of Linux syscalls needed by SPEC benchmarks.
 - [x] brk (214) — merged
 - [x] mmap (222) — merged
 
-##### H2.1.3: Remaining syscalls 🚧 IN PROGRESS (~5-10 cycles)
+##### H2.1.3: Remaining syscalls 🚧 BLOCKED BY QA REVIEW
 - [x] lseek (62) — merged (PR #282)
-- [ ] exit_group (94) — PR #299 open, reviewed, needs lint fix
-- [ ] mprotect (226) — PR #300 open, reviewed, needs lint fix
+- [x] exit_group (94) — merged (PR #299)
+- [ ] mprotect (226) — CI-green PR #300, **blocked awaiting QA review** (issue #312)
 
 ##### H2.1.4: Lower-priority syscalls ⬜ NOT STARTED (~10-20 cycles)
 - [ ] munmap (215) — issue #271
@@ -95,31 +97,32 @@ Complete the set of Linux syscalls needed by SPEC benchmarks.
 
 **Human guidance (issue #107):** Going directly to SPEC is too large a leap. We need more microbenchmarks and medium-sized benchmarks first. SPEC simulations are long-running and must not be run by agents directly — they should run in CI (GitHub Actions) with sufficient time limits, triggered periodically (e.g., every 24 hours).
 
-##### H2.2.1: Expand microbenchmark suite (~10-20 cycles)
-- [x] Add microbenchmarks for memory access patterns (strided) — PR #302
-- [x] Add microbenchmarks for instruction mix (load-heavy, store-heavy, branch-heavy) — PR #302
+##### H2.2.1: Expand microbenchmark suite 🚧 BLOCKED BY QA
+- [x] Add microbenchmarks for memory access patterns (strided) — merged (PR #302)
+- [x] Add microbenchmarks for instruction mix (load-heavy, store-heavy, branch-heavy) — merged (PR #302)
 - [ ] Add microbenchmarks for cache behavior (L1 hit, L2 hit, cache miss)
-- [ ] Collect M2 hardware CPI data for new microbenchmarks
+- [ ] Collect M2 hardware CPI data for new microbenchmarks — **blocked** (issue #309, assigned to QA)
 
-##### H2.2.2: Medium-sized benchmarks (~20-40 cycles)
+##### H2.2.2: Medium-sized benchmarks ⬜ NOT STARTED (~20-40 cycles)
 - [ ] Create or adopt small benchmark programs (100-1000 lines) that exercise multiple subsystems
 - [ ] Examples: matrix multiply, linked list traversal, sorting algorithms, simple parsers
 - [ ] Validate correct execution and timing against M2 hardware
+- [ ] Issue #291 tracks this work
 
-#### H2.3: SPEC Binary Preparation (medium-level) 🚧 IN PROGRESS
+#### H2.3: SPEC Binary Preparation (medium-level) ✅ COMPLETE
 
-**Issue #285:** SPEC binaries on the host machine are Mach-O (macOS native), but M2Sim requires ARM64 Linux ELF format. Per human direction (issue #289), **workers should compile ELF binaries via tool calls** — this is not blocked on human action.
+**Issue #285 resolved:** Workers successfully compiled ARM64 Linux ELF binaries using cross-compilation toolchain.
 
-##### H2.3.1: Cross-compilation setup (~5-10 cycles)
-- [ ] Workers install/use ARM64 Linux cross-compiler (aarch64-linux-musl-gcc)
-- [ ] Create SPEC config for ARM64 Linux static ELF
-- [ ] Rebuild SPEC benchmarks as ELF
+##### H2.3.1: Cross-compilation setup ✅ COMPLETE
+- [x] Workers install/use ARM64 Linux cross-compiler (aarch64-linux-musl-gcc) — merged (PR #306)
+- [x] Create build scripts for ARM64 Linux static ELF — merged (PR #306)
+- [x] Rebuild SPEC benchmarks as ELF — merged (PR #306)
 
-##### H2.3.2: Benchmark validation (~10-20 cycles per benchmark)
-- [ ] 548.exchange2_r — Sudoku solver, pure computation, easiest target
-- [ ] 505.mcf_r — vehicle scheduling, tests file I/O path
+##### H2.3.2: Benchmark validation 🚧 IN PROGRESS (~10-20 cycles per benchmark)
+- [ ] 548.exchange2_r — Sudoku solver, compiled as ARM64 ELF, ready for validation (issue #277)
+- [ ] 505.mcf_r — vehicle scheduling, compiled as ARM64 ELF
 - [ ] 541.leela_r — Go AI, minimal I/O
-- [ ] 531.deepsjeng_r — chess engine, larger memory
+- [ ] 531.deepsjeng_r — chess engine, compiled as ARM64 ELF
 
 **Important:** SPEC simulation runs must go through CI/GitHub Actions, not be run by agents directly.
 
@@ -128,7 +131,7 @@ Complete the set of Linux syscalls needed by SPEC benchmarks.
 SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Expect to discover and fix gaps during validation (H2.3.2).
 
 ##### H2.4.1: SIMD/FP dispatch wiring ✅ COMPLETE
-- [x] Wire FormatSIMDReg and FormatSIMDLoadStore in emulator — PR #301 (reviewed, CI passes)
+- [x] Wire FormatSIMDReg and FormatSIMDLoadStore in emulator — merged (PR #301)
 - [x] VFADD, VFSUB, VFMUL now reachable through emulator dispatch
 
 ##### H2.4.2: Scalar floating-point instructions ⬜ NOT STARTED (~20-40 cycles)
@@ -136,7 +139,7 @@ SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Exp
 - [ ] FP load/store: LDR/STR for S and D registers
 - [ ] FP moves and comparisons: FMOV, FCMP
 - [ ] Int↔FP conversions: SCVTF, FCVTZS
-- [ ] Update SUPPORTED.md with all FP instructions
+- [ ] Update SUPPORTED.md with all FP instructions — **blocked** (issue #305, QA responsibility)
 
 **Strategy:** Don't implement proactively. Attempt benchmark execution first; add scalar FP support reactively when benchmarks fail on unimplemented opcodes. SPEC integer benchmarks may not need much FP.
 

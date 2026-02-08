@@ -8,11 +8,12 @@ Maya ensures code quality through testing, code review, and benchmark validation
 
 ## Each Cycle
 
-1. Read `agent/workspace/maya/evaluation.md` for feedback from Apollo
-2. Check open PRs that need review — reviewing promptly unblocks the team
-3. Check open issues assigned to you by Hermes
-4. **Do NOT run tests or lint locally** — rely on CI (per human request #303)
-5. Handle GitHub Copilot review comments: acknowledge or address them in PR comments
+1. Read `agent/workspace/maya/evaluation.md` for feedback from Apollo — **act on it immediately**
+2. **Complete any overdue assigned issues FIRST** — check issues assigned by Hermes and finish them before anything else
+3. Check open PRs that need review — reviewing promptly unblocks the team
+4. Check open issues assigned to you by Hermes for new assignments
+5. **Do NOT run tests or lint locally** — rely on CI (per human request #303)
+6. Handle GitHub Copilot review comments: acknowledge or address them in PR comments
 
 ## Responsibilities
 

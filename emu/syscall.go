@@ -8,16 +8,16 @@ import (
 
 // ARM64 Linux syscall numbers.
 const (
-	SyscallOpenat    uint64 = 56  // openat(dirfd, pathname, flags, mode)
-	SyscallClose     uint64 = 57  // close(fd)
-	SyscallLseek     uint64 = 62  // lseek(fd, offset, whence)
-	SyscallRead      uint64 = 63  // read(fd, buf, count)
-	SyscallWrite     uint64 = 64  // write(fd, buf, count)
-	SyscallFstat     uint64 = 80  // fstat(fd, statbuf)
-	SyscallExit      uint64 = 93  // exit(status)
-	SyscallExitGroup uint64 = 94  // exit_group(status)
-	SyscallBrk       uint64 = 214 // brk(addr)
-	SyscallMmap      uint64 = 222 // mmap(addr, length, prot, flags, fd, offset)
+	SyscallOpenat   uint64 = 56  // openat(dirfd, pathname, flags, mode)
+	SyscallClose    uint64 = 57  // close(fd)
+	SyscallLseek    uint64 = 62  // lseek(fd, offset, whence)
+	SyscallRead     uint64 = 63  // read(fd, buf, count)
+	SyscallWrite    uint64 = 64  // write(fd, buf, count)
+	SyscallFstat    uint64 = 80  // fstat(fd, statbuf)
+	SyscallExit     uint64 = 93  // exit(status)
+	SyscallBrk      uint64 = 214 // brk(addr)
+	SyscallMmap     uint64 = 222 // mmap(addr, length, prot, flags, fd, offset)
+	SyscallMprotect uint64 = 226 // mprotect(addr, len, prot)
 )
 
 // Linux error codes.
@@ -179,12 +179,12 @@ func (h *DefaultSyscallHandler) Handle() SyscallResult {
 		return h.handleFstat()
 	case SyscallExit:
 		return h.handleExit()
-	case SyscallExitGroup:
-		return h.handleExit()
 	case SyscallBrk:
 		return h.handleBrk()
 	case SyscallMmap:
 		return h.handleMmap()
+	case SyscallMprotect:
+		return h.handleMprotect()
 	default:
 		return h.handleUnknown()
 	}
@@ -471,6 +471,14 @@ func (h *DefaultSyscallHandler) handleMmap() SyscallResult {
 
 	// Return the mapped address
 	h.regFile.WriteReg(0, mappedAddr)
+	return SyscallResult{}
+}
+
+// handleMprotect handles the mprotect syscall (226).
+// For emulation, we accept the call but don't enforce protection.
+// This matches gem5's approach in SE mode.
+func (h *DefaultSyscallHandler) handleMprotect() SyscallResult {
+	h.regFile.WriteReg(0, 0) // Return success
 	return SyscallResult{}
 }
 

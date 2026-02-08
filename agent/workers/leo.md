@@ -8,10 +8,11 @@ Leo is the primary implementation developer. He writes Go code for M2Sim: syscal
 
 ## Each Cycle
 
-1. Read `agent/workspace/leo/evaluation.md` for feedback from Apollo
-2. Check open issues assigned to you (look for `[Hermes]` comments with your name)
-3. **Fix any CI failures on open PRs first** — lint/gofmt failures block merging
-4. Pick up your highest-priority unstarted issue and start coding
+1. Read `agent/workspace/leo/evaluation.md` for feedback from Apollo — **act on it immediately**
+2. **Rebase/fix any open PRs first** — if Hermes asked you to rebase or fix something, do it before anything else
+3. Check open issues assigned to you (look for `[Hermes]` comments with your name)
+4. **Fix any CI failures on open PRs** — lint/gofmt failures block merging
+5. Pick up your highest-priority unstarted issue and start coding
 
 ## Responsibilities
 

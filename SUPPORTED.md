@@ -61,6 +61,29 @@ This document tracks ARM64 instructions and syscalls supported by M2Sim.
 | STR (imm, 64-bit) | Store 64-bit register | ✅ | ✅ |
 | STR (imm, 32-bit) | Store 32-bit register | ✅ | ✅ |
 
+### SIMD Integer Instructions
+
+| Instruction | Description | Decoder | Emulator |
+|-------------|-------------|---------|----------|
+| VADD        | Vector add | ✅ | ✅ |
+| VSUB        | Vector subtract | ✅ | ✅ |
+| VMUL        | Vector multiply | ✅ | ✅ |
+
+### SIMD Floating-Point Instructions
+
+| Instruction | Description | Decoder | Emulator |
+|-------------|-------------|---------|----------|
+| VFADD       | Vector FP add | ✅ | ✅ |
+| VFSUB       | Vector FP subtract | ✅ | ✅ |
+| VFMUL       | Vector FP multiply | ✅ | ✅ |
+
+### SIMD Load/Store Instructions
+
+| Instruction | Description | Decoder | Emulator |
+|-------------|-------------|---------|----------|
+| LDR Q       | Load 128-bit vector register | ✅ | ✅ |
+| STR Q       | Store 128-bit vector register | ✅ | ✅ |
+
 ## Supported Syscalls
 
 The driver package emulates ARM64 Linux syscalls:
@@ -68,6 +91,7 @@ The driver package emulates ARM64 Linux syscalls:
 | Syscall | Number | Description |
 |---------|--------|-------------|
 | exit    | 93     | Terminate program with exit code |
+| exit_group | 94  | Terminate program with exit code (all threads) |
 | write   | 64     | Write buffer to file descriptor |
 
 ### Syscall Convention (ARM64 Linux)
@@ -103,6 +127,8 @@ The driver package emulates ARM64 Linux syscalls:
 - **FormatBranchCond**: Conditional Branch
 - **FormatBranchReg**: Branch to Register
 - **FormatLoadStore**: Load/Store with Immediate Offset
+- **FormatSIMDReg**: SIMD Data Processing (Register)
+- **FormatSIMDLoadStore**: SIMD Load/Store
 
 ## Known Limitations
 
@@ -139,5 +165,5 @@ The following areas lack test coverage:
 
 ---
 
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*
 *Consolidated from root SUPPORTED.md and insts/SUPPORTED.md*

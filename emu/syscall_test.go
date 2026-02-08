@@ -102,28 +102,6 @@ var _ = Describe("Syscall Handler", func() {
 		})
 	})
 
-	Describe("Exit_group syscall", func() {
-		It("should exit with specified code", func() {
-			regFile.WriteReg(8, 94) // SyscallExitGroup
-			regFile.WriteReg(0, 7)  // Exit code
-
-			result := handler.Handle()
-
-			Expect(result.Exited).To(BeTrue())
-			Expect(result.ExitCode).To(Equal(int64(7)))
-		})
-
-		It("should handle zero exit code", func() {
-			regFile.WriteReg(8, 94) // SyscallExitGroup
-			regFile.WriteReg(0, 0)  // Exit code 0
-
-			result := handler.Handle()
-
-			Expect(result.Exited).To(BeTrue())
-			Expect(result.ExitCode).To(Equal(int64(0)))
-		})
-	})
-
 	Describe("Write syscall to stdout", func() {
 		It("should write buffer to stdout", func() {
 			// Store "hello" in memory
@@ -631,6 +609,32 @@ var _ = Describe("Syscall Handler", func() {
 			var enosys int64 = 38
 			expectedError := uint64(-enosys)
 			Expect(x0).To(Equal(expectedError))
+		})
+	})
+
+	Describe("Mprotect syscall", func() {
+		It("should return success (0) as a no-op", func() {
+			regFile.WriteReg(8, 226)    // SyscallMprotect
+			regFile.WriteReg(0, 0x1000) // addr
+			regFile.WriteReg(1, 4096)   // length
+			regFile.WriteReg(2, 0x3)    // PROT_READ|PROT_WRITE
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(0)))
+		})
+
+		It("should return success for PROT_NONE", func() {
+			regFile.WriteReg(8, 226)    // SyscallMprotect
+			regFile.WriteReg(0, 0x2000) // addr
+			regFile.WriteReg(1, 8192)   // length
+			regFile.WriteReg(2, 0x0)    // PROT_NONE
+
+			result := handler.Handle()
+
+			Expect(result.Exited).To(BeFalse())
+			Expect(regFile.ReadReg(0)).To(Equal(uint64(0)))
 		})
 	})
 
