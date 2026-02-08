@@ -167,19 +167,26 @@ SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Exp
 - [x] Microbenchmark ARM64 ELF compilation complete
 
 #### H3.2: Fast Timing Mode & Calibration 🚧 IN PROGRESS
-The full pipeline timing simulation is ~30,000x slower than emulation, making iterative calibration impractical. A "fast timing" mode was developed locally (unmerged) to approximate cycle counts without full pipeline simulation.
+The full pipeline timing simulation is ~30,000x slower than emulation, making iterative calibration impractical. A "fast timing" mode approximates cycle counts using latency-weighted instruction mix without full pipeline simulation.
 
 **Status:**
-- [x] Fast timing prototype created (`timing/pipeline/fast_timing.go` — local, not yet in a PR)
+- [x] Fast timing engine merged (`timing/pipeline/fast_timing.go` — PR #361)
 - [x] Instruction limit support added
-- [ ] **Submit fast timing as PR and get it merged** (blocking all calibration work)
-- [ ] Run matrix multiply with fast timing, collect CPI data
+- [x] Profile tool merged (`cmd/profile/main.go` — PR #361)
+- [x] CI blockers fixed (PR #368 — gofmt + acceptance test timeout)
+- [ ] Run matrix multiply with fast timing via GitHub Actions, collect CPI data (issue #359)
 - [ ] Compare fast timing CPI vs full timing CPI vs M2 hardware CPI
 - [ ] Clearly label outputs: simulation speed vs virtual (predicted) time (issue #354)
 
-#### H3.3: Parameter Tuning ⬜ BLOCKED on H3.2
-- [ ] Identify which timing parameters cause the largest CPI errors
-- [ ] Tune latency table values based on calibration data
+#### H3.3: Parameter Tuning 🚧 UNBLOCKED — READY TO START
+Root cause analysis complete (PR #367). Key tuning targets identified:
+- **Arithmetic (49.3% error):** RAW hazard blocking in `canIssueWith()` at `superscalar.go` — M2 uses register renaming, simulator doesn't
+- **Branch (34.5% error):** `BranchMispredictPenalty=14` in `config.go` but M2 is ~12 cycles; cold-start predictor penalty
+- **Dependency (18.9% error):** Near theoretical minimum, low priority
+
+**Work items:**
+- [ ] Fix branch misprediction penalty (14 → 12 cycles)
+- [ ] Reduce RAW hazard over-blocking (model register renaming)
 - [ ] Multi-scale validation (64x64 → 256x256 matrix multiply)
 - [ ] Target: <20% average error on microbenchmarks + medium benchmarks
 
