@@ -19,3 +19,12 @@ benchmarks/coremark/
 embench-iot/
 agent/node_modules/
 agent/state.json
+
+# Agent workspace (managed outside repo)
+workspace/
+
+# Profiling output
+*.prof
+
+# Python cache
+__pycache__/
