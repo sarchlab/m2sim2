@@ -72,11 +72,12 @@ func main() {
 
 	var exitCode int64
 	var instrCount uint64
+	var cycleCount uint64
 
 	if *fastTiming {
-		exitCode, instrCount = runFastTimingProfile(prog, programPath)
+		exitCode, instrCount, cycleCount = runFastTimingProfile(prog, programPath)
 	} else if *timing {
-		exitCode, instrCount = runTimingProfile(prog, programPath)
+		exitCode, instrCount, cycleCount = runTimingProfile(prog, programPath)
 	} else {
 		exitCode, instrCount = runEmulationProfile(prog, programPath)
 	}
@@ -100,6 +101,11 @@ func main() {
 	fmt.Printf("\nProfiling Results:\n")
 	fmt.Printf("Exit code: %d\n", exitCode)
 	fmt.Printf("Instructions executed: %d\n", instrCount)
+	if cycleCount > 0 {
+		cpi := float64(cycleCount) / float64(instrCount)
+		fmt.Printf("Cycles: %d\n", cycleCount)
+		fmt.Printf("CPI: %.3f\n", cpi)
+	}
 	fmt.Printf("Elapsed time: %v\n", elapsed)
 	if instrCount > 0 {
 		fmt.Printf("Instructions/second: %.0f\n", float64(instrCount)/elapsed.Seconds())
@@ -148,7 +154,7 @@ func runEmulationProfile(prog *loader.Program, programPath string) (int64, uint6
 }
 
 // runTimingProfile runs the program in timing simulation mode with profiling.
-func runTimingProfile(prog *loader.Program, programPath string) (int64, uint64) {
+func runTimingProfile(prog *loader.Program, programPath string) (int64, uint64, uint64) {
 	// Set up timing configuration
 	timingConfig := latency.DefaultTimingConfig()
 	latencyTable := latency.NewTableWithConfig(timingConfig)
@@ -179,11 +185,11 @@ func runTimingProfile(prog *loader.Program, programPath string) (int64, uint64) 
 	// Get statistics
 	stats := pipe.Stats()
 
-	return exitCode, stats.Instructions
+	return exitCode, stats.Instructions, stats.Cycles
 }
 
 // runFastTimingProfile runs the program in fast timing simulation mode with profiling.
-func runFastTimingProfile(prog *loader.Program, programPath string) (int64, uint64) {
+func runFastTimingProfile(prog *loader.Program, programPath string) (int64, uint64, uint64) {
 	// Set up timing configuration
 	timingConfig := latency.DefaultTimingConfig()
 	latencyTable := latency.NewTableWithConfig(timingConfig)
@@ -214,5 +220,5 @@ func runFastTimingProfile(prog *loader.Program, programPath string) (int64, uint
 	// Get statistics
 	stats := fastTiming.Stats()
 
-	return exitCode, stats.Instructions
+	return exitCode, stats.Instructions, stats.Cycles
 }
