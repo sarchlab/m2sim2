@@ -45,6 +45,8 @@ class BenchmarkComparison:
     sim_latency_ns: float     # ns per instruction (at assumed frequency)
     # Error metrics
     error: float              # abs(t_sim - t_real) / min(t_sim, t_real)
+    # Calibration status
+    calibrated: bool = True   # whether baseline is from real hardware measurement
 
 
 def load_calibration_results(path: Path) -> dict:
@@ -207,20 +209,21 @@ def compare_benchmarks(
     
     for result in calibration_results.get('results', []):
         bench_name = result['benchmark']
-        
+
         if bench_name not in simulator_cpis:
             print(f"Warning: No simulator CPI for benchmark '{bench_name}'")
             continue
-        
+
         real_latency_ns = result['instruction_latency_ns']
         real_r_squared = result['r_squared']
-        
+        calibrated = result.get('calibrated', True)
+
         sim_cpi = simulator_cpis[bench_name]
         # Convert CPI to latency: latency_ns = CPI / frequency_GHz
         sim_latency_ns = sim_cpi / assumed_frequency_ghz
-        
+
         error = calculate_error(sim_latency_ns, real_latency_ns)
-        
+
         comparisons.append(BenchmarkComparison(
             name=bench_name,
             description=result['description'],
@@ -229,6 +232,7 @@ def compare_benchmarks(
             sim_cpi=sim_cpi,
             sim_latency_ns=sim_latency_ns,
             error=error,
+            calibrated=calibrated,
         ))
     
     return comparisons
@@ -248,11 +252,13 @@ def generate_figure(comparisons: List[BenchmarkComparison], output_path: Path):
     sim_latencies = [c.sim_latency_ns for c in comparisons]
     names = [c.name for c in comparisons]
     
-    ax1.scatter(real_latencies, sim_latencies, s=100, c='steelblue', edgecolors='black')
-    
+    scatter_colors = ['steelblue' if c.calibrated else 'lightgray' for c in comparisons]
+    ax1.scatter(real_latencies, sim_latencies, s=100, c=scatter_colors, edgecolors='black')
+
     # Add benchmark labels
     for i, name in enumerate(names):
-        ax1.annotate(name, (real_latencies[i], sim_latencies[i]), 
+        suffix = '' if comparisons[i].calibrated else '*'
+        ax1.annotate(name + suffix, (real_latencies[i], sim_latencies[i]),
                      textcoords="offset points", xytext=(5, 5), fontsize=9)
     
     # Add perfect prediction line
@@ -295,18 +301,22 @@ def generate_markdown_report(
     figure_path: Optional[Path] = None
 ):
     """Generate a markdown accuracy report."""
-    errors = [c.error for c in comparisons]
-    avg_error = sum(errors) / len(errors) if errors else 0
-    max_error = max(errors) if errors else 0
-    
+    calibrated = [c for c in comparisons if c.calibrated]
+    uncalibrated = [c for c in comparisons if not c.calibrated]
+
+    cal_errors = [c.error for c in calibrated]
+    cal_avg_error = sum(cal_errors) / len(cal_errors) if cal_errors else 0
+    cal_max_error = max(cal_errors) if cal_errors else 0
+
     lines = [
         "# M2Sim Accuracy Report",
         "",
-        "## Summary",
+        "## Summary (Calibrated Benchmarks Only)",
         "",
-        f"- **Average Error:** {avg_error * 100:.1f}%",
-        f"- **Max Error:** {max_error * 100:.1f}%",
-        f"- **Benchmarks Evaluated:** {len(comparisons)}",
+        f"- **Average Error:** {cal_avg_error * 100:.1f}%",
+        f"- **Max Error:** {cal_max_error * 100:.1f}%",
+        f"- **Calibrated Benchmarks:** {len(calibrated)}",
+        f"- **Uncalibrated Benchmarks:** {len(uncalibrated)}",
         "",
         "## Error Formula",
         "",
@@ -315,7 +325,7 @@ def generate_markdown_report(
         "```",
         "",
     ]
-    
+
     if figure_path and figure_path.exists():
         lines.extend([
             "## Visualization",
@@ -323,46 +333,77 @@ def generate_markdown_report(
             f"![Accuracy Figure]({figure_path.name})",
             "",
         ])
-    
+
+    # Calibrated benchmarks table
     lines.extend([
-        "## Per-Benchmark Results",
+        "## Calibrated Benchmarks (Hardware-Measured Baselines)",
         "",
         "| Benchmark | Description | Real (ns/inst) | Sim (ns/inst) | Error |",
         "|-----------|-------------|----------------|---------------|-------|",
     ])
-    
-    for c in comparisons:
+
+    for c in calibrated:
         lines.append(
             f"| {c.name} | {c.description[:40]}... | "
             f"{c.real_latency_ns:.4f} | {c.sim_latency_ns:.4f} | "
             f"{c.error * 100:.1f}% |"
         )
-    
+
+    # Uncalibrated benchmarks table (if any)
+    if uncalibrated:
+        lines.extend([
+            "",
+            "## Uncalibrated Benchmarks (Analytical Estimates)",
+            "",
+            "These benchmarks use analytical CPI estimates rather than real hardware",
+            "measurements. Errors are not included in the summary statistics above.",
+            "The simulator runs without D-cache, but these baselines assume cached",
+            "performance, making them incomparable until real calibration is done.",
+            "",
+            "| Benchmark | Description | Est. (ns/inst) | Sim (ns/inst) | Error |",
+            "|-----------|-------------|----------------|---------------|-------|",
+        ])
+
+        for c in uncalibrated:
+            lines.append(
+                f"| {c.name} | {c.description[:40]}... | "
+                f"{c.real_latency_ns:.4f} | {c.sim_latency_ns:.4f} | "
+                f"{c.error * 100:.1f}% |"
+            )
+
     lines.extend([
         "",
         "## Analysis",
         "",
     ])
-    
-    # Identify best and worst performing benchmarks
-    sorted_by_error = sorted(comparisons, key=lambda c: c.error)
-    best = sorted_by_error[0]
-    worst = sorted_by_error[-1]
-    
-    lines.extend([
-        f"- **Best prediction:** {best.name} ({best.error * 100:.1f}% error)",
-        f"- **Worst prediction:** {worst.name} ({worst.error * 100:.1f}% error)",
-        "",
-    ])
-    
-    # Add interpretation
-    if avg_error < 0.5:
-        status = "✅ **Good accuracy** - simulator predictions are within 50% of real hardware"
-    elif avg_error < 1.0:
-        status = "⚠️ **Moderate accuracy** - some predictions have significant error"
+
+    # Identify best and worst among calibrated benchmarks
+    if calibrated:
+        sorted_cal = sorted(calibrated, key=lambda c: c.error)
+        best = sorted_cal[0]
+        worst = sorted_cal[-1]
+
+        lines.extend([
+            f"- **Best prediction:** {best.name} ({best.error * 100:.1f}% error)",
+            f"- **Worst prediction:** {worst.name} ({worst.error * 100:.1f}% error)",
+        ])
+
+    if uncalibrated:
+        lines.append(
+            f"- **Uncalibrated benchmarks excluded:** {len(uncalibrated)} "
+            f"(need real hardware measurements)"
+        )
+
+    lines.append("")
+
+    # Status based on calibrated benchmarks only
+    if cal_avg_error < 0.2:
+        status = "✅ **Good accuracy** - calibrated predictions within 20%"
+    elif cal_avg_error < 0.5:
+        status = "⚠️ **Moderate accuracy** - calibrated predictions within 50%"
     else:
         status = "❌ **Poor accuracy** - simulator needs calibration improvements"
-    
+
     lines.extend([
         "## Status",
         "",
@@ -371,7 +412,7 @@ def generate_markdown_report(
         "---",
         "*Generated by M2Sim accuracy_report.py*",
     ])
-    
+
     output_path.write_text('\n'.join(lines))
     print(f"Report saved to: {output_path}")
 
@@ -390,10 +431,12 @@ def generate_normalized_chart(comparisons: List[BenchmarkComparison], output_pat
     names = [c.name for c in comparisons]
     ratios = [c.sim_latency_ns / c.real_latency_ns for c in comparisons]
 
-    # Determine bar colors based on accuracy thresholds
+    # Determine bar colors: calibrated use accuracy thresholds, uncalibrated are gray
     colors = []
-    for ratio in ratios:
-        if 0.8 <= ratio <= 1.2:  # Within 20% - green
+    for i, ratio in enumerate(ratios):
+        if not comparisons[i].calibrated:
+            colors.append('lightgray')
+        elif 0.8 <= ratio <= 1.2:  # Within 20% - green
             colors.append('green')
         elif 0.5 <= ratio <= 1.5:  # Within 50% - orange
             colors.append('orange')
@@ -408,10 +451,13 @@ def generate_normalized_chart(comparisons: List[BenchmarkComparison], output_pat
     ax.axhline(y=1.0, color='gray', linestyle='--', alpha=0.8, linewidth=1.5, label='Perfect prediction (1.0)')
 
     # Add text labels on bars showing the ratio value
-    for bar, ratio in zip(bars, ratios):
+    for i, (bar, ratio) in enumerate(zip(bars, ratios)):
         height = bar.get_height()
+        label = f'{ratio:.2f}'
+        if not comparisons[i].calibrated:
+            label += '*'
         ax.text(bar.get_x() + bar.get_width()/2., height + 0.02,
-                f'{ratio:.2f}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                label, ha='center', va='bottom', fontweight='bold', fontsize=10)
 
     # Formatting
     ax.set_xlabel('Benchmark', fontsize=12)
@@ -423,6 +469,12 @@ def generate_normalized_chart(comparisons: List[BenchmarkComparison], output_pat
     # Set y-axis to start from 0 and include some headroom
     max_ratio = max(ratios)
     ax.set_ylim(0, max_ratio * 1.15)
+
+    # Add footnote for uncalibrated benchmarks
+    has_uncalibrated = any(not c.calibrated for c in comparisons)
+    if has_uncalibrated:
+        ax.text(0.5, -0.12, '* Uncalibrated (analytical estimate, not hardware-measured)',
+                transform=ax.transAxes, ha='center', fontsize=9, fontstyle='italic', color='gray')
 
     plt.tight_layout()
     plt.savefig(output_path, format='pdf', bbox_inches='tight', dpi=150)
@@ -436,18 +488,22 @@ def generate_json_results(
     output_path: Path
 ):
     """Generate machine-readable JSON results."""
-    errors = [c.error for c in comparisons]
+    calibrated = [c for c in comparisons if c.calibrated]
+    cal_errors = [c.error for c in calibrated]
 
     output = {
         "summary": {
-            "average_error": sum(errors) / len(errors) if errors else 0,
-            "max_error": max(errors) if errors else 0,
+            "average_error": sum(cal_errors) / len(cal_errors) if cal_errors else 0,
+            "max_error": max(cal_errors) if cal_errors else 0,
+            "calibrated_count": len(calibrated),
+            "uncalibrated_count": len(comparisons) - len(calibrated),
             "benchmark_count": len(comparisons),
         },
         "benchmarks": [
             {
                 "name": c.name,
                 "description": c.description,
+                "calibrated": c.calibrated,
                 "real_latency_ns": c.real_latency_ns,
                 "sim_cpi": c.sim_cpi,
                 "sim_latency_ns": c.sim_latency_ns,
@@ -485,20 +541,25 @@ def main():
     comparisons = compare_benchmarks(calibration_results, simulator_cpis)
     
     # Print summary to console
-    errors = [c.error for c in comparisons]
-    avg_error = sum(errors) / len(errors) if errors else 0
-    max_error = max(errors) if errors else 0
-    
+    calibrated = [c for c in comparisons if c.calibrated]
+    uncalibrated = [c for c in comparisons if not c.calibrated]
+    cal_errors = [c.error for c in calibrated]
+    cal_avg_error = sum(cal_errors) / len(cal_errors) if cal_errors else 0
+    cal_max_error = max(cal_errors) if cal_errors else 0
+
     print("\n" + "=" * 60)
-    print("ACCURACY SUMMARY")
+    print("ACCURACY SUMMARY (Calibrated Benchmarks)")
     print("=" * 60)
-    print(f"Average Error: {avg_error * 100:.1f}%")
-    print(f"Max Error:     {max_error * 100:.1f}%")
+    print(f"Average Error: {cal_avg_error * 100:.1f}%")
+    print(f"Max Error:     {cal_max_error * 100:.1f}%")
+    print(f"Calibrated:    {len(calibrated)}")
+    print(f"Uncalibrated:  {len(uncalibrated)}")
     print("")
-    print(f"{'Benchmark':<15} {'Real (ns)':<12} {'Sim (ns)':<12} {'Error':<10}")
-    print("-" * 60)
+    print(f"{'Benchmark':<15} {'Real (ns)':<12} {'Sim (ns)':<12} {'Error':<10} {'Status':<12}")
+    print("-" * 65)
     for c in comparisons:
-        print(f"{c.name:<15} {c.real_latency_ns:<12.4f} {c.sim_latency_ns:<12.4f} {c.error * 100:.1f}%")
+        status = "calibrated" if c.calibrated else "estimate"
+        print(f"{c.name:<15} {c.real_latency_ns:<12.4f} {c.sim_latency_ns:<12.4f} {c.error * 100:<10.1f} {status}")
     
     # Generate outputs
     output_dir = script_dir
@@ -519,7 +580,8 @@ def main():
     print("\nDone!")
     
     # Return non-zero if accuracy is very poor (for CI failure)
-    if avg_error > 2.0:  # >200% average error
+    # Only check calibrated benchmarks — uncalibrated have unreliable baselines
+    if cal_avg_error > 2.0:  # >200% average error on calibrated benchmarks
         print("\n⚠️  Warning: Accuracy is significantly degraded!")
         return 1
     
