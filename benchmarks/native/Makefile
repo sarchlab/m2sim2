@@ -19,10 +19,12 @@ SRCS = arithmetic_sequential.s \
        branch_taken.s \
        mixed_operations.s
 
-# Long-running benchmarks (1M iterations)
+# Long-running benchmarks (10M iterations)
 LONG_SRCS = arithmetic_sequential_long.s \
             dependency_chain_long.s \
             memory_sequential_long.s \
+            memory_strided_long.s \
+            memory_random_long.s \
             branch_taken_long.s \
             mixed_operations_long.s
 
@@ -109,6 +111,8 @@ verify: all
 # - arithmetic_sequential_long: 40M increments (4 per iter * 10M), 40000000 mod 256 = 0
 # - dependency_chain_long: 200M increments (20 per iter * 10M), 200000000 mod 256 = 0
 # - memory_sequential_long: 50M increments (5 per iter * 10M), 50000000 mod 256 = 128
+# - memory_strided_long: 50M increments (5 per iter * 10M), 50000000 mod 256 = 128
+# - memory_random_long: 50M increments (5 per iter * 10M), 50000000 mod 256 = 128
 # - branch_taken_long: 50M increments (5 per iter * 10M), 50000000 mod 256 = 128
 # - mixed_operations_long: 10M increments (1 per iter * 10M), 10000000 mod 256 = 128
 verify-long: long
@@ -117,6 +121,8 @@ verify-long: long
 	./arithmetic_sequential_long; test $$? -eq 0 || { echo "FAIL: arithmetic_sequential_long (expected 0)"; failed=1; }; \
 	./dependency_chain_long; test $$? -eq 0 || { echo "FAIL: dependency_chain_long (expected 0)"; failed=1; }; \
 	./memory_sequential_long; test $$? -eq 128 || { echo "FAIL: memory_sequential_long (expected 128)"; failed=1; }; \
+	./memory_strided_long; test $$? -eq 128 || { echo "FAIL: memory_strided_long (expected 128)"; failed=1; }; \
+	./memory_random_long; test $$? -eq 128 || { echo "FAIL: memory_random_long (expected 128)"; failed=1; }; \
 	./branch_taken_long; test $$? -eq 128 || { echo "FAIL: branch_taken_long (expected 128)"; failed=1; }; \
 	./mixed_operations_long; test $$? -eq 128 || { echo "FAIL: mixed_operations_long (expected 128)"; failed=1; }; \
 	if [ $$failed -eq 0 ]; then echo "All long benchmarks verified!"; else exit 1; fi

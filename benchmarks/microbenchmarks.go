@@ -17,6 +17,9 @@ func GetMicrobenchmarks() []Benchmark {
 		dependencyChain(),
 		memorySequential(),
 		memoryStrided(),
+		memorySequentialScaled(),
+		memoryStridedScaled(),
+		memoryRandomAccess(),
 		loadHeavy(),
 		storeHeavy(),
 		branchTaken(),
@@ -559,6 +562,105 @@ func memoryStrided() Benchmark {
 		),
 		ExpectedExit: 7,
 	}
+}
+
+// 9b. Memory Sequential Scaled - 200 sequential store/load pairs
+// Enough instructions to amortize pipeline fill/drain overhead (~2%).
+func memorySequentialScaled() Benchmark {
+	const numPairs = 200
+	return Benchmark{
+		Name:        "memory_sequential_scaled",
+		Description: "200 sequential store/load pairs - measures memory latency at scale",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(0, 42)     // X0 = value to store/load
+		},
+		Program:      buildMemorySequentialScaled(numPairs),
+		ExpectedExit: 42,
+	}
+}
+
+func buildMemorySequentialScaled(numPairs int) []byte {
+	instrs := make([]uint32, 0, numPairs*2+1)
+	for i := 0; i < numPairs; i++ {
+		offset := uint16(i) // sequential offsets: 0, 1, 2, ... (each 8 bytes)
+		instrs = append(instrs,
+			EncodeSTR64(0, 1, offset),
+			EncodeLDR64(0, 1, offset),
+		)
+	}
+	instrs = append(instrs, EncodeSVC(0))
+	return BuildProgram(instrs...)
+}
+
+// 9c. Memory Strided Scaled - 200 strided store/load pairs (stride = 4 elements = 32 bytes)
+func memoryStridedScaled() Benchmark {
+	const numPairs = 200
+	return Benchmark{
+		Name:        "memory_strided_scaled",
+		Description: "200 strided store/load pairs (32-byte stride) - measures strided memory latency at scale",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(0, 7)      // X0 = value to store/load
+		},
+		Program:      buildMemoryStridedScaled(numPairs),
+		ExpectedExit: 7,
+	}
+}
+
+func buildMemoryStridedScaled(numPairs int) []byte {
+	instrs := make([]uint32, 0, numPairs*2+1)
+	for i := 0; i < numPairs; i++ {
+		offset := uint16(i * 4) // stride-4 offsets: 0, 4, 8, 12, ... (each unit = 8 bytes)
+		instrs = append(instrs,
+			EncodeSTR64(0, 1, offset),
+			EncodeLDR64(0, 1, offset),
+		)
+	}
+	instrs = append(instrs, EncodeSVC(0))
+	return BuildProgram(instrs...)
+}
+
+// 9d. Memory Random Access - 200 store/load pairs with pseudo-random offsets
+// Uses a deterministic permutation to create non-sequential access patterns
+// that stress cache line utilization without exceeding the addressable range.
+func memoryRandomAccess() Benchmark {
+	const numPairs = 200
+	return Benchmark{
+		Name:        "memory_random_access",
+		Description: "200 store/load pairs with pseudo-random offsets - measures random memory latency",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(0, 13)     // X0 = value to store/load
+		},
+		Program:      buildMemoryRandomAccess(numPairs),
+		ExpectedExit: 13,
+	}
+}
+
+func buildMemoryRandomAccess(numPairs int) []byte {
+	// Generate pseudo-random offsets using a simple LCG permutation.
+	// Offsets span a 3200-element range (25600 bytes) to create
+	// scattered access across multiple cache lines.
+	offsets := make([]uint16, numPairs)
+	x := uint32(7) // seed
+	for i := 0; i < numPairs; i++ {
+		x = (x*1103515245 + 12345) & 0x7FFFFFFF
+		offsets[i] = uint16(x % 3200) // max offset 3200 * 8 = 25600 bytes
+	}
+
+	instrs := make([]uint32, 0, numPairs*2+1)
+	for i := 0; i < numPairs; i++ {
+		instrs = append(instrs,
+			EncodeSTR64(0, 1, offsets[i]),
+			EncodeLDR64(0, 1, offsets[i]),
+		)
+	}
+	instrs = append(instrs, EncodeSVC(0))
+	return BuildProgram(instrs...)
 }
 
 // 10. Load Heavy - Instruction mix dominated by loads
