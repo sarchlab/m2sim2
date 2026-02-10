@@ -316,6 +316,130 @@ var _ = Describe("M2 Baseline Validation Suite", func() {
 		})
 	})
 
+	Describe("Shifted Register Operands", func() {
+		Context("ADD with LSL shift", func() {
+			It("should compute X0 + (X1 << 3)", func() {
+				// X0 = 100, X1 = 5
+				// ADD X2, X0, X1, LSL #3  => X2 = 100 + (5 << 3) = 100 + 40 = 140
+				// exit(X2)
+				program := []byte{}
+				program = append(program, uint32ToBytes(encodeADDImm(0, 31, 100, false))...)                 // X0 = 100
+				program = append(program, uint32ToBytes(encodeADDImm(1, 31, 5, false))...)                   // X1 = 5
+				program = append(program, uint32ToBytes(encodeADDRegShifted(2, 0, 1, 0, 3, true, false))...) // X2 = X0 + (X1 << 3)
+				program = append(program, uint32ToBytes(encodeADDReg(0, 31, 2, false))...)                   // X0 = X2
+				program = append(program, uint32ToBytes(encodeADDImm(8, 31, 93, false))...)                  // X8 = 93
+				program = append(program, uint32ToBytes(encodeSVC(0))...)                                    // syscall
+
+				e.LoadProgram(0x1000, program)
+				exitCode := e.Run()
+
+				Expect(exitCode).To(Equal(int64(140)))
+			})
+		})
+
+		Context("ADD with LSR shift", func() {
+			It("should compute X0 + (X1 >> 2)", func() {
+				// X0 = 10, X1 = 128
+				// ADD X2, X0, X1, LSR #2  => X2 = 10 + (128 >> 2) = 10 + 32 = 42
+				e.RegFile().WriteReg(0, 10)
+				e.RegFile().WriteReg(1, 128)
+
+				program := []byte{}
+				program = append(program, uint32ToBytes(encodeADDRegShifted(2, 0, 1, 1, 2, true, false))...) // X2 = X0 + (X1 >> 2)
+				program = append(program, uint32ToBytes(encodeADDReg(0, 31, 2, false))...)                   // X0 = X2
+				program = append(program, uint32ToBytes(encodeADDImm(8, 31, 93, false))...)                  // X8 = 93
+				program = append(program, uint32ToBytes(encodeSVC(0))...)                                    // syscall
+
+				e.LoadProgram(0x1000, program)
+				exitCode := e.Run()
+
+				Expect(exitCode).To(Equal(int64(42)))
+			})
+		})
+
+		Context("ADD with ASR shift (sign-extending)", func() {
+			It("should arithmetic shift right a negative value", func() {
+				// X0 = 50, X1 = 0xFFFFFFFFFFFFFF00 (-256 signed)
+				// ADD X2, X0, X1, ASR #4  => X2 = 50 + (-256 >> 4) = 50 + (-16) = 34
+				e.RegFile().WriteReg(0, 50)
+				e.RegFile().WriteReg(1, 0xFFFFFFFFFFFFFF00) // -256
+
+				program := []byte{}
+				program = append(program, uint32ToBytes(encodeADDRegShifted(2, 0, 1, 2, 4, true, false))...) // X2 = X0 + (X1 ASR 4)
+				program = append(program, uint32ToBytes(encodeADDReg(0, 31, 2, false))...)                   // X0 = X2
+				program = append(program, uint32ToBytes(encodeADDImm(8, 31, 93, false))...)                  // X8 = 93
+				program = append(program, uint32ToBytes(encodeSVC(0))...)                                    // syscall
+
+				e.LoadProgram(0x1000, program)
+				exitCode := e.Run()
+
+				Expect(exitCode).To(Equal(int64(34)))
+			})
+		})
+
+		Context("SUB with LSL shift", func() {
+			It("should compute X0 - (X1 << 2)", func() {
+				// X0 = 100, X1 = 10
+				// SUB X2, X0, X1, LSL #2  => X2 = 100 - (10 << 2) = 100 - 40 = 60
+				program := []byte{}
+				program = append(program, uint32ToBytes(encodeADDImm(0, 31, 100, false))...)                 // X0 = 100
+				program = append(program, uint32ToBytes(encodeADDImm(1, 31, 10, false))...)                  // X1 = 10
+				program = append(program, uint32ToBytes(encodeSUBRegShifted(2, 0, 1, 0, 2, true, false))...) // X2 = X0 - (X1 << 2)
+				program = append(program, uint32ToBytes(encodeADDReg(0, 31, 2, false))...)                   // X0 = X2
+				program = append(program, uint32ToBytes(encodeADDImm(8, 31, 93, false))...)                  // X8 = 93
+				program = append(program, uint32ToBytes(encodeSVC(0))...)                                    // syscall
+
+				e.LoadProgram(0x1000, program)
+				exitCode := e.Run()
+
+				Expect(exitCode).To(Equal(int64(60)))
+			})
+		})
+
+		Context("AND with LSL shift", func() {
+			It("should AND with shifted operand", func() {
+				// X0 = 0xFF00, X1 = 0xFF
+				// AND X2, X0, X1, LSL #8  => X2 = 0xFF00 & (0xFF << 8) = 0xFF00 & 0xFF00 = 0xFF00
+				e.RegFile().WriteReg(0, 0xFF00)
+				e.RegFile().WriteReg(1, 0xFF)
+
+				program := []byte{}
+				program = append(program, uint32ToBytes(encodeLogicalRegShifted(2, 0, 1, 0, 0, 0, 8))...) // AND X2, X0, X1, LSL #8
+				program = append(program, uint32ToBytes(encodeADDReg(0, 31, 2, false))...)                // X0 = X2
+				program = append(program, uint32ToBytes(encodeADDImm(8, 31, 93, false))...)               // X8 = 93
+				program = append(program, uint32ToBytes(encodeSVC(0))...)                                 // syscall
+
+				e.LoadProgram(0x1000, program)
+				exitCode := e.Run()
+
+				Expect(exitCode).To(Equal(int64(0xFF00)))
+			})
+		})
+
+		Context("array index pattern: ADD X0, X1, X2, LSL #3", func() {
+			It("should compute array base + index*8 (common array indexing)", func() {
+				// Simulates: addr = base + index * 8
+				// base = 0x2000, index = 3
+				// ADD X0, X1, X2, LSL #3  => 0x2000 + (3 << 3) = 0x2000 + 24 = 0x2018
+				// Store a value at 0x2018, then load from computed address
+				e.Memory().Write64(0x2018, 42)
+				e.RegFile().WriteReg(1, 0x2000) // base
+				e.RegFile().WriteReg(2, 3)      // index
+
+				program := []byte{}
+				program = append(program, uint32ToBytes(encodeADDRegShifted(3, 1, 2, 0, 3, true, false))...) // X3 = base + index*8
+				program = append(program, uint32ToBytes(encodeLDR64(0, 3, 0))...)                            // X0 = [X3]
+				program = append(program, uint32ToBytes(encodeADDImm(8, 31, 93, false))...)                  // X8 = 93
+				program = append(program, uint32ToBytes(encodeSVC(0))...)                                    // syscall
+
+				e.LoadProgram(0x1000, program)
+				exitCode := e.Run()
+
+				Expect(exitCode).To(Equal(int64(42)))
+			})
+		})
+	})
+
 	Describe("Regression Baseline Summary", func() {
 		It("should print validation summary", func() {
 			fmt.Println("\n========================================")
@@ -379,6 +503,62 @@ func encodeEORReg(rd, rn, rm uint8) uint32 {
 	inst |= 0 << 21       // N = 0
 	inst |= uint32(rm&0x1F) << 16
 	inst |= 0 << 10 // imm6 = 0 (no shift)
+	inst |= uint32(rn&0x1F) << 5
+	inst |= uint32(rd & 0x1F)
+	return inst
+}
+
+// encodeADDRegShifted encodes ADD/ADDS (shifted register).
+// shift: 0=LSL, 1=LSR, 2=ASR
+func encodeADDRegShifted(rd, rn, rm, shift, amount uint8, sf, setFlags bool) uint32 {
+	var inst uint32
+	if sf {
+		inst |= 1 << 31
+	}
+	if setFlags {
+		inst |= 1 << 29
+	}
+	inst |= 0b01011 << 24
+	inst |= uint32(shift&0x3) << 22
+	inst |= uint32(rm&0x1F) << 16
+	inst |= uint32(amount&0x3F) << 10
+	inst |= uint32(rn&0x1F) << 5
+	inst |= uint32(rd & 0x1F)
+	return inst
+}
+
+// encodeSUBRegShifted encodes SUB/SUBS (shifted register).
+// shift: 0=LSL, 1=LSR, 2=ASR
+func encodeSUBRegShifted(rd, rn, rm, shift, amount uint8, sf, setFlags bool) uint32 {
+	var inst uint32
+	if sf {
+		inst |= 1 << 31
+	}
+	inst |= 1 << 30 // op=1 for SUB
+	if setFlags {
+		inst |= 1 << 29
+	}
+	inst |= 0b01011 << 24
+	inst |= uint32(shift&0x3) << 22
+	inst |= uint32(rm&0x1F) << 16
+	inst |= uint32(amount&0x3F) << 10
+	inst |= uint32(rn&0x1F) << 5
+	inst |= uint32(rd & 0x1F)
+	return inst
+}
+
+// encodeLogicalRegShifted encodes logical register instructions with shift.
+// opc: 0=AND, 1=ORR, 2=EOR; n: 0=normal, 1=NOT variant (BIC/ORN/EON)
+// shift: 0=LSL, 1=LSR, 2=ASR, 3=ROR
+func encodeLogicalRegShifted(rd, rn, rm, opc, n, shift, amount uint8) uint32 {
+	var inst uint32
+	inst |= 1 << 31 // sf = 1 (64-bit)
+	inst |= uint32(opc&0x3) << 29
+	inst |= 0b01010 << 24
+	inst |= uint32(shift&0x3) << 22
+	inst |= uint32(n&0x1) << 21
+	inst |= uint32(rm&0x1F) << 16
+	inst |= uint32(amount&0x3F) << 10
 	inst |= uint32(rn&0x1F) << 5
 	inst |= uint32(rd & 0x1F)
 	return inst

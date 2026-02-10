@@ -347,6 +347,194 @@ var _ = Describe("Decoder", func() {
 		})
 	})
 
+	Describe("Shifted Register Operands - Add/Sub", func() {
+		// ADD X0, X1, X2, LSL #3  -> 0x8B020C20
+		// Encoding: sf=1, op=0, S=0, 01011, shift=00, 0, Rm=2, imm6=3, Rn=1, Rd=0
+		It("should decode ADD X0, X1, X2, LSL #3", func() {
+			inst := decoder.Decode(0x8B020C20)
+
+			Expect(inst.Op).To(Equal(insts.OpADD))
+			Expect(inst.Format).To(Equal(insts.FormatDPReg))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(3)))
+		})
+
+		// ADD X3, X4, X5, LSR #4  -> 0x8B451083
+		// Encoding: sf=1, op=0, S=0, 01011, shift=01, 0, Rm=5, imm6=4, Rn=4, Rd=3
+		It("should decode ADD X3, X4, X5, LSR #4", func() {
+			inst := decoder.Decode(0x8B451083)
+
+			Expect(inst.Op).To(Equal(insts.OpADD))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(3)))
+			Expect(inst.Rn).To(Equal(uint8(4)))
+			Expect(inst.Rm).To(Equal(uint8(5)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSR))
+			Expect(inst.ShiftAmount).To(Equal(uint8(4)))
+		})
+
+		// ADD X6, X7, X8, ASR #2  -> 0x8B8808E6
+		// Encoding: sf=1, op=0, S=0, 01011, shift=10, 0, Rm=8, imm6=2, Rn=7, Rd=6
+		It("should decode ADD X6, X7, X8, ASR #2", func() {
+			inst := decoder.Decode(0x8B8808E6)
+
+			Expect(inst.Op).To(Equal(insts.OpADD))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(6)))
+			Expect(inst.Rn).To(Equal(uint8(7)))
+			Expect(inst.Rm).To(Equal(uint8(8)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftASR))
+			Expect(inst.ShiftAmount).To(Equal(uint8(2)))
+		})
+
+		// SUB X0, X1, X2, LSL #3  -> 0xCB020C20
+		// Encoding: sf=1, op=1, S=0, 01011, shift=00, 0, Rm=2, imm6=3, Rn=1, Rd=0
+		It("should decode SUB X0, X1, X2, LSL #3", func() {
+			inst := decoder.Decode(0xCB020C20)
+
+			Expect(inst.Op).To(Equal(insts.OpSUB))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(3)))
+		})
+
+		// SUBS X0, X1, X2, LSL #1  -> 0xEB020420
+		// Encoding: sf=1, op=1, S=1, 01011, shift=00, 0, Rm=2, imm6=1, Rn=1, Rd=0
+		It("should decode SUBS X0, X1, X2, LSL #1", func() {
+			inst := decoder.Decode(0xEB020420)
+
+			Expect(inst.Op).To(Equal(insts.OpSUB))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.SetFlags).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(1)))
+		})
+
+		// ADD W0, W1, W2, LSL #3  -> 0x0B020C20
+		// Encoding: sf=0, op=0, S=0, 01011, shift=00, 0, Rm=2, imm6=3, Rn=1, Rd=0
+		It("should decode ADD W0, W1, W2, LSL #3 (32-bit)", func() {
+			inst := decoder.Decode(0x0B020C20)
+
+			Expect(inst.Op).To(Equal(insts.OpADD))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(3)))
+		})
+
+		// SUB W0, W1, W2, LSR #4  -> 0x4B421020
+		// Encoding: sf=0, op=1, S=0, 01011, shift=01, 0, Rm=2, imm6=4, Rn=1, Rd=0
+		It("should decode SUB W0, W1, W2, LSR #4 (32-bit)", func() {
+			inst := decoder.Decode(0x4B421020)
+
+			Expect(inst.Op).To(Equal(insts.OpSUB))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSR))
+			Expect(inst.ShiftAmount).To(Equal(uint8(4)))
+		})
+	})
+
+	Describe("Shifted Register Operands - Logical", func() {
+		// AND X0, X1, X2, LSL #4  -> 0x8A021020
+		// Encoding: sf=1, opc=00, 01010, shift=00, N=0, Rm=2, imm6=4, Rn=1, Rd=0
+		It("should decode AND X0, X1, X2, LSL #4", func() {
+			inst := decoder.Decode(0x8A021020)
+
+			Expect(inst.Op).To(Equal(insts.OpAND))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(4)))
+		})
+
+		// ORR X0, X1, X2, LSR #8  -> 0xAA422020
+		// Encoding: sf=1, opc=01, 01010, shift=01, N=0, Rm=2, imm6=8, Rn=1, Rd=0
+		It("should decode ORR X0, X1, X2, LSR #8", func() {
+			inst := decoder.Decode(0xAA422020)
+
+			Expect(inst.Op).To(Equal(insts.OpORR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSR))
+			Expect(inst.ShiftAmount).To(Equal(uint8(8)))
+		})
+
+		// EOR X0, X1, X2, ASR #16  -> 0xCA824020
+		// Encoding: sf=1, opc=10, 01010, shift=10, N=0, Rm=2, imm6=16, Rn=1, Rd=0
+		It("should decode EOR X0, X1, X2, ASR #16", func() {
+			inst := decoder.Decode(0xCA824020)
+
+			Expect(inst.Op).To(Equal(insts.OpEOR))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftASR))
+			Expect(inst.ShiftAmount).To(Equal(uint8(16)))
+		})
+
+		// BIC X0, X1, X2, LSL #5  -> 0x8A221420
+		// Encoding: sf=1, opc=00, 01010, shift=00, N=1, Rm=2, imm6=5, Rn=1, Rd=0
+		It("should decode BIC X0, X1, X2, LSL #5", func() {
+			inst := decoder.Decode(0x8A221420)
+
+			Expect(inst.Op).To(Equal(insts.OpBIC))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(5)))
+		})
+
+		// ORN X0, X1, X2, LSL #3  -> 0xAA220C20
+		// Encoding: sf=1, opc=01, 01010, shift=00, N=1, Rm=2, imm6=3, Rn=1, Rd=0
+		It("should decode ORN X0, X1, X2, LSL #3", func() {
+			inst := decoder.Decode(0xAA220C20)
+
+			Expect(inst.Op).To(Equal(insts.OpORN))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSL))
+			Expect(inst.ShiftAmount).To(Equal(uint8(3)))
+		})
+
+		// EON X0, X1, X2, LSR #2  -> 0xCA620820
+		// Encoding: sf=1, opc=10, 01010, shift=01, N=1, Rm=2, imm6=2, Rn=1, Rd=0
+		It("should decode EON X0, X1, X2, LSR #2", func() {
+			inst := decoder.Decode(0xCA620820)
+
+			Expect(inst.Op).To(Equal(insts.OpEON))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.ShiftType).To(Equal(insts.ShiftLSR))
+			Expect(inst.ShiftAmount).To(Equal(uint8(2)))
+		})
+	})
+
 	Describe("Branch Instructions", func() {
 		// B #0x100           -> 0x14000040
 		// Encoding: 000101, imm26=0x40 (64 instructions = 256 bytes)

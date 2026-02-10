@@ -257,13 +257,7 @@ The emu package implements the full set of syscalls. The driver package provides
 
 ## Known Limitations
 
-### Missing Test Coverage
-
-The following areas lack test coverage:
-
-1. **Shifted register operands** - No tests verify correct decoding of shift
-   type (LSL, LSR, ASR, ROR) and shift amount for register operands in
-   ADD/SUB/logical instructions.
+No known test coverage gaps at this time.
 
 ---
 
