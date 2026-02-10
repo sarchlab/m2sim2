@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sarchlab/m2sim/emu"
+	"github.com/sarchlab/m2sim/timing/cache"
 	"github.com/sarchlab/m2sim/timing/pipeline"
 )
 
@@ -109,6 +110,10 @@ type HarnessConfig struct {
 	// This matches the Apple M2's 8-wide decode capability
 	EnableOctupleIssue bool
 
+	// DCacheConfig overrides the default L1 D-cache configuration when EnableDCache is true.
+	// If nil, uses cache.DefaultL1DConfig().
+	DCacheConfig *cache.Config
+
 	// Output is where to write results (default: os.Stdout)
 	Output io.Writer
 
@@ -191,8 +196,15 @@ func (h *Harness) runBenchmark(bench Benchmark) BenchmarkResult {
 
 	// Create pipeline with options
 	opts := []pipeline.PipelineOption{}
-	if h.config.EnableICache || h.config.EnableDCache {
-		opts = append(opts, pipeline.WithDefaultCaches())
+	if h.config.EnableICache {
+		opts = append(opts, pipeline.WithICache(cache.DefaultL1IConfig()))
+	}
+	if h.config.EnableDCache {
+		dcacheConfig := cache.DefaultL1DConfig()
+		if h.config.DCacheConfig != nil {
+			dcacheConfig = *h.config.DCacheConfig
+		}
+		opts = append(opts, pipeline.WithDCache(dcacheConfig))
 	}
 	if h.config.EnableOctupleIssue {
 		opts = append(opts, pipeline.WithOctupleIssue())

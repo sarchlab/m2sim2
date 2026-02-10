@@ -472,15 +472,9 @@ func (p *Pipeline) accessSecondaryMem(slot MemorySlot) (MemoryResult, bool) {
 		result, stall := p.cachedMemoryStage2.AccessSlot(slot)
 		return result, stall
 	}
-	// Non-cached path: 1-cycle stall model
-	if p.memPending2 && p.memPendingPC2 != slot.GetPC() {
-		p.memPending2 = false
-	}
-	if !p.memPending2 {
-		p.memPending2 = true
-		p.memPendingPC2 = slot.GetPC()
-		return MemoryResult{}, true
-	}
+	// Non-cached path: immediate access (no stall).
+	// Without cache simulation, memory is a direct array lookup.
+	// Pipeline issue rules already enforce ordering constraints.
 	p.memPending2 = false
 	return p.memoryStage.MemorySlot(slot), false
 }
@@ -495,15 +489,9 @@ func (p *Pipeline) accessTertiaryMem(slot MemorySlot) (MemoryResult, bool) {
 		result, stall := p.cachedMemoryStage3.AccessSlot(slot)
 		return result, stall
 	}
-	// Non-cached path: 1-cycle stall model
-	if p.memPending3 && p.memPendingPC3 != slot.GetPC() {
-		p.memPending3 = false
-	}
-	if !p.memPending3 {
-		p.memPending3 = true
-		p.memPendingPC3 = slot.GetPC()
-		return MemoryResult{}, true
-	}
+	// Non-cached path: immediate access (no stall).
+	// Without cache simulation, memory is a direct array lookup.
+	// Pipeline issue rules already enforce ordering constraints.
 	p.memPending3 = false
 	return p.memoryStage.MemorySlot(slot), false
 }
@@ -3960,19 +3948,12 @@ func (p *Pipeline) tickOctupleIssue() {
 				p.stats.MemStalls++
 			}
 		} else {
+			// Non-cached path: immediate access (no stall).
+			// Without cache simulation, memory is a direct array lookup.
+			// Pipeline issue rules already enforce ordering constraints.
 			if p.exmem.MemRead || p.exmem.MemWrite {
-				if p.memPending && p.memPendingPC != p.exmem.PC {
-					p.memPending = false
-				}
-				if !p.memPending {
-					p.memPending = true
-					p.memPendingPC = p.exmem.PC
-					memStall = true
-					p.stats.MemStalls++
-				} else {
-					p.memPending = false
-					memResult = p.memoryStage.Access(&p.exmem)
-				}
+				p.memPending = false
+				memResult = p.memoryStage.Access(&p.exmem)
 			} else {
 				p.memPending = false
 			}
