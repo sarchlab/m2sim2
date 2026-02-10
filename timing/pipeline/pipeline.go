@@ -218,11 +218,11 @@ func WithDCache(config cache.Config) PipelineOption {
 	return func(p *Pipeline) {
 		backing := cache.NewMemoryBacking(p.memory)
 		dcache := cache.New(config, backing)
+		// Share one D-cache across all 3 memory ports (coherent).
+		// Each CachedMemoryStage tracks its own pending/stall state.
 		p.cachedMemoryStage = NewCachedMemoryStage(dcache, p.memory)
-		dcache2 := cache.New(config, backing)
-		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache2, p.memory)
-		dcache3 := cache.New(config, backing)
-		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache3, p.memory)
+		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache, p.memory)
 		p.useDCache = true
 	}
 }
@@ -236,13 +236,11 @@ func WithDefaultCaches() PipelineOption {
 		p.cachedFetchStage = NewCachedFetchStage(icache, p.memory)
 		p.useICache = true
 
-		// Initialize D-cache (3 ports for M2's 3 load/store units)
+		// Initialize D-cache — single shared cache, 3 port stages (coherent)
 		dcache := cache.New(cache.DefaultL1DConfig(), backing)
 		p.cachedMemoryStage = NewCachedMemoryStage(dcache, p.memory)
-		dcache2 := cache.New(cache.DefaultL1DConfig(), backing)
-		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache2, p.memory)
-		dcache3 := cache.New(cache.DefaultL1DConfig(), backing)
-		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache3, p.memory)
+		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache, p.memory)
 		p.useDCache = true
 	}
 }
