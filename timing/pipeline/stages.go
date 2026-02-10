@@ -531,6 +531,7 @@ func (s *MemoryStage) Access(exmem *EXMEMRegister) MemoryResult {
 // Implemented by all EXMEM register types.
 type MemorySlot interface {
 	IsValid() bool
+	GetPC() uint64
 	GetMemRead() bool
 	GetMemWrite() bool
 	GetInst() *insts.Instruction

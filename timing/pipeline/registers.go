@@ -169,6 +169,9 @@ func (r *EXMEMRegister) Clear() {
 // IsValid returns true if the register contains valid data.
 func (r *EXMEMRegister) IsValid() bool { return r.Valid }
 
+// GetPC returns the program counter.
+func (r *EXMEMRegister) GetPC() uint64 { return r.PC }
+
 // GetMemRead returns true if this is a load instruction.
 func (r *EXMEMRegister) GetMemRead() bool { return r.MemRead }
 

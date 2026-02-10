@@ -104,8 +104,20 @@ func canDualIssue(first, second *IDEXRegister) bool {
 		return false
 	}
 
-	// Cannot dual-issue if both access memory (single memory port)
-	if (first.MemRead || first.MemWrite) && (second.MemRead || second.MemWrite) {
+	// Cannot co-issue a load after a store (no store-to-load forwarding)
+	if first.MemWrite && second.MemRead {
+		return false
+	}
+
+	// Count memory operations - allow up to maxMemPorts memory ops per cycle
+	memOps := 0
+	if first.MemRead || first.MemWrite {
+		memOps++
+	}
+	if second.MemRead || second.MemWrite {
+		memOps++
+	}
+	if memOps > maxMemPorts {
 		return false
 	}
 
@@ -265,6 +277,9 @@ func (r *SecondaryEXMEMRegister) Clear() {
 
 // IsValid returns true if the register contains valid data.
 func (r *SecondaryEXMEMRegister) IsValid() bool { return r.Valid }
+
+// GetPC returns the program counter.
+func (r *SecondaryEXMEMRegister) GetPC() uint64 { return r.PC }
 
 // GetMemRead returns true if this is a load instruction.
 func (r *SecondaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
@@ -451,6 +466,9 @@ func (r *TertiaryEXMEMRegister) Clear() {
 
 // IsValid returns true if the register contains valid data.
 func (r *TertiaryEXMEMRegister) IsValid() bool { return r.Valid }
+
+// GetPC returns the program counter.
+func (r *TertiaryEXMEMRegister) GetPC() uint64 { return r.PC }
 
 // GetMemRead returns true if this is a load instruction.
 func (r *TertiaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
@@ -640,6 +658,9 @@ func (r *QuaternaryEXMEMRegister) Clear() {
 // IsValid returns true if the register contains valid data.
 func (r *QuaternaryEXMEMRegister) IsValid() bool { return r.Valid }
 
+// GetPC returns the program counter.
+func (r *QuaternaryEXMEMRegister) GetPC() uint64 { return r.PC }
+
 // GetMemRead returns true if this is a load instruction.
 func (r *QuaternaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
 
@@ -828,6 +849,9 @@ func (r *QuinaryEXMEMRegister) Clear() {
 // IsValid returns true if the register contains valid data.
 func (r *QuinaryEXMEMRegister) IsValid() bool { return r.Valid }
 
+// GetPC returns the program counter.
+func (r *QuinaryEXMEMRegister) GetPC() uint64 { return r.PC }
+
 // GetMemRead returns true if this is a load instruction.
 func (r *QuinaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
 
@@ -1014,6 +1038,9 @@ func (r *SenaryEXMEMRegister) Clear() {
 // IsValid returns true if the register contains valid data.
 func (r *SenaryEXMEMRegister) IsValid() bool { return r.Valid }
 
+// GetPC returns the program counter.
+func (r *SenaryEXMEMRegister) GetPC() uint64 { return r.PC }
+
 // GetMemRead returns true if this is a load instruction.
 func (r *SenaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
 
@@ -1087,6 +1114,10 @@ func (r *SenaryIDEXRegister) fromIDEX(idex *IDEXRegister) {
 // per cycle. Apple M2 Avalanche has 6 integer ALU execution units.
 const maxALUPorts = 6
 
+// maxMemPorts is the maximum number of load/store operations that can execute
+// per cycle. Apple M2 Avalanche has 3 load/store units (2 load + 1 store).
+const maxMemPorts = 3
+
 // isALUOp returns true if the instruction uses an integer ALU execution port.
 func isALUOp(inst *IDEXRegister) bool {
 	if inst == nil || !inst.Valid {
@@ -1124,8 +1155,12 @@ func canIssueWith(newInst *IDEXRegister, earlier []*IDEXRegister) bool {
 		return false
 	}
 
-	// Count memory operations - only 1 memory operation allowed per cycle (single memory port)
+	// Memory operations can only execute in slots with memory ports (first maxMemPorts slots).
+	// The new instruction would go into slot len(earlier), so reject memory ops in slots >= maxMemPorts.
 	newAccessesMem := newInst.MemRead || newInst.MemWrite
+	if newAccessesMem && len(earlier) >= maxMemPorts {
+		return false
+	}
 	memOpCount := 0
 	if newAccessesMem {
 		memOpCount = 1
@@ -1140,6 +1175,11 @@ func canIssueWith(newInst *IDEXRegister, earlier []*IDEXRegister) bool {
 	for _, prev := range earlier {
 		if prev == nil || !prev.Valid {
 			continue
+		}
+
+		// Cannot co-issue a load after a store (no store-to-load forwarding)
+		if prev.MemWrite && newInst.MemRead {
+			return false
 		}
 
 		if prev.MemRead || prev.MemWrite {
@@ -1185,8 +1225,8 @@ func canIssueWith(newInst *IDEXRegister, earlier []*IDEXRegister) bool {
 		}
 	}
 
-	// Only 1 memory operation per cycle
-	if memOpCount > 1 {
+	// Limit memory operations to available load/store ports
+	if memOpCount > maxMemPorts {
 		return false
 	}
 
@@ -1430,6 +1470,9 @@ func (r *SeptenaryEXMEMRegister) Clear() {
 // IsValid returns true if the register contains valid data.
 func (r *SeptenaryEXMEMRegister) IsValid() bool { return r.Valid }
 
+// GetPC returns the program counter.
+func (r *SeptenaryEXMEMRegister) GetPC() uint64 { return r.PC }
+
 // GetMemRead returns true if this is a load instruction.
 func (r *SeptenaryEXMEMRegister) GetMemRead() bool { return r.MemRead }
 
@@ -1638,6 +1681,9 @@ func (r *OctonaryEXMEMRegister) Clear() {
 
 // IsValid returns true if the register contains valid data.
 func (r *OctonaryEXMEMRegister) IsValid() bool { return r.Valid }
+
+// GetPC returns the program counter.
+func (r *OctonaryEXMEMRegister) GetPC() uint64 { return r.PC }
 
 // GetMemRead returns true if this is a load instruction.
 func (r *OctonaryEXMEMRegister) GetMemRead() bool { return r.MemRead }

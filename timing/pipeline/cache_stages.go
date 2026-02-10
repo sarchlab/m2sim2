@@ -202,6 +202,83 @@ func (s *CachedMemoryStage) Access(exmem *EXMEMRegister) (MemoryResult, bool) {
 	return result, false
 }
 
+// AccessSlot performs memory read or write through D-cache for any pipeline slot.
+func (s *CachedMemoryStage) AccessSlot(slot MemorySlot) (MemoryResult, bool) {
+	result := MemoryResult{}
+
+	if !slot.IsValid() {
+		s.pending = false
+		return result, false
+	}
+
+	if !slot.GetMemRead() && !slot.GetMemWrite() {
+		s.pending = false
+		return result, false
+	}
+
+	addr := slot.GetALUResult()
+	pc := slot.GetPC()
+
+	if s.pending && (s.pendingPC != pc || s.pendingAddr != addr) {
+		s.pending = false
+		s.latency = 0
+		s.result = nil
+	}
+
+	if s.pending {
+		s.latency--
+		if s.latency > 0 {
+			return result, true
+		}
+		s.pending = false
+		if s.result != nil && slot.GetMemRead() {
+			result.MemData = s.result.data
+		}
+		return result, false
+	}
+
+	inst := slot.GetInst()
+	size := 8
+	if inst != nil && !inst.Is64Bit {
+		size = 4
+	}
+
+	if slot.GetMemRead() {
+		cacheResult := s.cache.Read(addr, size)
+		s.pending = true
+		s.pendingPC = pc
+		s.pendingAddr = addr
+		s.latency = cacheResult.Latency - 1
+		s.result = &memResult{data: cacheResult.Data}
+		s.isHit = cacheResult.Hit
+
+		if s.latency > 0 {
+			return result, true
+		}
+		s.pending = false
+		result.MemData = cacheResult.Data
+		return result, false
+	}
+
+	if slot.GetMemWrite() {
+		cacheResult := s.cache.Write(addr, size, slot.GetStoreValue())
+		s.pending = true
+		s.pendingPC = pc
+		s.pendingAddr = addr
+		s.latency = cacheResult.Latency - 1
+		s.result = nil
+		s.isHit = cacheResult.Hit
+
+		if s.latency > 0 {
+			return result, true
+		}
+		s.pending = false
+		return result, false
+	}
+
+	return result, false
+}
+
 // Reset clears pending state.
 func (s *CachedMemoryStage) Reset() {
 	s.pending = false

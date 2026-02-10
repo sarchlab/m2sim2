@@ -218,7 +218,11 @@ func WithDCache(config cache.Config) PipelineOption {
 	return func(p *Pipeline) {
 		backing := cache.NewMemoryBacking(p.memory)
 		dcache := cache.New(config, backing)
+		// Share one D-cache across all 3 memory ports (coherent).
+		// Each CachedMemoryStage tracks its own pending/stall state.
 		p.cachedMemoryStage = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache, p.memory)
 		p.useDCache = true
 	}
 }
@@ -232,9 +236,11 @@ func WithDefaultCaches() PipelineOption {
 		p.cachedFetchStage = NewCachedFetchStage(icache, p.memory)
 		p.useICache = true
 
-		// Initialize D-cache
+		// Initialize D-cache — single shared cache, 3 port stages (coherent)
 		dcache := cache.New(cache.DefaultL1DConfig(), backing)
 		p.cachedMemoryStage = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache, p.memory)
 		p.useDCache = true
 	}
 }
@@ -329,9 +335,17 @@ type Pipeline struct {
 	exLatency7   uint64 // Remaining cycles for septenary execute slot
 	exLatency8   uint64 // Remaining cycles for octonary execute slot
 
-	// Non-cached memory latency tracking
-	memPending   bool   // True if waiting for memory operation to complete
-	memPendingPC uint64 // PC of pending memory operation
+	// Non-cached memory latency tracking (up to 3 memory ports)
+	memPending    bool   // True if waiting for memory operation to complete
+	memPendingPC  uint64 // PC of pending memory operation
+	memPending2   bool
+	memPendingPC2 uint64
+	memPending3   bool
+	memPendingPC3 uint64
+
+	// Cached memory stages for secondary/tertiary memory ports
+	cachedMemoryStage2 *CachedMemoryStage
+	cachedMemoryStage3 *CachedMemoryStage
 
 	// Shared resources
 	regFile *emu.RegFile
@@ -445,6 +459,61 @@ func (p *Pipeline) RunCycles(cycles uint64) bool {
 		p.Tick()
 	}
 	return !p.halted
+}
+
+// accessSecondaryMem processes a memory operation for secondary slot (slot 2).
+// Returns the memory result and whether a stall occurred.
+func (p *Pipeline) accessSecondaryMem(slot MemorySlot) (MemoryResult, bool) {
+	if !slot.IsValid() || (!slot.GetMemRead() && !slot.GetMemWrite()) {
+		p.memPending2 = false
+		return MemoryResult{}, false
+	}
+	if p.useDCache && p.cachedMemoryStage2 != nil {
+		result, stall := p.cachedMemoryStage2.AccessSlot(slot)
+		if stall {
+			p.stats.MemStalls++
+		}
+		return result, stall
+	}
+	// Non-cached path: 1-cycle stall model
+	if p.memPending2 && p.memPendingPC2 != slot.GetPC() {
+		p.memPending2 = false
+	}
+	if !p.memPending2 {
+		p.memPending2 = true
+		p.memPendingPC2 = slot.GetPC()
+		p.stats.MemStalls++
+		return MemoryResult{}, true
+	}
+	p.memPending2 = false
+	return p.memoryStage.MemorySlot(slot), false
+}
+
+// accessTertiaryMem processes a memory operation for tertiary slot (slot 3).
+func (p *Pipeline) accessTertiaryMem(slot MemorySlot) (MemoryResult, bool) {
+	if !slot.IsValid() || (!slot.GetMemRead() && !slot.GetMemWrite()) {
+		p.memPending3 = false
+		return MemoryResult{}, false
+	}
+	if p.useDCache && p.cachedMemoryStage3 != nil {
+		result, stall := p.cachedMemoryStage3.AccessSlot(slot)
+		if stall {
+			p.stats.MemStalls++
+		}
+		return result, stall
+	}
+	// Non-cached path: 1-cycle stall model
+	if p.memPending3 && p.memPendingPC3 != slot.GetPC() {
+		p.memPending3 = false
+	}
+	if !p.memPending3 {
+		p.memPending3 = true
+		p.memPendingPC3 = slot.GetPC()
+		p.stats.MemStalls++
+		return MemoryResult{}, true
+	}
+	p.memPending3 = false
+	return p.memoryStage.MemorySlot(slot), false
 }
 
 // Tick executes one pipeline cycle.
@@ -928,17 +997,27 @@ func (p *Pipeline) tickSuperscalar() {
 		}
 	}
 
-	// Secondary slot memory (only ALU results, no memory access)
+	// Secondary slot memory (memory port 2)
 	if p.exmem2.Valid && !memStall {
-		nextMEMWB2 = SecondaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem2.PC,
-			Inst:      p.exmem2.Inst,
-			ALUResult: p.exmem2.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem2.Rd,
-			RegWrite:  p.exmem2.RegWrite,
-			MemToReg:  false,
+		var memResult2 MemoryResult
+		if p.exmem2.MemRead || p.exmem2.MemWrite {
+			var memStall2 bool
+			memResult2, memStall2 = p.accessSecondaryMem(&p.exmem2)
+			if memStall2 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB2 = SecondaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem2.PC,
+				Inst:      p.exmem2.Inst,
+				ALUResult: p.exmem2.ALUResult,
+				MemData:   memResult2.MemData,
+				Rd:        p.exmem2.Rd,
+				RegWrite:  p.exmem2.RegWrite,
+				MemToReg:  p.exmem2.MemToReg,
+			}
 		}
 	}
 
@@ -1584,35 +1663,55 @@ func (p *Pipeline) tickQuadIssue() {
 		}
 	}
 
-	// Secondary slot memory (ALU results only, no memory access)
+	// Secondary slot memory (memory port 2)
 	if p.exmem2.Valid && !memStall {
-		nextMEMWB2 = SecondaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem2.PC,
-			Inst:      p.exmem2.Inst,
-			ALUResult: p.exmem2.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem2.Rd,
-			RegWrite:  p.exmem2.RegWrite,
-			MemToReg:  false,
+		var memResult2 MemoryResult
+		if p.exmem2.MemRead || p.exmem2.MemWrite {
+			var memStall2 bool
+			memResult2, memStall2 = p.accessSecondaryMem(&p.exmem2)
+			if memStall2 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB2 = SecondaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem2.PC,
+				Inst:      p.exmem2.Inst,
+				ALUResult: p.exmem2.ALUResult,
+				MemData:   memResult2.MemData,
+				Rd:        p.exmem2.Rd,
+				RegWrite:  p.exmem2.RegWrite,
+				MemToReg:  p.exmem2.MemToReg,
+			}
 		}
 	}
 
-	// Tertiary slot memory (ALU results only)
+	// Tertiary slot memory (memory port 3)
 	if p.exmem3.Valid && !memStall {
-		nextMEMWB3 = TertiaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem3.PC,
-			Inst:      p.exmem3.Inst,
-			ALUResult: p.exmem3.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem3.Rd,
-			RegWrite:  p.exmem3.RegWrite,
-			MemToReg:  false,
+		var memResult3 MemoryResult
+		if p.exmem3.MemRead || p.exmem3.MemWrite {
+			var memStall3 bool
+			memResult3, memStall3 = p.accessTertiaryMem(&p.exmem3)
+			if memStall3 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB3 = TertiaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem3.PC,
+				Inst:      p.exmem3.Inst,
+				ALUResult: p.exmem3.ALUResult,
+				MemData:   memResult3.MemData,
+				Rd:        p.exmem3.Rd,
+				RegWrite:  p.exmem3.RegWrite,
+				MemToReg:  p.exmem3.MemToReg,
+			}
 		}
 	}
 
-	// Quaternary slot memory (ALU results only)
+	// Quaternary slot memory (ALU results only, no memory port)
 	if p.exmem4.Valid && !memStall {
 		nextMEMWB4 = QuaternaryMEMWBRegister{
 			Valid:     true,
@@ -2572,35 +2671,55 @@ func (p *Pipeline) tickSextupleIssue() {
 		}
 	}
 
-	// Secondary slot memory (ALU results only, no memory access)
+	// Secondary slot memory (memory port 2)
 	if p.exmem2.Valid && !memStall {
-		nextMEMWB2 = SecondaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem2.PC,
-			Inst:      p.exmem2.Inst,
-			ALUResult: p.exmem2.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem2.Rd,
-			RegWrite:  p.exmem2.RegWrite,
-			MemToReg:  false,
+		var memResult2 MemoryResult
+		if p.exmem2.MemRead || p.exmem2.MemWrite {
+			var memStall2 bool
+			memResult2, memStall2 = p.accessSecondaryMem(&p.exmem2)
+			if memStall2 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB2 = SecondaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem2.PC,
+				Inst:      p.exmem2.Inst,
+				ALUResult: p.exmem2.ALUResult,
+				MemData:   memResult2.MemData,
+				Rd:        p.exmem2.Rd,
+				RegWrite:  p.exmem2.RegWrite,
+				MemToReg:  p.exmem2.MemToReg,
+			}
 		}
 	}
 
-	// Tertiary slot memory (ALU results only)
+	// Tertiary slot memory (memory port 3)
 	if p.exmem3.Valid && !memStall {
-		nextMEMWB3 = TertiaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem3.PC,
-			Inst:      p.exmem3.Inst,
-			ALUResult: p.exmem3.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem3.Rd,
-			RegWrite:  p.exmem3.RegWrite,
-			MemToReg:  false,
+		var memResult3 MemoryResult
+		if p.exmem3.MemRead || p.exmem3.MemWrite {
+			var memStall3 bool
+			memResult3, memStall3 = p.accessTertiaryMem(&p.exmem3)
+			if memStall3 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB3 = TertiaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem3.PC,
+				Inst:      p.exmem3.Inst,
+				ALUResult: p.exmem3.ALUResult,
+				MemData:   memResult3.MemData,
+				Rd:        p.exmem3.Rd,
+				RegWrite:  p.exmem3.RegWrite,
+				MemToReg:  p.exmem3.MemToReg,
+			}
 		}
 	}
 
-	// Quaternary slot memory (ALU results only)
+	// Quaternary slot memory (ALU results only, no memory port)
 	if p.exmem4.Valid && !memStall {
 		nextMEMWB4 = QuaternaryMEMWBRegister{
 			Valid:     true,
@@ -2614,7 +2733,7 @@ func (p *Pipeline) tickSextupleIssue() {
 		}
 	}
 
-	// Quinary slot memory (ALU results only)
+	// Quinary slot memory (ALU results only, no memory port)
 	if p.exmem5.Valid && !memStall {
 		nextMEMWB5 = QuinaryMEMWBRegister{
 			Valid:     true,
@@ -2628,7 +2747,7 @@ func (p *Pipeline) tickSextupleIssue() {
 		}
 	}
 
-	// Senary slot memory (ALU results only)
+	// Senary slot memory (ALU results only, no memory port)
 	if p.exmem6.Valid && !memStall {
 		nextMEMWB6 = SenaryMEMWBRegister{
 			Valid:     true,
@@ -3701,6 +3820,16 @@ func (p *Pipeline) Reset() {
 	p.exLatency8 = 0
 	p.memPending = false
 	p.memPendingPC = 0
+	p.memPending2 = false
+	p.memPendingPC2 = 0
+	p.memPending3 = false
+	p.memPendingPC3 = 0
+	if p.cachedMemoryStage2 != nil {
+		p.cachedMemoryStage2.Reset()
+	}
+	if p.cachedMemoryStage3 != nil {
+		p.cachedMemoryStage3.Reset()
+	}
 	if p.branchPredictor != nil {
 		p.branchPredictor.Reset()
 	}
@@ -3860,35 +3989,55 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
-	// Secondary slot memory (ALU results only, no memory access)
+	// Secondary slot memory (memory port 2)
 	if p.exmem2.Valid && !memStall {
-		nextMEMWB2 = SecondaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem2.PC,
-			Inst:      p.exmem2.Inst,
-			ALUResult: p.exmem2.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem2.Rd,
-			RegWrite:  p.exmem2.RegWrite,
-			MemToReg:  false,
+		var memResult2 MemoryResult
+		if p.exmem2.MemRead || p.exmem2.MemWrite {
+			var memStall2 bool
+			memResult2, memStall2 = p.accessSecondaryMem(&p.exmem2)
+			if memStall2 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB2 = SecondaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem2.PC,
+				Inst:      p.exmem2.Inst,
+				ALUResult: p.exmem2.ALUResult,
+				MemData:   memResult2.MemData,
+				Rd:        p.exmem2.Rd,
+				RegWrite:  p.exmem2.RegWrite,
+				MemToReg:  p.exmem2.MemToReg,
+			}
 		}
 	}
 
-	// Tertiary slot memory (ALU results only)
+	// Tertiary slot memory (memory port 3)
 	if p.exmem3.Valid && !memStall {
-		nextMEMWB3 = TertiaryMEMWBRegister{
-			Valid:     true,
-			PC:        p.exmem3.PC,
-			Inst:      p.exmem3.Inst,
-			ALUResult: p.exmem3.ALUResult,
-			MemData:   0,
-			Rd:        p.exmem3.Rd,
-			RegWrite:  p.exmem3.RegWrite,
-			MemToReg:  false,
+		var memResult3 MemoryResult
+		if p.exmem3.MemRead || p.exmem3.MemWrite {
+			var memStall3 bool
+			memResult3, memStall3 = p.accessTertiaryMem(&p.exmem3)
+			if memStall3 {
+				memStall = true
+			}
+		}
+		if !memStall {
+			nextMEMWB3 = TertiaryMEMWBRegister{
+				Valid:     true,
+				PC:        p.exmem3.PC,
+				Inst:      p.exmem3.Inst,
+				ALUResult: p.exmem3.ALUResult,
+				MemData:   memResult3.MemData,
+				Rd:        p.exmem3.Rd,
+				RegWrite:  p.exmem3.RegWrite,
+				MemToReg:  p.exmem3.MemToReg,
+			}
 		}
 	}
 
-	// Quaternary slot memory (ALU results only)
+	// Quaternary slot memory (ALU results only, no memory port)
 	if p.exmem4.Valid && !memStall {
 		nextMEMWB4 = QuaternaryMEMWBRegister{
 			Valid:     true,
@@ -3902,7 +4051,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
-	// Quinary slot memory (ALU results only)
+	// Quinary slot memory (ALU results only, no memory port)
 	if p.exmem5.Valid && !memStall {
 		nextMEMWB5 = QuinaryMEMWBRegister{
 			Valid:     true,
@@ -3916,7 +4065,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
-	// Senary slot memory (ALU results only)
+	// Senary slot memory (ALU results only, no memory port)
 	if p.exmem6.Valid && !memStall {
 		nextMEMWB6 = SenaryMEMWBRegister{
 			Valid:     true,
@@ -3930,7 +4079,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
-	// Septenary slot memory (ALU results only)
+	// Septenary slot memory (ALU results only, no memory port)
 	if p.exmem7.Valid && !memStall {
 		nextMEMWB7 = SeptenaryMEMWBRegister{
 			Valid:     true,
@@ -3944,7 +4093,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
-	// Octonary slot memory (ALU results only)
+	// Octonary slot memory (ALU results only, no memory port)
 	if p.exmem8.Valid && !memStall {
 		nextMEMWB8 = OctonaryMEMWBRegister{
 			Valid:     true,
