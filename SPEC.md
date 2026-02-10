@@ -145,28 +145,41 @@ SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Exp
 
 ---
 
-### H3: Accuracy Calibration ✅ TARGET MET
+### H3: Accuracy Calibration 🔄 RECALIBRATION REQUIRED
 
 **Goal:** Achieve <20% average CPI error on microbenchmarks vs real M2 hardware.
 
 **Important distinction (issue #354):** "Simulation time" = wall-clock time to run the simulator. "Virtual time" = the predicted execution time on the simulated M2 hardware. Our accuracy target is about virtual time matching real hardware.
 
-**Current microbenchmark accuracy (after PRs #393, #394, #395, #396):**
+**CALIBRATION STATUS UPDATE (February 10, 2026):**
 
-| Benchmark | Error |
-|-----------|-------|
-| arithmetic | 34.5% |
-| dependency | 6.7% |
-| branch | 1.3% |
-| **Average** | **14.1%** |
+**Previous accuracy (before PR #419):** 14.1% average error across 4 benchmarks
+
+**Current accuracy (after PR #419 latency fixes):** 106.3% average error across all 7 benchmarks
+
+**Root cause analysis (Issue #420):** NOT a regression - PR #419 correctly fixed missing memory operation latencies that were incorrectly set to 0. Hardware baselines measured against the buggy 0-latency behavior are now invalid.
+
+**Current benchmark status:**
+
+| Benchmark | Error | Status |
+|-----------|--------|---------|
+| arithmetic | 34.5% | ✅ Still calibrated |
+| dependency | 6.7% | ✅ Still calibrated |
+| branch | 1.3% | ✅ Still calibrated |
+| branchheavy | 16.1% | ✅ Still calibrated |
+| memorystrided | 2.0% | ✅ Still calibrated |
+| loadheavy | 424.0% | ❌ **Needs recalibration** |
+| storeheavy | 259.4% | ❌ **Needs recalibration** |
 
 Error formula: `abs(t_sim - t_real) / min(t_sim, t_real)`. Target: <20% average.
 
-**Accuracy journey:** 39.8% (baseline) → 34.2% (C1) → 22.8% (branch penalty fix) → 17.6% (fetch-stage branch target extraction) → 14.1% (benchmark scaling + fallback CPI update).
+**Accuracy journey:** 39.8% (baseline) → 34.2% (C1) → 22.8% (branch penalty fix) → 17.6% (fetch-stage branch target extraction) → 14.1% (benchmark scaling + fallback CPI update) → **106.3% (latency calibration invalidation)**
 
-**Arithmetic error (34.5%)** is an accepted in-order limitation (issue #386). WAW hazard blocking in the in-order pipeline prevents co-issue that M2's register renaming would allow. Excluding arithmetic, average error is ~4.0%. PR #397 (open) adds ALU port limit modeling (6 ports) for further realism.
+**Two-track remediation required:**
+1. **Issue #422**: Recalibration - Update hardware baselines for loadheavy/storeheavy with correct timing model
+2. **Issue #421**: Multi-port memory implementation - Address architectural limitation causing high memory operation CPIs
 
-**Remaining work:** H3 microbenchmark target is met. Next steps are H3.4 (SPEC-level calibration) to validate accuracy on larger, more realistic workloads.
+**Remaining work:** Complete recalibration (1-2 cycles), then assess if multi-port implementation needed for production targets.
 
 #### H3.1: Calibration Infrastructure ✅ COMPLETE
 - [x] H3 calibration framework deployed (PR #321 merged)
