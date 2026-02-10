@@ -462,6 +462,44 @@ func (e *Emulator) executeDPReg(inst *insts.Instruction) {
 			op2 := applyShift32(uint32(e.regFile.ReadReg(inst.Rm)), inst.ShiftType, inst.ShiftAmount)
 			e.regFile.WriteReg(inst.Rd, uint64(op1^op2))
 		}
+	case insts.OpBIC:
+		if inst.Is64Bit {
+			op1 := e.regFile.ReadReg(inst.Rn)
+			op2 := applyShift64(e.regFile.ReadReg(inst.Rm), inst.ShiftType, inst.ShiftAmount)
+			result := op1 & ^op2
+			e.regFile.WriteReg(inst.Rd, result)
+			if inst.SetFlags {
+				e.alu.setLogicFlags64(result)
+			}
+		} else {
+			op1 := uint32(e.regFile.ReadReg(inst.Rn))
+			op2 := applyShift32(uint32(e.regFile.ReadReg(inst.Rm)), inst.ShiftType, inst.ShiftAmount)
+			result := op1 & ^op2
+			e.regFile.WriteReg(inst.Rd, uint64(result))
+			if inst.SetFlags {
+				e.alu.setLogicFlags32(result)
+			}
+		}
+	case insts.OpORN:
+		if inst.Is64Bit {
+			op1 := e.regFile.ReadReg(inst.Rn)
+			op2 := applyShift64(e.regFile.ReadReg(inst.Rm), inst.ShiftType, inst.ShiftAmount)
+			e.regFile.WriteReg(inst.Rd, op1|^op2)
+		} else {
+			op1 := uint32(e.regFile.ReadReg(inst.Rn))
+			op2 := applyShift32(uint32(e.regFile.ReadReg(inst.Rm)), inst.ShiftType, inst.ShiftAmount)
+			e.regFile.WriteReg(inst.Rd, uint64(op1|^op2))
+		}
+	case insts.OpEON:
+		if inst.Is64Bit {
+			op1 := e.regFile.ReadReg(inst.Rn)
+			op2 := applyShift64(e.regFile.ReadReg(inst.Rm), inst.ShiftType, inst.ShiftAmount)
+			e.regFile.WriteReg(inst.Rd, op1^^op2)
+		} else {
+			op1 := uint32(e.regFile.ReadReg(inst.Rn))
+			op2 := applyShift32(uint32(e.regFile.ReadReg(inst.Rm)), inst.ShiftType, inst.ShiftAmount)
+			e.regFile.WriteReg(inst.Rd, uint64(op1^^op2))
+		}
 	}
 }
 

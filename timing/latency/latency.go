@@ -35,7 +35,8 @@ func (t *Table) GetLatency(inst *insts.Instruction) uint64 {
 	}
 
 	switch inst.Op {
-	case insts.OpADD, insts.OpSUB, insts.OpAND, insts.OpORR, insts.OpEOR:
+	case insts.OpADD, insts.OpSUB, insts.OpAND, insts.OpORR, insts.OpEOR,
+		insts.OpBIC, insts.OpORN, insts.OpEON:
 		return t.config.ALULatency
 
 	case insts.OpB, insts.OpBL, insts.OpBCond, insts.OpBR, insts.OpBLR, insts.OpRET:

@@ -282,6 +282,69 @@ var _ = Describe("Decoder", func() {
 			Expect(inst.Rn).To(Equal(uint8(19)))
 			Expect(inst.Rm).To(Equal(uint8(20)))
 		})
+
+		// BIC X0, X1, X2     -> 0x8A220020
+		// Encoding: sf=1, opc=00, 01010, shift=00, N=1, Rm=2, imm6=0, Rn=1, Rd=0
+		It("should decode BIC X0, X1, X2", func() {
+			inst := decoder.Decode(0x8A220020)
+
+			Expect(inst.Op).To(Equal(insts.OpBIC))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.SetFlags).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(0)))
+			Expect(inst.Rn).To(Equal(uint8(1)))
+			Expect(inst.Rm).To(Equal(uint8(2)))
+			Expect(inst.Format).To(Equal(insts.FormatDPReg))
+		})
+
+		// BIC W0, W1, W2     -> 0x0A220020
+		// Encoding: sf=0, opc=00, 01010, shift=00, N=1, Rm=2, imm6=0, Rn=1, Rd=0
+		It("should decode BIC W0, W1, W2", func() {
+			inst := decoder.Decode(0x0A220020)
+
+			Expect(inst.Op).To(Equal(insts.OpBIC))
+			Expect(inst.Is64Bit).To(BeFalse())
+			Expect(inst.SetFlags).To(BeFalse())
+		})
+
+		// ORN X3, X4, X5     -> 0xAA250083
+		// Encoding: sf=1, opc=01, 01010, shift=00, N=1, Rm=5, imm6=0, Rn=4, Rd=3
+		It("should decode ORN X3, X4, X5", func() {
+			inst := decoder.Decode(0xAA250083)
+
+			Expect(inst.Op).To(Equal(insts.OpORN))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.SetFlags).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(3)))
+			Expect(inst.Rn).To(Equal(uint8(4)))
+			Expect(inst.Rm).To(Equal(uint8(5)))
+		})
+
+		// EON X6, X7, X8     -> 0xCA2800E6
+		// Encoding: sf=1, opc=10, 01010, shift=00, N=1, Rm=8, imm6=0, Rn=7, Rd=6
+		It("should decode EON X6, X7, X8", func() {
+			inst := decoder.Decode(0xCA2800E6)
+
+			Expect(inst.Op).To(Equal(insts.OpEON))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.SetFlags).To(BeFalse())
+			Expect(inst.Rd).To(Equal(uint8(6)))
+			Expect(inst.Rn).To(Equal(uint8(7)))
+			Expect(inst.Rm).To(Equal(uint8(8)))
+		})
+
+		// BICS X9, X10, X11  -> 0xEA2B0149
+		// Encoding: sf=1, opc=11, 01010, shift=00, N=1, Rm=11, imm6=0, Rn=10, Rd=9
+		It("should decode BICS X9, X10, X11", func() {
+			inst := decoder.Decode(0xEA2B0149)
+
+			Expect(inst.Op).To(Equal(insts.OpBIC))
+			Expect(inst.Is64Bit).To(BeTrue())
+			Expect(inst.SetFlags).To(BeTrue())
+			Expect(inst.Rd).To(Equal(uint8(9)))
+			Expect(inst.Rn).To(Equal(uint8(10)))
+			Expect(inst.Rm).To(Equal(uint8(11)))
+		})
 	})
 
 	Describe("Branch Instructions", func() {

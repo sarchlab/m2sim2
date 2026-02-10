@@ -32,8 +32,12 @@ This document tracks ARM64 instructions and syscalls supported by M2Sim.
 | SUBS (reg)  | Subtract registers, set flags | ✅ | ✅ |
 | AND (reg)   | Bitwise AND | ✅ | ✅ |
 | ANDS (reg)  | Bitwise AND, set flags | ✅ | ✅ |
+| BIC (reg)   | Bitwise bit clear (AND NOT) | ✅ | ✅ |
+| BICS (reg)  | Bitwise bit clear, set flags | ✅ | ✅ |
 | ORR (reg)   | Bitwise OR | ✅ | ✅ |
+| ORN (reg)   | Bitwise OR NOT | ✅ | ✅ |
 | EOR (reg)   | Bitwise XOR | ✅ | ✅ |
+| EON (reg)   | Bitwise exclusive OR NOT | ✅ | ✅ |
 
 ### Data Processing (2 Source)
 
@@ -253,29 +257,6 @@ The emu package implements the full set of syscalls. The driver package provides
 
 ## Known Limitations
 
-### Logical Register Operations - N-bit Not Handled
-
-**Issue:** The N-bit (bit 21) in logical register instructions is not currently
-decoded. This bit controls whether the second operand (Rm) is inverted before
-the operation.
-
-**Affected Instructions:**
-- **BIC** (Bitwise Bit Clear) - decoded incorrectly as AND
-- **ORN** (Bitwise OR NOT) - decoded incorrectly as ORR
-- **EON** (Bitwise Exclusive OR NOT) - decoded incorrectly as EOR
-
-**Encoding Reference:**
-```
-Logical (shifted register): sf | opc | 01010 | shift | N | Rm | imm6 | Rn | Rd
-                                                       ^
-                                                   bit 21 (N)
-```
-
-When N=1, the Rm value should be bitwise inverted (~Rm) before the logical
-operation is applied. The current decoder ignores this bit.
-
-**Status:** Not implemented. Tracked for future work.
-
 ### Missing Test Coverage
 
 The following areas lack test coverage:
@@ -286,5 +267,5 @@ The following areas lack test coverage:
 
 ---
 
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-10*
 *Consolidated from root SUPPORTED.md and insts/SUPPORTED.md*

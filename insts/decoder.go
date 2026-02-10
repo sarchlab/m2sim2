@@ -86,6 +86,10 @@ const (
 	OpEXTR // Extract register (bitfield from register pair)
 	// System register opcodes
 	OpMRS // Move from system register
+	// Logical NOT register opcodes (N-bit = 1)
+	OpBIC // Bitwise bit clear (AND NOT): Rd = Rn & ~Rm
+	OpORN // Bitwise OR NOT: Rd = Rn | ~Rm
+	OpEON // Bitwise exclusive OR NOT: Rd = Rn ^ ~Rm
 )
 
 // Format represents an instruction encoding format.
@@ -378,21 +382,38 @@ func (d *Decoder) decodeDataProcessingReg(word uint32, inst *Instruction) {
 		}
 	} else {
 		// Logical register (op == 0b01010)
-		opc := (word >> 29) & 0x3 // bits [30:29]
+		opc := (word >> 29) & 0x3  // bits [30:29]
+		nBit := (word >> 21) & 0x1 // bit 21: invert Rm
 
 		switch opc {
 		case 0b00:
-			inst.Op = OpAND
+			if nBit == 0 {
+				inst.Op = OpAND
+			} else {
+				inst.Op = OpBIC
+			}
 			inst.SetFlags = false
 		case 0b01:
-			inst.Op = OpORR
+			if nBit == 0 {
+				inst.Op = OpORR
+			} else {
+				inst.Op = OpORN
+			}
 			inst.SetFlags = false
 		case 0b10:
-			inst.Op = OpEOR
+			if nBit == 0 {
+				inst.Op = OpEOR
+			} else {
+				inst.Op = OpEON
+			}
 			inst.SetFlags = false
 		case 0b11:
-			inst.Op = OpAND
-			inst.SetFlags = true // ANDS
+			if nBit == 0 {
+				inst.Op = OpAND
+			} else {
+				inst.Op = OpBIC
+			}
+			inst.SetFlags = true // ANDS / BICS
 		}
 	}
 }

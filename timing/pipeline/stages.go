@@ -112,7 +112,8 @@ func (s *DecodeStage) isRegWriteInst(inst *insts.Instruction) bool {
 	}
 
 	switch inst.Op {
-	case insts.OpADD, insts.OpSUB, insts.OpAND, insts.OpORR, insts.OpEOR:
+	case insts.OpADD, insts.OpSUB, insts.OpAND, insts.OpORR, insts.OpEOR,
+		insts.OpBIC, insts.OpORN, insts.OpEON:
 		return true
 	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
 		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ:
@@ -216,6 +217,12 @@ func (s *ExecuteStage) ExecuteWithFlags(idex *IDEXRegister, rnValue, rmValue uin
 		result.ALUResult = s.executeORR(inst, rnValue, rmValue)
 	case insts.OpEOR:
 		result.ALUResult = s.executeEOR(inst, rnValue, rmValue)
+	case insts.OpBIC:
+		result.ALUResult = s.executeBIC(inst, rnValue, rmValue)
+	case insts.OpORN:
+		result.ALUResult = s.executeORN(inst, rnValue, rmValue)
+	case insts.OpEON:
+		result.ALUResult = s.executeEON(inst, rnValue, rmValue)
 	case insts.OpLDR, insts.OpSTR, insts.OpLDP, insts.OpSTP,
 		insts.OpLDRB, insts.OpSTRB, insts.OpLDRSB,
 		insts.OpLDRH, insts.OpSTRH, insts.OpLDRSH:
@@ -393,6 +400,27 @@ func (s *ExecuteStage) executeEOR(inst *insts.Instruction, rnValue, rmValue uint
 		return rnValue ^ rmValue
 	}
 	return uint64(uint32(rnValue) ^ uint32(rmValue))
+}
+
+func (s *ExecuteStage) executeBIC(inst *insts.Instruction, rnValue, rmValue uint64) uint64 {
+	if inst.Is64Bit {
+		return rnValue & ^rmValue
+	}
+	return uint64(uint32(rnValue) & ^uint32(rmValue))
+}
+
+func (s *ExecuteStage) executeORN(inst *insts.Instruction, rnValue, rmValue uint64) uint64 {
+	if inst.Is64Bit {
+		return rnValue | ^rmValue
+	}
+	return uint64(uint32(rnValue) | ^uint32(rmValue))
+}
+
+func (s *ExecuteStage) executeEON(inst *insts.Instruction, rnValue, rmValue uint64) uint64 {
+	if inst.Is64Bit {
+		return rnValue ^ ^rmValue
+	}
+	return uint64(uint32(rnValue) ^ ^uint32(rmValue))
 }
 
 // computeAddFlags computes PSTATE flags for an ADD/ADDS operation without setting them.

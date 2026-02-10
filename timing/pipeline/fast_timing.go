@@ -285,6 +285,24 @@ func (ft *FastTiming) executeInstruction(inst *insts.Instruction, pc uint64) {
 			writeValue = rnValue ^ inst.Imm
 		}
 
+	case insts.OpBIC:
+		instLatency = ft.latencyTable.GetLatency(inst)
+		writeReg = inst.Rd
+		writeValue = rnValue & ^rmValue
+		if inst.SetFlags {
+			ft.updateFlagsLogical(writeValue, inst.Is64Bit)
+		}
+
+	case insts.OpORN:
+		instLatency = ft.latencyTable.GetLatency(inst)
+		writeReg = inst.Rd
+		writeValue = rnValue | ^rmValue
+
+	case insts.OpEON:
+		instLatency = ft.latencyTable.GetLatency(inst)
+		writeReg = inst.Rd
+		writeValue = rnValue ^ ^rmValue
+
 	case insts.OpRET:
 		targetAddr := ft.regFile.ReadReg(30)
 		ft.PC = targetAddr
