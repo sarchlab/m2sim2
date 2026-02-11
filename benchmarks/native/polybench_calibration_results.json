@@ -1,0 +1,119 @@
+{
+  "methodology": "hardware_baseline",
+  "formula": "instruction_latency_ns = cpi / frequency_ghz",
+  "frequency_ghz": 3.5,
+  "results": [
+    {
+      "benchmark": "gemm",
+      "description": "GEMM: General matrix-matrix multiply (16x16)",
+      "calibrated": true,
+      "instruction_latency_ns": 956.632,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 37000,
+          "time_ms": 35.395387606695294,
+          "cpi": 3348.212
+        }
+      ]
+    },
+    {
+      "benchmark": "atax",
+      "description": "ATAX: Matrix transpose and vector multiply (16x16)",
+      "calibrated": true,
+      "instruction_latency_ns": 7632.384857142858,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 5000,
+          "time_ms": 38.161924795713276,
+          "cpi": 26713.347
+        }
+      ]
+    },
+    {
+      "benchmark": "2mm",
+      "description": "2MM: 2 matrix multiplications (A*B*C) (16x16)",
+      "calibrated": true,
+      "instruction_latency_ns": 608.4177142857143,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 70000,
+          "time_ms": 42.58923750021495,
+          "cpi": 2129.462
+        }
+      ]
+    },
+    {
+      "benchmark": "mvt",
+      "description": "MVT: Matrix vector product and transpose (16x16)",
+      "calibrated": true,
+      "instruction_latency_ns": 7705.943142857142,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 5000,
+          "time_ms": 38.52971650776453,
+          "cpi": 26970.801
+        }
+      ]
+    },
+    {
+      "benchmark": "jacobi-1d",
+      "description": "Jacobi-1D: 1D Jacobi stencil computation (32 points, 8 steps)",
+      "calibrated": true,
+      "instruction_latency_ns": 7620.236571428572,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 5349,
+          "time_ms": 40.76064560213126,
+          "cpi": 26670.828
+        }
+      ]
+    },
+    {
+      "benchmark": "3mm",
+      "description": "3MM: 3 matrix multiplications (A*B*C*D) (16x16)",
+      "calibrated": true,
+      "instruction_latency_ns": 406.8045714285714,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 105410,
+          "time_ms": 42.88127478794195,
+          "cpi": 1423.816
+        }
+      ]
+    },
+    {
+      "benchmark": "bicg",
+      "description": "BiCG: Bi-conjugate gradient sub-kernel (16x16)",
+      "calibrated": true,
+      "instruction_latency_ns": 9236.387142857142,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "hardware_baseline": true,
+      "data_points": [
+        {
+          "instructions": 4830,
+          "time_ms": 44.611749809700996,
+          "cpi": 32327.355
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "methodology": "m2_hardware_baseline",
+  "formula": "instruction_latency_ns = (cpi * 1000) / frequency_ghz (3.5 GHz)",
+  "results": [
+    {
+      "benchmark": "atax",
+      "description": "PolyBench ATAX - Triangular matrix vector multiply and add",
+      "calibrated": true,
+      "instruction_latency_ns": 7632.38485714286,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 5000,
+          "time_ms": 38.16192479571327
+        }
+      ]
+    },
+    {
+      "benchmark": "bicg",
+      "description": "PolyBench BICG - BiCG sub-kernel of BiCGStab linear solver",
+      "calibrated": true,
+      "instruction_latency_ns": 9236.387428571428,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 4830,
+          "time_ms": 44.61174980970099
+        }
+      ]
+    },
+    {
+      "benchmark": "gemm",
+      "description": "PolyBench GEMM - General matrix multiply",
+      "calibrated": true,
+      "instruction_latency_ns": 956.6320000000001,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 37000,
+          "time_ms": 35.39538760669529
+        }
+      ]
+    },
+    {
+      "benchmark": "mvt",
+      "description": "PolyBench MVT - Matrix vector product and transpose",
+      "calibrated": true,
+      "instruction_latency_ns": 7706.2288571428574,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 5000,
+          "time_ms": 38.52971650776453
+        }
+      ]
+    },
+    {
+      "benchmark": "jacobi-1d",
+      "description": "PolyBench JACOBI-1D - 1-D Jacobi iterative method",
+      "calibrated": true,
+      "instruction_latency_ns": 7620.236571428572,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 5349,
+          "time_ms": 40.76064560213126
+        }
+      ]
+    },
+    {
+      "benchmark": "2mm",
+      "description": "PolyBench 2MM - 2 matrix multiplications",
+      "calibrated": true,
+      "instruction_latency_ns": 608.4177142857143,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 70000,
+          "time_ms": 42.58923750021495
+        }
+      ]
+    },
+    {
+      "benchmark": "3mm",
+      "description": "PolyBench 3MM - 3 matrix multiplications",
+      "calibrated": true,
+      "instruction_latency_ns": 406.8045714285714,
+      "overhead_ms": 0.0,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 105410,
+          "time_ms": 42.881274787941945
+        }
+      ]
+    }
+  ]
+}

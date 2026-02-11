@@ -1,0 +1,120 @@
+{
+  "methodology": "m2_hardware_baseline",
+  "formula": "instruction_latency_ns = cpi / frequency_ghz",
+  "frequency_ghz": 3.5,
+  "note": "Hardware baselines from M2 native ARM64 execution",
+  "results": [
+    {
+      "benchmark": "gemm",
+      "description": "General matrix multiply (GEMM) - compute C = AB + C",
+      "calibrated": true,
+      "instruction_latency_ns": 956.632,
+      "m2_hardware_cpi": 3348.212,
+      "instructions_per_run": 37000,
+      "avg_time_sec": 0.03539538760669529,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 37000,
+          "time_ms": 35.395387606695294
+        }
+      ]
+    },
+    {
+      "benchmark": "atax",
+      "description": "Matrix transpose and vector multiply (atax kernel)",
+      "calibrated": true,
+      "instruction_latency_ns": 7632.384857142858,
+      "m2_hardware_cpi": 26713.347,
+      "instructions_per_run": 5000,
+      "avg_time_sec": 0.03816192479571327,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 5000,
+          "time_ms": 38.161924795713276
+        }
+      ]
+    },
+    {
+      "benchmark": "2mm",
+      "description": "Two matrix multiplies (2MM) - D = A * B; E = C * D",
+      "calibrated": true,
+      "instruction_latency_ns": 608.4177142857143,
+      "m2_hardware_cpi": 2129.462,
+      "instructions_per_run": 70000,
+      "avg_time_sec": 0.04258923750021495,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 70000,
+          "time_ms": 42.58923750021495
+        }
+      ]
+    },
+    {
+      "benchmark": "mvt",
+      "description": "Matrix-vector multiply and transpose operations",
+      "calibrated": true,
+      "instruction_latency_ns": 7705.943142857142,
+      "m2_hardware_cpi": 26970.801,
+      "instructions_per_run": 5000,
+      "avg_time_sec": 0.03852971650776453,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 5000,
+          "time_ms": 38.52971650776453
+        }
+      ]
+    },
+    {
+      "benchmark": "jacobi-1d",
+      "description": "1D Jacobi iteration stencil computation",
+      "calibrated": true,
+      "instruction_latency_ns": 7620.236571428572,
+      "m2_hardware_cpi": 26670.828,
+      "instructions_per_run": 5349,
+      "avg_time_sec": 0.04076064560213126,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 5349,
+          "time_ms": 40.76064560213126
+        }
+      ]
+    },
+    {
+      "benchmark": "3mm",
+      "description": "Three matrix multiplies (3MM) - G = A * B; H = C * D; I = E * H",
+      "calibrated": true,
+      "instruction_latency_ns": 406.8045714285714,
+      "m2_hardware_cpi": 1423.816,
+      "instructions_per_run": 105410,
+      "avg_time_sec": 0.042881274787941945,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 105410,
+          "time_ms": 42.88127478794195
+        }
+      ]
+    },
+    {
+      "benchmark": "bicg",
+      "description": "BiCG kernel - Biconjugate gradient solver",
+      "calibrated": true,
+      "instruction_latency_ns": 9236.387142857142,
+      "m2_hardware_cpi": 32327.355,
+      "instructions_per_run": 4830,
+      "avg_time_sec": 0.04461174980970099,
+      "r_squared": 1.0,
+      "data_points": [
+        {
+          "instructions": 4830,
+          "time_ms": 44.611749809700996
+        }
+      ]
+    }
+  ]
+}

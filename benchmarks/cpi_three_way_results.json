@@ -2,9 +2,9 @@
   {
     "name": "arithmetic",
     "m2_cpi": 0.29579261338281376,
-    "full_pipeline_cpi": 0.22,
+    "full_pipeline_cpi": 0.27,
     "fast_timing_cpi": 1,
-    "full_error_pct": 34.451187901278985,
+    "full_error_pct": 9.552819771412498,
     "fast_error_pct": 238.07470327387912
   },
   {

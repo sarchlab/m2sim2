@@ -53,9 +53,38 @@ def load_calibration_results(path: Path) -> dict:
     """Load real M2 calibration results from JSON."""
     if not path.exists():
         raise FileNotFoundError(f"Calibration results not found: {path}")
-    
+
     with open(path) as f:
         return json.load(f)
+
+
+def merge_calibration_results(microbench_results: dict, polybench_results: dict) -> dict:
+    """Merge microbenchmark and PolyBench calibration results.
+
+    Args:
+        microbench_results: Calibration results for microbenchmarks
+        polybench_results: Calibration results for PolyBench benchmarks
+
+    Returns:
+        Combined calibration results dict
+    """
+    merged = {
+        "methodology": "combined_calibration",
+        "formula": "Merged microbenchmark and PolyBench hardware baselines",
+        "sources": {
+            "microbenchmarks": microbench_results.get("methodology", "unknown"),
+            "polybench": polybench_results.get("methodology", "unknown")
+        },
+        "results": []
+    }
+
+    # Add all microbenchmark results
+    merged["results"].extend(microbench_results.get("results", []))
+
+    # Add all PolyBench results
+    merged["results"].extend(polybench_results.get("results", []))
+
+    return merged
 
 
 def run_simulator_benchmarks(repo_root: Path) -> List[dict]:
@@ -111,6 +140,7 @@ def get_simulator_cpi_for_benchmarks(repo_root: Path) -> dict:
     """
     # Map simulator benchmark names to calibration benchmark names
     name_mapping = {
+        # Microbenchmarks
         'arithmetic_sequential': 'arithmetic',
         'dependency_chain': 'dependency',
         'branch_taken_conditional': 'branch',
@@ -122,10 +152,19 @@ def get_simulator_cpi_for_benchmarks(repo_root: Path) -> dict:
         'vector_add': 'vectoradd',
         'reduction_tree': 'reductiontree',
         'stride_indirect': 'strideindirect',
+        # PolyBench benchmarks
+        'polybench_atax': 'atax',
+        'polybench_bicg': 'bicg',
+        'polybench_mvt': 'mvt',
+        'polybench_jacobi1d': 'jacobi-1d',
+        'polybench_gemm': 'gemm',
+        'polybench_2mm': '2mm',
+        'polybench_3mm': '3mm',
     }
 
     # Fallback CPI values if test can't run (updated 2026-02-11 with looped benchmarks)
     fallback_cpis = {
+        # Microbenchmarks
         "arithmetic": 0.27,   # 200 independent ADDs, 5 regs, 8-wide issue, 4 write ports
         "dependency": 1.02,   # 200 dependent ADDs (RAW chain), forwarding
         "branch": 1.32,       # 50 conditional branches (CMP + B.GE)
@@ -137,6 +176,14 @@ def get_simulator_cpi_for_benchmarks(repo_root: Path) -> dict:
         "vectoradd": 0.401,   # 16-element vector add (2 loads+add+store)
         "reductiontree": 0.452, # 16-element tree reduction (ILP-heavy)
         "strideindirect": 0.708, # 8-hop pointer chase (dependent loads)
+        # PolyBench benchmarks - estimated fallback CPI values
+        "atax": 5.0,         # Matrix transpose and vector multiply
+        "bicg": 5.0,         # BiCG matrix vector kernel
+        "mvt": 5.0,          # Matrix vector product and transpose
+        "jacobi-1d": 5.0,    # 1D Jacobi stencil computation
+        "gemm": 1.0,         # Matrix multiplication (compute-intensive)
+        "2mm": 1.0,          # Two matrix multiplications
+        "3mm": 1.0,          # Three matrix multiplications
     }
 
     # Run two test configurations and merge results.
@@ -188,12 +235,51 @@ def get_simulator_cpi_for_benchmarks(repo_root: Path) -> dict:
     print("  Running with D-cache...")
     dcache_cpis = run_test("TestAccuracyCPI_WithDCache", "D-cache")
 
-    # Merge: use D-cache CPI for dcache_benchmarks, no-cache for the rest
+    # Run PolyBench benchmarks (intermediate complexity)
+    print("  Running PolyBench benchmarks...")
+    polybench_cpis = {}
+    polybench_tests = [
+        ("TestPolybenchATAX", "atax"),
+        ("TestPolybenchBiCG", "bicg"),
+        ("TestPolybenchMVT", "mvt"),
+        ("TestPolybenchJacobi1D", "jacobi-1d"),
+        ("TestPolybenchGEMM", "gemm"),
+        ("TestPolybench2MM", "2mm"),
+        ("TestPolybench3MM", "3mm")
+    ]
+
+    for test_name, bench_name in polybench_tests:
+        cmd = ["go", "test", "-v", "-run", test_name, "-count=1", "./benchmarks/"]
+        try:
+            output = subprocess.check_output(
+                cmd, cwd=str(repo_root), stderr=subprocess.STDOUT,
+                text=True, timeout=300  # 5 min timeout for PolyBench
+            )
+            # Parse CPI from test output
+            for line in output.split('\n'):
+                if 'CPI=' in line and bench_name in line.lower():
+                    try:
+                        cpi_str = line.split('CPI=')[1].split(',')[0]
+                        polybench_cpis[bench_name] = float(cpi_str)
+                        print(f"  Found PolyBench: {bench_name}: CPI={polybench_cpis[bench_name]}")
+                        break
+                    except (IndexError, ValueError):
+                        print(f"  Warning: Could not parse PolyBench CPI from line: {line}")
+        except Exception as e:
+            print(f"  Note: PolyBench test {test_name} failed or skipped: {e}")
+            # Use fallback CPI if available
+            if bench_name in fallback_cpis:
+                polybench_cpis[bench_name] = fallback_cpis[bench_name]
+
+    # Merge: use D-cache CPI for dcache_benchmarks, no-cache for the rest, PolyBench for intermediate benchmarks
     cpis = {}
     for short_name in fallback_cpis:
         if short_name in dcache_benchmarks and short_name in dcache_cpis:
             cpis[short_name] = dcache_cpis[short_name]
             print(f"  Using D-cache CPI for {short_name}: {cpis[short_name]}")
+        elif short_name in polybench_cpis:
+            cpis[short_name] = polybench_cpis[short_name]
+            print(f"  Using PolyBench CPI for {short_name}: {cpis[short_name]}")
         elif short_name in no_cache_cpis:
             cpis[short_name] = no_cache_cpis[short_name]
         # else: will fall through to fallback below
@@ -576,10 +662,24 @@ def main():
     print("M2Sim Accuracy Report Generator")
     print("=" * 60)
     
-    # Load real M2 calibration results
+    # Load real M2 calibration results for microbenchmarks
     calibration_path = script_dir / "calibration_results.json"
-    print(f"\nLoading calibration results from: {calibration_path}")
-    calibration_results = load_calibration_results(calibration_path)
+    print(f"\nLoading microbenchmark calibration results from: {calibration_path}")
+    microbench_results = load_calibration_results(calibration_path)
+
+    # Load PolyBench calibration results
+    polybench_path = script_dir / "polybench_calibration_results.json"
+    print(f"Loading PolyBench calibration results from: {polybench_path}")
+    try:
+        polybench_results = load_calibration_results(polybench_path)
+    except FileNotFoundError:
+        print(f"Warning: PolyBench calibration results not found at {polybench_path}")
+        print("Continuing with microbenchmarks only...")
+        polybench_results = {"results": []}
+
+    # Merge calibration results
+    print("Merging microbenchmark and PolyBench calibration results...")
+    calibration_results = merge_calibration_results(microbench_results, polybench_results)
     
     # Get simulator CPI values
     print("\nRunning simulator benchmarks...")

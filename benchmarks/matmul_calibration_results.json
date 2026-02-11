@@ -2,7 +2,7 @@
   "benchmark": "matmul_4x4",
   "mode": "fast_timing",
   "instructions": 1189,
-  "cycles": 1621,
-  "cpi": 1.3633305298570226,
+  "cycles": 2037,
+  "cpi": 1.7132043734230447,
   "exit_code": 136
 }
