@@ -358,6 +358,8 @@ func (c *Cache) Flush() {
 func (c *Cache) Reset() {
 	c.directory.Reset()
 	c.stats = Statistics{}
+	c.recentStoreValid = false
+	c.recentStoreAddr = 0
 }
 
 // extractData extracts a value of the given size from a byte slice.

@@ -551,7 +551,7 @@ func memoryStrided() Benchmark {
 		},
 		Program: BuildProgram(
 			// 5 chains of STR X0 → LDR X2 → ADD X0, X2, #1
-			// Matches native: str x0,[sp,#off]; ldr x1,[sp,#off]; add x0,x1,#1
+			// Matches native: str x0,[sp,#off]; ldr x2,[sp,#off]; add x0,x2,#1
 			EncodeSTR64(0, 1, 0), EncodeLDR64(2, 1, 0), EncodeADDImm(0, 2, 1, false),
 			EncodeSTR64(0, 1, 4), EncodeLDR64(2, 1, 4), EncodeADDImm(0, 2, 1, false),
 			EncodeSTR64(0, 1, 8), EncodeLDR64(2, 1, 8), EncodeADDImm(0, 2, 1, false),
