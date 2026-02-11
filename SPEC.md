@@ -7,7 +7,7 @@ Build a cycle-accurate Apple M2 CPU simulator using the Akita simulation framewo
 ## Success Criteria
 
 - [x] Execute ARM64 user-space programs correctly (functional emulation)
-- [x] Predict execution time with <20% average error across benchmarks (13.3% achieved on microbenchmarks, intermediate benchmark accuracy pending)
+- [ ] Predict execution time with <20% average error across benchmarks (13.3% achieved on microbenchmarks only, intermediate benchmark accuracy NOT validated)
 - [ ] Modular design: functional and timing simulation are separate
 - [ ] Support benchmarks in μs to ms range
 
@@ -41,7 +41,7 @@ While M2Sim uses Akita (like MGPUSim) and draws inspiration from MGPUSim's archi
 | H2 | SPEC benchmark enablement (syscalls, ELF loading, validation) | ✅ COMPLETE |
 | H3 | Accuracy calibration (<20% error on microbenchmarks) | ✅ COMPLETE (14.1%) |
 | H4 | Multi-core support | ⬜ NOT STARTED |
-| H5 | 15+ Intermediate Benchmarks (<20% average error) | 🚧 IN PROGRESS |
+| H5 | 15+ Intermediate Benchmarks (<20% average error) | ⚠️ SCOPE CORRECTION REQUIRED |
 
 ---
 
@@ -262,7 +262,7 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 - Maintain sub-20% accuracy targets for multi-core workloads
 - Ensure compatibility with existing single-core benchmark and calibration infrastructure
 
-**Strategic Prerequisites:** H5 completion required before H4 transition. Current 13.3% accuracy applies to microbenchmarks only; intermediate benchmark accuracy validation needed to complete H5 milestone properly.
+**STRATEGIC PREREQUISITES (CRITICAL):** H5 completion REQUIRED before H4 transition. Current 13.3% accuracy applies to microbenchmarks ONLY; intermediate benchmark accuracy validation is MANDATORY to complete H5 milestone properly. H4 planning is PREMATURE without validated H5 achievement.
 
 ---
 
@@ -270,13 +270,14 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 **Goal (Issue #433):** Achieve <20% average error across 15+ intermediate benchmarks from PolyBench, EmBench, and SPEC suites.
 
-**Status Clarification (February 11, 2026):** Human feedback (Issue #455) identified critical scope limitation in accuracy claims.
+**CRITICAL STATUS CORRECTION (February 11, 2026):** Human feedback (Issues #455, #458) identified fundamental milestone misrepresentation.
 
-**Current Status:**
-- **Benchmark Count:** 14+ operational benchmarks (7 microbenchmarks + 7 PolyBench)
-- **Accuracy Status:** 13.3% average error on **microbenchmarks only** (NOT intermediate benchmarks)
-- **Key Gap:** PolyBench and intermediate benchmarks are **not yet accuracy-calibrated**
-- **Goal Status:** Benchmark count achieved, but accuracy validation on intermediate complexity pending
+**ACCURACY SCOPE CRISIS:**
+- **13.3% Error Scope:** ONLY 7 microbenchmarks (arithmetic, dependency, branch, memory patterns)
+- **Intermediate Benchmark Accuracy:** COMPLETELY UNVALIDATED
+- **PolyBench Status:** 7 benchmarks operational but ZERO accuracy calibration
+- **H5 Milestone Reality:** Benchmark count achieved, accuracy validation INCOMPLETE
+- **Strategic Impact:** H4 multi-core planning premature without H5 completion
 
 #### H5.1: PolyBench Integration ✅ COMPLETE
 
@@ -296,7 +297,7 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 **Important:** This 13.3% accuracy applies only to microbenchmarks, **NOT** to intermediate benchmarks.
 
-#### H5.3: Intermediate Benchmark Calibration ⬜ NOT STARTED
+#### H5.3: Intermediate Benchmark Calibration ⚠️ CRITICAL PRIORITY
 
 **Remaining Work:** Accuracy calibration of intermediate benchmarks
 - **PolyBench Suite:** 7 benchmarks operational but **NOT accuracy-calibrated**
