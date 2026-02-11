@@ -182,6 +182,36 @@ func (s *ExecuteStage) ExecuteWithFlags(idex *IDEXRegister, rnValue, rmValue uin
 
 	inst := idex.Inst
 
+	// Apply shift to Rm for data-processing register instructions.
+	// This mirrors the emulator's applyShift64/applyShift32 in executeDPReg.
+	if inst.Format == insts.FormatDPReg && inst.ShiftAmount > 0 {
+		if inst.Is64Bit {
+			switch inst.ShiftType {
+			case insts.ShiftLSL:
+				rmValue = rmValue << inst.ShiftAmount
+			case insts.ShiftLSR:
+				rmValue = rmValue >> inst.ShiftAmount
+			case insts.ShiftASR:
+				rmValue = uint64(int64(rmValue) >> inst.ShiftAmount)
+			case insts.ShiftROR:
+				rmValue = (rmValue >> inst.ShiftAmount) | (rmValue << (64 - inst.ShiftAmount))
+			}
+		} else {
+			rm32 := uint32(rmValue)
+			switch inst.ShiftType {
+			case insts.ShiftLSL:
+				rm32 = rm32 << inst.ShiftAmount
+			case insts.ShiftLSR:
+				rm32 = rm32 >> inst.ShiftAmount
+			case insts.ShiftASR:
+				rm32 = uint32(int32(rm32) >> inst.ShiftAmount)
+			case insts.ShiftROR:
+				rm32 = (rm32 >> inst.ShiftAmount) | (rm32 << (32 - inst.ShiftAmount))
+			}
+			rmValue = uint64(rm32)
+		}
+	}
+
 	switch inst.Op {
 	case insts.OpADD:
 		result.ALUResult = s.executeADD(inst, rnValue, rmValue)

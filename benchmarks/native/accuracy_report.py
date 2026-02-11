@@ -244,9 +244,9 @@ def compare_benchmarks(
         'storeheavy': (20, 23),      # cal: 20 stores counted; sim: 20 + 3 loop overhead = 23
         'vectorsum': (100, 96),      # cal: 4 setup + 96 inner = 100; sim: 6×16 = 96
         'vectoradd': (165, 162),     # cal: 5 setup + 160 inner = 165; sim: 10×16+2 = 162
-        'strideindirect': (50, 65),  # cal: 2 setup + 6×8 = 50; sim: 8×8+1 = 65
-        # Note: strideindirect sim uses 3 ADDs to shift vs 1 LSL in native calibration,
-        # so 8 insts/hop (sim) vs 6 insts/hop (native). High error expected.
+        'strideindirect': (50, 49),  # cal: 2 setup + 6×8 = 50; sim: 6×8+1 = 49
+        # Note: strideindirect sim now uses ADD+LSL shifted register (1 instr) matching
+        # native's LSL, so 6 insts/hop in both sim and native.
         # reductiontree: no adjustment needed (31 flat insts in both sim and calib)
     }
 

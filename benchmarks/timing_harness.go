@@ -447,6 +447,25 @@ func EncodeADDReg(rd, rn, rm uint8, setFlags bool) uint32 {
 	return inst
 }
 
+// EncodeADDRegShifted encodes ADD/ADDS with shifted register: Rd = Rn + (Rm << shift)
+// shiftType: 0=LSL, 1=LSR, 2=ASR
+func EncodeADDRegShifted(rd, rn, rm, shift, shiftType uint8, setFlags bool) uint32 {
+	var inst uint32 = 0
+	inst |= 1 << 31 // sf = 1 (64-bit)
+	inst |= 0 << 30 // op = 0 (ADD)
+	if setFlags {
+		inst |= 1 << 29 // S = 1 (set flags)
+	}
+	inst |= 0b01011 << 24
+	inst |= uint32(shiftType&0x3) << 22
+	inst |= 0 << 21 // 0
+	inst |= uint32(rm&0x1F) << 16
+	inst |= uint32(shift&0x3F) << 10 // imm6 = shift amount
+	inst |= uint32(rn&0x1F) << 5
+	inst |= uint32(rd & 0x1F)
+	return inst
+}
+
 // EncodeSUBReg encodes SUB/SUBS register: Rd = Rn - Rm
 func EncodeSUBReg(rd, rn, rm uint8, setFlags bool) uint32 {
 	var inst uint32 = 0
