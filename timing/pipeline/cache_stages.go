@@ -95,6 +95,10 @@ type CachedMemoryStage struct {
 	latency     uint64     // Remaining latency cycles
 	result      *memResult // Cached result while waiting
 	isHit       bool       // True if pending is for a hit (for stats)
+
+	storeIssuedPC   uint64 // PC of last fire-and-forget store issued
+	storeIssuedAddr uint64 // Address of last fire-and-forget store issued
+	storeIssued     bool   // True if store already written to cache for current (PC, addr)
 }
 
 type memResult struct {
@@ -179,22 +183,20 @@ func (s *CachedMemoryStage) Access(exmem *EXMEMRegister) (MemoryResult, bool) {
 	}
 
 	if exmem.MemWrite {
-		// Store through D-cache
-		cacheResult := s.cache.Write(addr, size, exmem.StoreValue)
-
-		// Both hits and misses have latency - set up pending state
-		s.pending = true
-		s.pendingPC = exmem.PC
-		s.pendingAddr = addr
-		s.latency = cacheResult.Latency - 1
-		s.result = nil
-		s.isHit = cacheResult.Hit
-
-		if s.latency > 0 {
-			return result, true // Stall for remaining latency
+		// Store through D-cache — fire-and-forget to the store buffer.
+		// The cache is updated immediately (write-allocate) by this call,
+		// and the pipeline does not stall. In real M2 hardware, a deep
+		// store queue absorbs store latency to lower memory levels, so
+		// the architectural effect of the store appears asynchronous.
+		//
+		// Idempotency: when another port's stall replays this cycle,
+		// skip the duplicate cache.Write to avoid inflating stats.
+		if !s.storeIssued || s.storeIssuedPC != exmem.PC || s.storeIssuedAddr != addr {
+			s.cache.Write(addr, size, exmem.StoreValue)
+			s.storeIssued = true
+			s.storeIssuedPC = exmem.PC
+			s.storeIssuedAddr = addr
 		}
-
-		// Single-cycle latency
 		s.pending = false
 		return result, false
 	}
@@ -261,16 +263,13 @@ func (s *CachedMemoryStage) AccessSlot(slot MemorySlot) (MemoryResult, bool) {
 	}
 
 	if slot.GetMemWrite() {
-		cacheResult := s.cache.Write(addr, size, slot.GetStoreValue())
-		s.pending = true
-		s.pendingPC = pc
-		s.pendingAddr = addr
-		s.latency = cacheResult.Latency - 1
-		s.result = nil
-		s.isHit = cacheResult.Hit
-
-		if s.latency > 0 {
-			return result, true
+		// Store through D-cache — fire-and-forget to store buffer.
+		// Idempotency guard: skip duplicate writes on stall replays.
+		if !s.storeIssued || s.storeIssuedPC != pc || s.storeIssuedAddr != addr {
+			s.cache.Write(addr, size, slot.GetStoreValue())
+			s.storeIssued = true
+			s.storeIssuedPC = pc
+			s.storeIssuedAddr = addr
 		}
 		s.pending = false
 		return result, false
@@ -285,6 +284,7 @@ func (s *CachedMemoryStage) Reset() {
 	s.latency = 0
 	s.result = nil
 	s.isHit = false
+	s.storeIssued = false
 }
 
 // CacheStats returns the underlying cache statistics.
