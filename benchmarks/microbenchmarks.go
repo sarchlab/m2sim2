@@ -1083,8 +1083,8 @@ func strideIndirect() Benchmark {
 }
 
 func buildStrideIndirect(n int) []byte {
-	// loop body:
-	//   X5 = X2 * 8 (shift left by 3 for 8-byte elements) — use ADD X5, X2, X2 three times
+	// loop body (6 instructions per hop, matching native LSL encoding):
+	//   X5 = X2 << 3 (shift left by 3 for 8-byte elements) — ADD X5, XZR, X2, LSL #3
 	//   X5 = X1 + X5 (compute address)
 	//   X2 = [X5] (load next offset, encoded as LDR X2, [X5, #0])
 	//   X3++ (hop count)
@@ -1092,14 +1092,12 @@ func buildStrideIndirect(n int) []byte {
 	//   B.LT loop
 	instrs := []uint32{
 		// loop:
-		EncodeADDReg(5, 2, 2, false), // X5 = X2 * 2
-		EncodeADDReg(5, 5, 5, false), // X5 = X2 * 4
-		EncodeADDReg(5, 5, 5, false), // X5 = X2 * 8
-		EncodeADDReg(5, 1, 5, false), // X5 = base + offset*8
-		EncodeLDR64(2, 5, 0),         // X2 = [X5] (next index)
-		EncodeADDImm(3, 3, 1, false), // X3++ (hop count)
-		EncodeCMPReg(3, 4),           // CMP X3, N
-		EncodeBCond(-28, 11),         // B.LT loop (-28 bytes = -7 instructions)
+		EncodeADDRegShifted(5, 31, 2, 3, 0, false), // X5 = XZR + (X2 << 3) = X2 * 8
+		EncodeADDReg(5, 1, 5, false),               // X5 = base + offset*8
+		EncodeLDR64(2, 5, 0),                       // X2 = [X5] (next index)
+		EncodeADDImm(3, 3, 1, false),               // X3++ (hop count)
+		EncodeCMPReg(3, 4),                         // CMP X3, N
+		EncodeBCond(-20, 11),                       // B.LT loop (-20 bytes = -5 instructions)
 		// exit:
 		EncodeADDReg(0, 3, 31, false), // X0 = X3 (hop count), XZR add
 	}

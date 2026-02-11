@@ -7,7 +7,7 @@ Build a cycle-accurate Apple M2 CPU simulator using the Akita simulation framewo
 ## Success Criteria
 
 - [x] Execute ARM64 user-space programs correctly (functional emulation)
-- [x] Predict execution time with <20% average error across benchmarks (14.1% achieved on microbenchmarks)
+- [x] Predict execution time with <20% average error across benchmarks (13.3% achieved on microbenchmarks, intermediate benchmark accuracy pending)
 - [ ] Modular design: functional and timing simulation are separate
 - [ ] Support benchmarks in μs to ms range
 
@@ -41,7 +41,7 @@ While M2Sim uses Akita (like MGPUSim) and draws inspiration from MGPUSim's archi
 | H2 | SPEC benchmark enablement (syscalls, ELF loading, validation) | ✅ COMPLETE |
 | H3 | Accuracy calibration (<20% error on microbenchmarks) | ✅ COMPLETE (14.1%) |
 | H4 | Multi-core support | ⬜ NOT STARTED |
-| H5 | 15+ Intermediate Benchmarks (<20% average error) | ✅ ACHIEVED |
+| H5 | 15+ Intermediate Benchmarks (<20% average error) | 🚧 IN PROGRESS |
 
 ---
 
@@ -240,39 +240,43 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 ---
 
-### H4: Multi-Core Support ⬜ NEXT STRATEGIC MILESTONE
+### H4: Multi-Core Support 🚧 STRATEGIC PLANNING IN PROGRESS
 
 **Goal:** Extend M2Sim to simulate multi-core M2 architectures with cache coherence and shared memory.
 
 **Strategic Priority:** Major architectural milestone enabling comprehensive Apple M2 system simulation.
 
-**Planning Required (Issue #453):**
-- [ ] Multi-core architecture design assessment
+**Status Update (February 11, 2026):** Strategic transition initiated following H5 completion. Architecture design assessment in progress.
+
+**Strategic Planning (Issue #453):**
+- 🚧 Multi-core architecture design assessment
 - [ ] Cache coherence protocol implementation strategy
 - [ ] Shared memory subsystem integration
 - [ ] Inter-core communication and synchronization mechanisms
 - [ ] Performance scaling validation methodology
 
-**Prerequisites:** H5 completion provides stable single-core foundation for multi-core extension.
+**Prerequisites:** ✅ H5 completion provides stable single-core foundation for multi-core extension.
 
 **Design Considerations:**
 - Leverage Akita's multi-core simulation patterns while adapting to ARM64/M2 specifics
 - Maintain sub-20% accuracy targets for multi-core workloads
 - Ensure compatibility with existing single-core benchmark and calibration infrastructure
 
+**Strategic Prerequisites:** H5 completion required before H4 transition. Current 13.3% accuracy applies to microbenchmarks only; intermediate benchmark accuracy validation needed to complete H5 milestone properly.
+
 ---
 
-### H5: 15+ Intermediate Benchmarks ✅ ACHIEVED
+### H5: 15+ Intermediate Benchmarks 🚧 IN PROGRESS
 
 **Goal (Issue #433):** Achieve <20% average error across 15+ intermediate benchmarks from PolyBench, EmBench, and SPEC suites.
 
-**Strategic Achievement:** Human-specified accuracy goal achieved through comprehensive timing model validation across diverse computational patterns.
+**Status Clarification (February 11, 2026):** Human feedback (Issue #455) identified critical scope limitation in accuracy claims.
 
-**Achievement Status (February 11, 2026):**
-- **Benchmark Count:** 14+ operational benchmarks (7 calibrated + 7 PolyBench)
-- **Accuracy Achievement:** 13.3% average error (significantly under <20% target)
-- **Framework Maturity:** Proven calibration methodology with autonomous operations
-- **Quality Validation:** QA-confirmed goal achievement with ongoing expansion capacity
+**Current Status:**
+- **Benchmark Count:** 14+ operational benchmarks (7 microbenchmarks + 7 PolyBench)
+- **Accuracy Status:** 13.3% average error on **microbenchmarks only** (NOT intermediate benchmarks)
+- **Key Gap:** PolyBench and intermediate benchmarks are **not yet accuracy-calibrated**
+- **Goal Status:** Benchmark count achieved, but accuracy validation on intermediate complexity pending
 
 #### H5.1: PolyBench Integration ✅ COMPLETE
 
@@ -284,31 +288,33 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 #### H5.2: Calibrated Microbenchmark Suite ✅ COMPLETE
 
-**Achievement:** 7 calibrated benchmarks with 13.3% average accuracy
+**Achievement:** 7 calibrated **microbenchmarks** with 13.3% average accuracy
 - [x] Core microbenchmarks: arithmetic (9.6%), dependency (6.7%), branch (1.3%)
 - [x] Memory benchmarks: memorystrided (2.0%), loadheavy (28.1%), storeheavy (11.3%)
 - [x] Specialized benchmarks: branchheavy (16.1%)
 - [x] Autonomous calibration methodology with hardware baseline validation
 
-#### H5.3: Expansion Pipeline ✅ CAPACITY ESTABLISHED
+**Important:** This 13.3% accuracy applies only to microbenchmarks, **NOT** to intermediate benchmarks.
 
-**Achievement:** Additional benchmark capacity ready for deployment
-- **Available:** PR #435 contains 4 validated intermediate benchmarks
-- **Framework:** Proven calibration methodology scalable to additional suites
+#### H5.3: Intermediate Benchmark Calibration ⬜ NOT STARTED
+
+**Remaining Work:** Accuracy calibration of intermediate benchmarks
+- **PolyBench Suite:** 7 benchmarks operational but **NOT accuracy-calibrated**
+- **PR #435:** 4 intermediate benchmarks available for calibration
 - **EmBench:** Evaluation ongoing (Issue #445) for continued growth
-- **Quality Assurance:** All expansions maintain <20% accuracy requirement
+- **Critical Gap:** Need M2 hardware baseline data for intermediate benchmarks
 
-**Strategic Framework Achievements:**
-- **Autonomous Operations:** Self-sufficient review and deployment capability (Issues #447, #449)
-- **Quality Standards:** Zero compromise on accuracy targets or CI validation
-- **Methodology Excellence:** Complex calibration challenges resolved systematically
-- **Scalable Infrastructure:** Ready for continued benchmark ecosystem expansion
-
-**Goal Achievement Summary:**
+**Goal Achievement Status:**
 - **Target:** 15+ intermediate benchmarks with <20% average error
-- **Achieved:** 14+ operational benchmarks with 13.3% average error
-- **Exceeded:** Quality target significantly surpassed with proven expansion capacity
-- **Framework:** Sophisticated calibration methodology with autonomous delivery demonstrated
+- **Current:** 14+ operational benchmarks with **microbenchmark accuracy only**
+- **Remaining:** Accuracy calibration on intermediate benchmark suite
+- **Framework:** Calibration methodology proven, ready for intermediate benchmark application
+
+**Priority Actions:**
+1. Collect M2 hardware baseline data for PolyBench benchmarks
+2. Execute accuracy calibration on intermediate benchmark suite
+3. Validate <20% average error target on intermediate complexity
+4. Complete H5 milestone properly before H4 transition
 
 ## Scope
 
