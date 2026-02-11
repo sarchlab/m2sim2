@@ -666,6 +666,10 @@ func buildMemoryRandomAccess(numPairs int) []byte {
 
 // 10. Load Heavy - Instruction mix dominated by loads
 // Tests load unit throughput and memory subsystem pressure.
+// Runs in a 10-iteration loop to amortize pipeline startup/drain,
+// matching native calibration methodology. Each iteration:
+// 20 LDR + 3-instruction loop overhead, instructions_per_iter=23.
+// Total retired: 10*23 = 230 instructions (SVC terminates, not retired).
 func loadHeavy() Benchmark {
 	return Benchmark{
 		Name:        "load_heavy",
@@ -673,14 +677,15 @@ func loadHeavy() Benchmark {
 		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
 			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
 			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(21, 10)    // X21 = loop counter (10 iterations)
 			// Pre-fill memory with known values
 			for i := uint64(0); i < 20; i++ {
 				memory.Write64(0x8000+i*8, i+1)
 			}
 		},
 		Program: BuildProgram(
-			// 20 loads to independent registers (no RAW hazards between loads)
-			EncodeLDR64(0, 1, 0),
+			// loop: 20 loads to distinct registers (no WAW/RAW hazards)
+			EncodeLDR64(22, 1, 0),
 			EncodeLDR64(2, 1, 1),
 			EncodeLDR64(3, 1, 2),
 			EncodeLDR64(4, 1, 3),
@@ -699,7 +704,10 @@ func loadHeavy() Benchmark {
 			EncodeLDR64(18, 1, 16),
 			EncodeLDR64(19, 1, 17),
 			EncodeLDR64(20, 1, 18),
-			EncodeLDR64(0, 1, 19), // X0 = last value (20) for exit code
+			EncodeLDR64(0, 1, 19),          // X0 = 20 (exit code after last iter)
+			EncodeSUBImm(21, 21, 1, false), // X21 = X21 - 1
+			EncodeCMPImm(21, 0),            // CMP X21, #0
+			EncodeBCond(-88, 1),            // B.NE loop (-88 = -22 instructions * 4)
 			EncodeSVC(0),
 		),
 		ExpectedExit: 20,
@@ -708,6 +716,10 @@ func loadHeavy() Benchmark {
 
 // 11. Store Heavy - Instruction mix dominated by stores
 // Tests store unit throughput and write buffer behavior.
+// Runs in a 10-iteration loop to amortize pipeline startup/drain,
+// matching native calibration methodology. Each iteration:
+// 20 STR + 3-instruction loop overhead, instructions_per_iter=23.
+// Total retired: 10*23 = 230 instructions (SVC terminates, not retired).
 func storeHeavy() Benchmark {
 	return Benchmark{
 		Name:        "store_heavy",
@@ -717,9 +729,10 @@ func storeHeavy() Benchmark {
 			regFile.WriteReg(0, 3)      // X0 = exit code (also stored)
 			regFile.WriteReg(1, 0x8000) // X1 = base address
 			regFile.WriteReg(2, 99)     // X2 = value to store
+			regFile.WriteReg(21, 10)    // X21 = loop counter (10 iterations)
 		},
 		Program: BuildProgram(
-			// 20 stores to sequential addresses (no data dependencies)
+			// loop: 20 stores to sequential addresses (no data dependencies)
 			EncodeSTR64(2, 1, 0),
 			EncodeSTR64(2, 1, 1),
 			EncodeSTR64(2, 1, 2),
@@ -740,6 +753,9 @@ func storeHeavy() Benchmark {
 			EncodeSTR64(2, 1, 17),
 			EncodeSTR64(2, 1, 18),
 			EncodeSTR64(2, 1, 19),
+			EncodeSUBImm(21, 21, 1, false), // X21 = X21 - 1
+			EncodeCMPImm(21, 0),            // CMP X21, #0
+			EncodeBCond(-88, 1),            // B.NE loop (-88 = -22 instructions * 4)
 			EncodeSVC(0),
 		),
 		ExpectedExit: 3,

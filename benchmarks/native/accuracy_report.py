@@ -120,17 +120,14 @@ def get_simulator_cpi_for_benchmarks(repo_root: Path) -> dict:
         'branch_heavy': 'branchheavy',
     }
 
-    # Fallback CPI values if test can't run (updated 2026-02-11)
-    # memorystrided uses D-cache CPI (store-to-load forwarding dominates).
-    # loadheavy/storeheavy use no-cache CPI (straight-line, cold misses
-    # would dominate with D-cache, unlike native loop-based benchmarks).
+    # Fallback CPI values if test can't run (updated 2026-02-11 with looped benchmarks)
     fallback_cpis = {
         "arithmetic": 0.27,   # 200 independent ADDs, 5 regs, 8-wide issue, 4 write ports
         "dependency": 1.02,   # 200 dependent ADDs (RAW chain), forwarding
         "branch": 1.32,       # 50 conditional branches (CMP + B.GE)
         "memorystrided": 2.7, # 10 store/load pairs, strided access
-        "loadheavy": 0.55,    # 20 sequential loads, 3 mem ports
-        "storeheavy": 0.55,   # 20 sequential stores, fire-and-forget
+        "loadheavy": 0.361,   # 20 loads in 10-iter loop, 3 mem ports
+        "storeheavy": 0.361,  # 20 stores in 10-iter loop, fire-and-forget
         "branchheavy": 0.829, # 10 alternating taken/not-taken branches
     }
 
@@ -225,7 +222,16 @@ def compare_benchmarks(
         List of benchmark comparisons
     """
     comparisons = []
-    
+
+    # Benchmarks where calibration counts only core instructions per iteration,
+    # but simulator CPI is over ALL retired instructions including loop overhead.
+    # SVC is NOT retired (terminates pipeline), so total = 10 iters * 23 = 230.
+    # Map: benchmark -> (core_insts_per_iter, total_insts_per_iter)
+    loop_overhead_adjustment = {
+        'loadheavy': (20, 23),   # 20 loads + 3-instruction loop overhead
+        'storeheavy': (20, 23),  # 20 stores + 3-instruction loop overhead
+    }
+
     for result in calibration_results.get('results', []):
         bench_name = result['benchmark']
 
@@ -236,6 +242,13 @@ def compare_benchmarks(
         real_latency_ns = result['instruction_latency_ns']
         real_r_squared = result['r_squared']
         calibrated = result.get('calibrated', True)
+
+        # Adjust real latency for loop overhead: calibration counts only core
+        # instructions, but simulator counts all instructions including loop
+        # overhead. Scale real latency to per-all-instruction basis.
+        if bench_name in loop_overhead_adjustment:
+            core, total = loop_overhead_adjustment[bench_name]
+            real_latency_ns = real_latency_ns * core / total
 
         sim_cpi = simulator_cpis[bench_name]
         # Convert CPI to latency: latency_ns = CPI / frequency_GHz
