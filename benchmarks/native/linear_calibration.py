@@ -435,19 +435,370 @@ _main:
     svc #0x80
 """
     },
+    "vectorsum": {
+        "description": "16-element array sum loop per iteration (load+accumulate)",
+        "instructions_per_iter": 100,  # 4 setup + 16 inner iters * 6 insts/inner iter = 100
+        "template": """
+// vectorsum_calibration.s - Generated for {iterations} outer iterations
+// Inner loop: 16 loads + accumulates (6 insts * 16 = 96 inner + 4 setup = 100)
+.global _main
+.align 4
+
+_main:
+    // Allocate array on stack (16 * 8 = 128 bytes, 256 with alignment padding)
+    sub sp, sp, #256
+
+    // Initialize array: A[i] = i + 1
+    mov x0, #1
+    str x0, [sp, #0]
+    mov x0, #2
+    str x0, [sp, #8]
+    mov x0, #3
+    str x0, [sp, #16]
+    mov x0, #4
+    str x0, [sp, #24]
+    mov x0, #5
+    str x0, [sp, #32]
+    mov x0, #6
+    str x0, [sp, #40]
+    mov x0, #7
+    str x0, [sp, #48]
+    mov x0, #8
+    str x0, [sp, #56]
+    mov x0, #9
+    str x0, [sp, #64]
+    mov x0, #10
+    str x0, [sp, #72]
+    mov x0, #11
+    str x0, [sp, #80]
+    mov x0, #12
+    str x0, [sp, #88]
+    mov x0, #13
+    str x0, [sp, #96]
+    mov x0, #14
+    str x0, [sp, #104]
+    mov x0, #15
+    str x0, [sp, #112]
+    mov x0, #16
+    str x0, [sp, #120]
+
+    mov x10, #0              // outer iteration counter
+{load_iterations}
+
+.outer_loop:
+    // Setup (4 insts)
+    mov x0, #0              // sum = 0
+    mov x1, sp              // array pointer
+    mov x2, #0              // i = 0
+    mov x3, #16             // N = 16
+
+.inner_loop:
+    // Inner loop body (6 insts * 16 iters = 96)
+    ldr x4, [x1]            // load A[i]
+    add x0, x0, x4          // sum += A[i]
+    add x1, x1, #8          // ptr += 8
+    add x2, x2, #1          // i++
+    cmp x2, x3              // i < N?
+    b.lt .inner_loop
+
+    add x10, x10, #1
+    cmp x10, x11
+    b.lt .outer_loop
+
+    add sp, sp, #256
+    mov x0, #0
+    mov x16, #1
+    svc #0x80
+"""
+    },
+    "vectoradd": {
+        "description": "16-element vector add loop per iteration (2 loads+add+store)",
+        "instructions_per_iter": 165,  # 5 setup + 16 inner iters * 10 insts/inner iter = 165
+        "template": """
+// vectoradd_calibration.s - Generated for {iterations} outer iterations
+// Inner loop: C[i]=A[i]+B[i] (10 insts * 16 = 160 inner + 5 setup = 165)
+.global _main
+.align 4
+
+_main:
+    // Allocate 3 arrays: A, B, C (each 128 bytes = 16*8 = 384, 512 with padding)
+    sub sp, sp, #512
+
+    // Initialize A[i] = i + 1
+    mov x0, #1
+    str x0, [sp, #0]
+    mov x0, #2
+    str x0, [sp, #8]
+    mov x0, #3
+    str x0, [sp, #16]
+    mov x0, #4
+    str x0, [sp, #24]
+    mov x0, #5
+    str x0, [sp, #32]
+    mov x0, #6
+    str x0, [sp, #40]
+    mov x0, #7
+    str x0, [sp, #48]
+    mov x0, #8
+    str x0, [sp, #56]
+    mov x0, #9
+    str x0, [sp, #64]
+    mov x0, #10
+    str x0, [sp, #72]
+    mov x0, #11
+    str x0, [sp, #80]
+    mov x0, #12
+    str x0, [sp, #88]
+    mov x0, #13
+    str x0, [sp, #96]
+    mov x0, #14
+    str x0, [sp, #104]
+    mov x0, #15
+    str x0, [sp, #112]
+    mov x0, #16
+    str x0, [sp, #120]
+
+    // Initialize B[i] = 2*(i+1)
+    mov x0, #2
+    str x0, [sp, #128]
+    mov x0, #4
+    str x0, [sp, #136]
+    mov x0, #6
+    str x0, [sp, #144]
+    mov x0, #8
+    str x0, [sp, #152]
+    mov x0, #10
+    str x0, [sp, #160]
+    mov x0, #12
+    str x0, [sp, #168]
+    mov x0, #14
+    str x0, [sp, #176]
+    mov x0, #16
+    str x0, [sp, #184]
+    mov x0, #18
+    str x0, [sp, #192]
+    mov x0, #20
+    str x0, [sp, #200]
+    mov x0, #22
+    str x0, [sp, #208]
+    mov x0, #24
+    str x0, [sp, #216]
+    mov x0, #26
+    str x0, [sp, #224]
+    mov x0, #28
+    str x0, [sp, #232]
+    mov x0, #30
+    str x0, [sp, #240]
+    mov x0, #32
+    str x0, [sp, #248]
+
+    mov x10, #0              // outer iteration counter
+{load_iterations}
+
+.outer_loop:
+    // Setup (5 insts)
+    add x1, sp, #0          // A ptr
+    add x2, sp, #128        // B ptr
+    add x3, sp, #256        // C ptr
+    mov x4, #0              // i = 0
+    mov x5, #16             // N = 16
+
+.inner_loop:
+    // Inner loop body (10 insts * 16 iters = 160)
+    ldr x6, [x1]            // load A[i]
+    ldr x7, [x2]            // load B[i]
+    add x9, x6, x7          // A[i] + B[i]
+    str x9, [x3]            // store C[i]
+    add x1, x1, #8          // A ptr++
+    add x2, x2, #8          // B ptr++
+    add x3, x3, #8          // C ptr++
+    add x4, x4, #1          // i++
+    cmp x4, x5              // i < N?
+    b.lt .inner_loop
+
+    add x10, x10, #1
+    cmp x10, x11
+    b.lt .outer_loop
+
+    add sp, sp, #512
+    mov x0, #0
+    mov x16, #1
+    svc #0x80
+"""
+    },
+    "reductiontree": {
+        "description": "16-element parallel reduction tree per iteration (16 loads + 15 adds)",
+        "instructions_per_iter": 31,  # 16 loads + 15 adds = 31 flat instructions
+        "template": """
+// reductiontree_calibration.s - Generated for {iterations} iterations
+// Flat body: 16 loads + 15 tree-reduction adds = 31 insts per iteration
+.global _main
+.align 4
+
+_main:
+    // Allocate array on stack (16 * 8 = 128 bytes, 256 with alignment padding)
+    sub sp, sp, #256
+
+    // Initialize array: A[i] = i + 1
+    mov x0, #1
+    str x0, [sp, #0]
+    mov x0, #2
+    str x0, [sp, #8]
+    mov x0, #3
+    str x0, [sp, #16]
+    mov x0, #4
+    str x0, [sp, #24]
+    mov x0, #5
+    str x0, [sp, #32]
+    mov x0, #6
+    str x0, [sp, #40]
+    mov x0, #7
+    str x0, [sp, #48]
+    mov x0, #8
+    str x0, [sp, #56]
+    mov x0, #9
+    str x0, [sp, #64]
+    mov x0, #10
+    str x0, [sp, #72]
+    mov x0, #11
+    str x0, [sp, #80]
+    mov x0, #12
+    str x0, [sp, #88]
+    mov x0, #13
+    str x0, [sp, #96]
+    mov x0, #14
+    str x0, [sp, #104]
+    mov x0, #15
+    str x0, [sp, #112]
+    mov x0, #16
+    str x0, [sp, #120]
+
+    mov x20, #0              // iteration counter
+{load_iterations_x21}
+
+.loop:
+    // Load all 16 elements (16 insts)
+    ldr x0, [sp, #0]
+    ldr x2, [sp, #8]
+    ldr x3, [sp, #16]
+    ldr x4, [sp, #24]
+    ldr x5, [sp, #32]
+    ldr x6, [sp, #40]
+    ldr x7, [sp, #48]
+    ldr x9, [sp, #56]
+    ldr x10, [sp, #64]
+    ldr x11, [sp, #72]
+    ldr x12, [sp, #80]
+    ldr x13, [sp, #88]
+    ldr x14, [sp, #96]
+    ldr x15, [sp, #104]
+    ldr x16, [sp, #112]
+    ldr x17, [sp, #120]
+
+    // Level 1: 8 pairwise sums
+    add x0, x0, x2
+    add x3, x3, x4
+    add x5, x5, x6
+    add x7, x7, x9
+    add x10, x10, x11
+    add x12, x12, x13
+    add x14, x14, x15
+    add x16, x16, x17
+
+    // Level 2: 4 sums
+    add x0, x0, x3
+    add x5, x5, x7
+    add x10, x10, x12
+    add x14, x14, x16
+
+    // Level 3: 2 sums
+    add x0, x0, x5
+    add x10, x10, x14
+
+    // Level 4: final sum
+    add x0, x0, x10
+
+    add x20, x20, #1
+    cmp x20, x21
+    b.lt .loop
+
+    add sp, sp, #256
+    mov x0, #0
+    mov x16, #1
+    svc #0x80
+"""
+    },
+    "strideindirect": {
+        "description": "8-hop pointer chase per iteration (dependent load chain)",
+        "instructions_per_iter": 50,  # 2 setup + 8 inner iters * 6 insts = 50
+        "template": """
+// strideindirect_calibration.s - Generated for {iterations} outer iterations
+// Inner loop: 8 dependent pointer chases (6 insts * 8 = 48 inner + 2 setup = 50)
+.global _main
+.align 4
+
+_main:
+    // Allocate index array on stack (8 * 8 = 64 bytes, 128 with alignment padding)
+    sub sp, sp, #128
+
+    // Build pointer chase chain: 0->3->1->5->2->7->4->6->0
+    mov x0, #3
+    str x0, [sp, #0]       // A[0] = 3
+    mov x0, #5
+    str x0, [sp, #8]       // A[1] = 5
+    mov x0, #7
+    str x0, [sp, #16]      // A[2] = 7
+    mov x0, #1
+    str x0, [sp, #24]      // A[3] = 1
+    mov x0, #6
+    str x0, [sp, #32]      // A[4] = 6
+    mov x0, #2
+    str x0, [sp, #40]      // A[5] = 2
+    mov x0, #0
+    str x0, [sp, #48]      // A[6] = 0
+    mov x0, #4
+    str x0, [sp, #56]      // A[7] = 4
+
+    mov x10, #0              // outer iteration counter
+{load_iterations}
+
+.outer_loop:
+    // Setup (2 insts)
+    mov x2, #0              // start at index 0
+    mov x3, #0              // hop counter
+
+.chase_loop:
+    // Inner loop body (6 insts * 8 hops = 48)
+    lsl x5, x2, #3          // x5 = index * 8
+    add x5, sp, x5          // x5 = base + offset
+    ldr x2, [x5]            // x2 = A[index] (next index)
+    add x3, x3, #1          // hop++
+    cmp x3, #8              // 8 hops?
+    b.lt .chase_loop
+
+    add x10, x10, #1
+    cmp x10, x11
+    b.lt .outer_loop
+
+    add sp, sp, #128
+    mov x0, #0
+    mov x16, #1
+    svc #0x80
+"""
+    },
 }
 
 
-def load_iterations_asm(n: int) -> str:
-    """Generate ARM64 assembly to load iteration count into x11."""
+def load_iterations_asm(n: int, reg: str = "x11") -> str:
+    """Generate ARM64 assembly to load iteration count into given register."""
     if n <= 0xFFFF:
-        return f"    movz x11, #{n}"
+        return f"    movz {reg}, #{n}"
     elif n <= 0xFFFFFFFF:
         low = n & 0xFFFF
         high = (n >> 16) & 0xFFFF
-        lines = [f"    movz x11, #{low}"]
+        lines = [f"    movz {reg}, #{low}"]
         if high > 0:
-            lines.append(f"    movk x11, #{high}, lsl #16")
+            lines.append(f"    movk {reg}, #{high}, lsl #16")
         return "\n".join(lines)
     else:
         raise ValueError(f"Iteration count {n} too large (max 2^32-1)")
@@ -458,7 +809,8 @@ def generate_benchmark(template_name: str, iterations: int) -> str:
     tmpl = BENCHMARK_TEMPLATES[template_name]
     return tmpl["template"].format(
         iterations=iterations,
-        load_iterations=load_iterations_asm(iterations)
+        load_iterations=load_iterations_asm(iterations),
+        load_iterations_x21=load_iterations_asm(iterations, "x21"),
     )
 
 

@@ -76,6 +76,10 @@ var benchmarkMapping = map[string]string{
 	"dependency_chain":         "dependency",
 	"branch_taken_conditional": "branch",
 	"branch_heavy":             "branchheavy",
+	"vector_sum":               "vectorsum",
+	"vector_add":               "vectoradd",
+	"reduction_tree":           "reductiontree",
+	"stride_indirect":          "strideindirect",
 }
 
 // loadBaseline loads the M2 baseline data from the native directory.

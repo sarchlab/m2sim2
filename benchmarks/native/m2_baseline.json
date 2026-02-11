@@ -77,6 +77,46 @@
       "ipc_at_3_5_ghz": 1.0,
       "r_squared": 0.995,
       "notes": "Analytical estimate based on instruction mix - analytical_with_verification"
+    },
+    {
+      "name": "vectorsum",
+      "description": "16-element array sum loop (load+accumulate)",
+      "instructions_per_iteration": 100,
+      "latency_ns_per_instruction": 0.1148,
+      "cpi_at_3_5_ghz": 0.402,
+      "ipc_at_3_5_ghz": 2.49,
+      "r_squared": 0.9989,
+      "notes": "Linear regression calibration - 4 MOV setup + 16 iters of 6-inst inner loop"
+    },
+    {
+      "name": "vectoradd",
+      "description": "16-element vector add loop (C=A+B, 2 loads+add+store)",
+      "instructions_per_iteration": 165,
+      "latency_ns_per_instruction": 0.0939,
+      "cpi_at_3_5_ghz": 0.329,
+      "ipc_at_3_5_ghz": 3.04,
+      "r_squared": 0.9958,
+      "notes": "Linear regression calibration - 5 setup + 16 iters of 10-inst inner loop"
+    },
+    {
+      "name": "reductiontree",
+      "description": "16-element parallel reduction tree (16 loads + 15 adds)",
+      "instructions_per_iteration": 31,
+      "latency_ns_per_instruction": 0.1370,
+      "cpi_at_3_5_ghz": 0.480,
+      "ipc_at_3_5_ghz": 2.09,
+      "r_squared": 0.9989,
+      "notes": "Linear regression calibration - flat body, high ILP in reduction pattern"
+    },
+    {
+      "name": "strideindirect",
+      "description": "8-hop pointer chase (dependent load chain)",
+      "instructions_per_iteration": 50,
+      "latency_ns_per_instruction": 0.1509,
+      "cpi_at_3_5_ghz": 0.528,
+      "ipc_at_3_5_ghz": 1.89,
+      "r_squared": 0.9996,
+      "notes": "Linear regression calibration - 2 setup + 8 hops of 6-inst chase loop (LSL+ADD+LDR+ADD+CMP+B.LT)"
     }
   ],
   "target_accuracy": {

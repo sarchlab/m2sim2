@@ -239,6 +239,142 @@
           "time_ms": 68.30478699998821
         }
       ]
+    },
+    {
+      "benchmark": "vectorsum",
+      "description": "16-element array sum loop per iteration (load+accumulate)",
+      "calibrated": true,
+      "instruction_latency_ns": 0.11482038812035278,
+      "overhead_ms": 4.804625032127784,
+      "r_squared": 0.9988579787611135,
+      "data_points": [
+        {
+          "instructions": 20000000,
+          "time_ms": 6.919944438979858
+        },
+        {
+          "instructions": 40000000,
+          "time_ms": 8.752814675163892
+        },
+        {
+          "instructions": 80000000,
+          "time_ms": 13.22585155463053
+        },
+        {
+          "instructions": 160000000,
+          "time_ms": 24.338310345127766
+        },
+        {
+          "instructions": 320000000,
+          "time_ms": 42.70075454971649
+        },
+        {
+          "instructions": 640000000,
+          "time_ms": 77.56376366079267
+        }
+      ]
+    },
+    {
+      "benchmark": "vectoradd",
+      "description": "16-element vector add loop per iteration (2 loads+add+store)",
+      "calibrated": true,
+      "instruction_latency_ns": 0.09388580904285077,
+      "overhead_ms": 6.207772204633113,
+      "r_squared": 0.9958115158615158,
+      "data_points": [
+        {
+          "instructions": 19800000,
+          "time_ms": 7.030138765306522
+        },
+        {
+          "instructions": 39600000,
+          "time_ms": 8.498574109075385
+        },
+        {
+          "instructions": 79200000,
+          "time_ms": 14.287958335545328
+        },
+        {
+          "instructions": 158400000,
+          "time_ms": 22.090518672484905
+        },
+        {
+          "instructions": 316800000,
+          "time_ms": 37.990319329158716
+        },
+        {
+          "instructions": 633600000,
+          "time_ms": 64.46228221627987
+        }
+      ]
+    },
+    {
+      "benchmark": "reductiontree",
+      "description": "16-element parallel reduction tree per iteration (16 loads + 15 adds)",
+      "calibrated": true,
+      "instruction_latency_ns": 0.1370163694642002,
+      "overhead_ms": 5.283671244586334,
+      "r_squared": 0.9988077949244268,
+      "data_points": [
+        {
+          "instructions": 19840000,
+          "time_ms": 7.219675779601352
+        },
+        {
+          "instructions": 39680000,
+          "time_ms": 9.631291769134501
+        },
+        {
+          "instructions": 79360000,
+          "time_ms": 17.83728267117921
+        },
+        {
+          "instructions": 158720000,
+          "time_ms": 27.98741187952045
+        },
+        {
+          "instructions": 317440000,
+          "time_ms": 47.96153711180927
+        },
+        {
+          "instructions": 634880000,
+          "time_ms": 92.32432877696637
+        }
+      ]
+    },
+    {
+      "benchmark": "strideindirect",
+      "description": "8-hop pointer chase per iteration (dependent load chain)",
+      "calibrated": true,
+      "instruction_latency_ns": 0.150898762160847,
+      "overhead_ms": 5.34075526024445,
+      "r_squared": 0.9995957461230315,
+      "data_points": [
+        {
+          "instructions": 20000000,
+          "time_ms": 7.945476662522803
+        },
+        {
+          "instructions": 40000000,
+          "time_ms": 10.691898111771378
+        },
+        {
+          "instructions": 80000000,
+          "time_ms": 17.83381488510511
+        },
+        {
+          "instructions": 160000000,
+          "time_ms": 30.717342555160737
+        },
+        {
+          "instructions": 320000000,
+          "time_ms": 53.12684711922581
+        },
+        {
+          "instructions": 640000000,
+          "time_ms": 101.86159255034808
+        }
+      ]
     }
   ]
 }
