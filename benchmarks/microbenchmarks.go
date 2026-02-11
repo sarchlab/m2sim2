@@ -32,6 +32,10 @@ func GetMicrobenchmarks() []Benchmark {
 		mixedOperations(),
 		matrixMultiply2x2(),
 		loopSimulation(),
+		vectorSum(),
+		vectorAdd(),
+		reductionTree(),
+		strideIndirect(),
 	}
 }
 
@@ -899,6 +903,210 @@ func branchHeavy() Benchmark {
 		),
 		ExpectedExit: 10,
 	}
+}
+
+// 13. Vector Sum - Loop summing array elements
+// Tests a realistic reduction loop: load from array, accumulate, branch back.
+// Pattern: for i := 0; i < N; i++ { sum += A[i] }
+func vectorSum() Benchmark {
+	const n = 16
+	return Benchmark{
+		Name:        "vector_sum",
+		Description: "16-iteration loop summing array elements - tests load+accumulate loop",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(0, 0)      // X0 = sum = 0
+			regFile.WriteReg(1, 0x8000) // X1 = base address of array
+			regFile.WriteReg(2, 0)      // X2 = i = 0
+			regFile.WriteReg(3, n)      // X3 = N = 16
+			// Fill array: A[i] = i + 1
+			for i := uint64(0); i < n; i++ {
+				memory.Write64(0x8000+i*8, i+1)
+			}
+		},
+		// sum = 1+2+3+...+16 = 136; exit code = 136
+		Program: BuildProgram(
+			// loop:
+			EncodeLDR64(4, 1, 0),         // X4 = A[X1] (load current element)
+			EncodeADDReg(0, 0, 4, false), // sum += X4
+			EncodeADDImm(1, 1, 8, false), // X1 += 8 (advance pointer)
+			EncodeADDImm(2, 2, 1, false), // i++
+			EncodeCMPReg(2, 3),           // CMP i, N
+			EncodeBCond(-20, 11),         // B.LT loop (-20 bytes = -5 instructions)
+			// exit:
+			EncodeSVC(0), // exit with X0 = 136
+		),
+		ExpectedExit: 136, // sum(1..16) = 136
+	}
+}
+
+// 14. Vector Add - Loop adding two arrays element-by-element
+// Tests load+load+ALU+store loop, common in scientific computing.
+// Pattern: for i := 0; i < N; i++ { C[i] = A[i] + B[i] }
+func vectorAdd() Benchmark {
+	const n = 16
+	return Benchmark{
+		Name:        "vector_add",
+		Description: "16-iteration vector add loop (C=A+B) - tests load+ALU+store loop",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = A base
+			regFile.WriteReg(2, 0x8100) // X2 = B base
+			regFile.WriteReg(3, 0x8200) // X3 = C base
+			regFile.WriteReg(4, 0)      // X4 = i = 0
+			regFile.WriteReg(5, n)      // X5 = N = 16
+			// A[i] = i + 1, B[i] = 2*(i+1)
+			for i := uint64(0); i < n; i++ {
+				memory.Write64(0x8000+i*8, i+1)
+				memory.Write64(0x8100+i*8, 2*(i+1))
+			}
+		},
+		// C[i] = A[i]+B[i] = 3*(i+1)
+		// Verify: load C[0] = 3 as exit code
+		Program: BuildProgram(
+			// loop:
+			EncodeLDR64(6, 1, 0),         // X6 = A[i]
+			EncodeLDR64(7, 2, 0),         // X7 = B[i]
+			EncodeADDReg(9, 6, 7, false), // X9 = A[i] + B[i]
+			EncodeSTR64(9, 3, 0),         // C[i] = X9
+			EncodeADDImm(1, 1, 8, false), // A ptr += 8
+			EncodeADDImm(2, 2, 8, false), // B ptr += 8
+			EncodeADDImm(3, 3, 8, false), // C ptr += 8
+			EncodeADDImm(4, 4, 1, false), // i++
+			EncodeCMPReg(4, 5),           // CMP i, N
+			EncodeBCond(-36, 11),         // B.LT loop (-36 bytes = -9 instructions)
+			// Verify: load C[0] as exit code
+			EncodeSUBImm(3, 3, 128, false), // X3 -= 128 (back to C base: 16*8=128)
+			EncodeLDR64(0, 3, 0),           // X0 = C[0] = 3
+			EncodeSVC(0),
+		),
+		ExpectedExit: 3, // C[0] = A[0]+B[0] = 1+2 = 3
+	}
+}
+
+// 15. Reduction Tree - Parallel reduction over 16 values
+// Tests ILP: independent partial sums that merge in a tree pattern.
+// Unlike vector_sum's serial chain, this has log2(N) dependency depth.
+func reductionTree() Benchmark {
+	return Benchmark{
+		Name:        "reduction_tree",
+		Description: "16-element parallel reduction tree - tests ILP in reduction",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = array base
+			// Fill 16 elements: values 1..16
+			for i := uint64(0); i < 16; i++ {
+				memory.Write64(0x8000+i*8, i+1)
+			}
+		},
+		// Tree reduction: sum(1..16) = 136
+		Program: BuildProgram(
+			// Load all 16 elements into registers (level 0)
+			EncodeLDR64(0, 1, 0),   // r0 = 1
+			EncodeLDR64(2, 1, 1),   // r2 = 2
+			EncodeLDR64(3, 1, 2),   // r3 = 3
+			EncodeLDR64(4, 1, 3),   // r4 = 4
+			EncodeLDR64(5, 1, 4),   // r5 = 5
+			EncodeLDR64(6, 1, 5),   // r6 = 6
+			EncodeLDR64(7, 1, 6),   // r7 = 7
+			EncodeLDR64(9, 1, 7),   // r9 = 8
+			EncodeLDR64(10, 1, 8),  // r10 = 9
+			EncodeLDR64(11, 1, 9),  // r11 = 10
+			EncodeLDR64(12, 1, 10), // r12 = 11
+			EncodeLDR64(13, 1, 11), // r13 = 12
+			EncodeLDR64(14, 1, 12), // r14 = 13
+			EncodeLDR64(15, 1, 13), // r15 = 14
+			EncodeLDR64(16, 1, 14), // r16 = 15
+			EncodeLDR64(17, 1, 15), // r17 = 16
+
+			// Level 1: 8 independent pairwise sums
+			EncodeADDReg(0, 0, 2, false),    // r0 = 1+2 = 3
+			EncodeADDReg(3, 3, 4, false),    // r3 = 3+4 = 7
+			EncodeADDReg(5, 5, 6, false),    // r5 = 5+6 = 11
+			EncodeADDReg(7, 7, 9, false),    // r7 = 7+8 = 15
+			EncodeADDReg(10, 10, 11, false), // r10 = 9+10 = 19
+			EncodeADDReg(12, 12, 13, false), // r12 = 11+12 = 23
+			EncodeADDReg(14, 14, 15, false), // r14 = 13+14 = 27
+			EncodeADDReg(16, 16, 17, false), // r16 = 15+16 = 31
+
+			// Level 2: 4 independent sums
+			EncodeADDReg(0, 0, 3, false),    // r0 = 3+7 = 10
+			EncodeADDReg(5, 5, 7, false),    // r5 = 11+15 = 26
+			EncodeADDReg(10, 10, 12, false), // r10 = 19+23 = 42
+			EncodeADDReg(14, 14, 16, false), // r14 = 27+31 = 58
+
+			// Level 3: 2 independent sums
+			EncodeADDReg(0, 0, 5, false),    // r0 = 10+26 = 36
+			EncodeADDReg(10, 10, 14, false), // r10 = 42+58 = 100
+
+			// Level 4: final sum
+			EncodeADDReg(0, 0, 10, false), // r0 = 36+100 = 136
+
+			EncodeSVC(0), // exit with X0 = 136
+		),
+		ExpectedExit: 136, // sum(1..16) = 136
+	}
+}
+
+// 16. Stride Indirect - Pointer chasing through array
+// Each load uses the result of the previous load as the address offset.
+// Tests memory-level parallelism limits: loads are serialized by data dependency.
+// Pattern: addr = base + A[addr]; repeat
+func strideIndirect() Benchmark {
+	const n = 8
+	return Benchmark{
+		Name:        "stride_indirect",
+		Description: "8-element pointer chase (dependent loads) - tests load-to-use latency chain",
+		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
+			regFile.WriteReg(8, 93)     // X8 = 93 (exit syscall)
+			regFile.WriteReg(1, 0x8000) // X1 = base address
+			regFile.WriteReg(2, 0)      // X2 = current offset (in 8-byte units)
+			regFile.WriteReg(3, 0)      // X3 = hop counter
+			regFile.WriteReg(4, n)      // X4 = max hops
+			// Build a chain: A[0]=3, A[3]=1, A[1]=5, A[5]=2, A[2]=7, A[7]=4, A[4]=6, A[6]=0
+			// Chain: 0→3→1→5→2→7→4→6→0 (8 hops, visits all)
+			memory.Write64(0x8000+0*8, 3)
+			memory.Write64(0x8000+3*8, 1)
+			memory.Write64(0x8000+1*8, 5)
+			memory.Write64(0x8000+5*8, 2)
+			memory.Write64(0x8000+2*8, 7)
+			memory.Write64(0x8000+7*8, 4)
+			memory.Write64(0x8000+4*8, 6)
+			memory.Write64(0x8000+6*8, 0)
+		},
+		Program: buildStrideIndirect(n),
+		// After 8 hops: 0→3→1→5→2→7→4→6, X2 ends at 6; but final LDR loads A[6]=0
+		// Actually, after 8 hops: hop 1: load A[0]=3, hop 2: load A[3]=1, ...
+		// hop 8: load A[6]=0. So X2 = 0 at exit. Exit code = hop count = 8.
+		ExpectedExit: int64(n),
+	}
+}
+
+func buildStrideIndirect(n int) []byte {
+	// loop body:
+	//   X5 = X2 * 8 (shift left by 3 for 8-byte elements) — use ADD X5, X2, X2 three times
+	//   X5 = X1 + X5 (compute address)
+	//   X2 = [X5] (load next offset, encoded as LDR X2, [X5, #0])
+	//   X3++ (hop count)
+	//   CMP X3, X4
+	//   B.LT loop
+	instrs := []uint32{
+		// loop:
+		EncodeADDReg(5, 2, 2, false), // X5 = X2 * 2
+		EncodeADDReg(5, 5, 5, false), // X5 = X2 * 4
+		EncodeADDReg(5, 5, 5, false), // X5 = X2 * 8
+		EncodeADDReg(5, 1, 5, false), // X5 = base + offset*8
+		EncodeLDR64(2, 5, 0),         // X2 = [X5] (next index)
+		EncodeADDImm(3, 3, 1, false), // X3++ (hop count)
+		EncodeCMPReg(3, 4),           // CMP X3, N
+		EncodeBCond(-28, 11),         // B.LT loop (-28 bytes = -7 instructions)
+		// exit:
+		EncodeADDReg(0, 3, 31, false), // X0 = X3 (hop count), XZR add
+	}
+	// Actually, ADD Rd, Rn, XZR is equivalent to MOV Rd, Rn
+	// X31 = XZR = 0 in register reads, so EncodeADDReg(0, 3, 31) = X0 = X3 + 0 = X3
+	instrs = append(instrs, EncodeSVC(0))
+	return BuildProgram(instrs...)
 }
 
 // EncodeCMPReg encodes compare register: CMP Xn, Xm

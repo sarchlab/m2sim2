@@ -26,7 +26,11 @@ LONG_SRCS = arithmetic_sequential_long.s \
             memory_strided_long.s \
             memory_random_long.s \
             branch_taken_long.s \
-            mixed_operations_long.s
+            mixed_operations_long.s \
+            vector_sum_long.s \
+            vector_add_long.s \
+            reduction_tree_long.s \
+            stride_indirect_long.s
 
 # Output binaries
 BINS = $(SRCS:.s=)
