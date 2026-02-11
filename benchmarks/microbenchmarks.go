@@ -668,7 +668,7 @@ func buildMemoryRandomAccess(numPairs int) []byte {
 // Tests load unit throughput and memory subsystem pressure.
 // Runs in a 10-iteration loop to amortize pipeline startup/drain,
 // matching native calibration methodology. Each iteration:
-// 20 LDR + 3-instruction loop overhead (SUB + CMP + B.NE).
+// 20 LDR + 3-instruction loop overhead, instructions_per_iter=23.
 // Total retired: 10*23 = 230 instructions (SVC terminates, not retired).
 func loadHeavy() Benchmark {
 	return Benchmark{
@@ -718,7 +718,7 @@ func loadHeavy() Benchmark {
 // Tests store unit throughput and write buffer behavior.
 // Runs in a 10-iteration loop to amortize pipeline startup/drain,
 // matching native calibration methodology. Each iteration:
-// 20 STR + 3-instruction loop overhead (SUB + CMP + B.NE).
+// 20 STR + 3-instruction loop overhead, instructions_per_iter=23.
 // Total retired: 10*23 = 230 instructions (SVC terminates, not retired).
 func storeHeavy() Benchmark {
 	return Benchmark{
