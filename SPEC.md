@@ -297,43 +297,37 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 **Important:** This 13.3% accuracy applies only to microbenchmarks, **NOT** to intermediate benchmarks.
 
-#### H5.3: Intermediate Benchmark Calibration 🚧 CRISIS RECOVERY IN PROGRESS
+#### H5.3: Intermediate Benchmark Calibration 🚧 FINAL PHASE - HARDWARE BASELINE CRISIS
 
-**CRISIS CONFIRMED (February 11, 2026):** Direct examination of h5_accuracy_results.json revealed catastrophic data integrity failure.
+**CURRENT STATUS (February 12, 2026):** Hardware baseline methodology crisis identified as final H5 blocker.
 
-**Crisis Evidence:**
-- **Overall accuracy:** 986,144% error (vs 20% target) - complete milestone failure
-- **PolyBench data corruption:** sim_cpi values of 0.4-0.7 were fallback/dummy values, not actual measurements
-- **Massive accuracy failures:** atax (53,425%), mvt (53,940%), bicg (53,877%) indicated missing simulation data
-- **False completion claims:** Multiple agent reports claimed "goal achieved" based on corrupted data
+**Crisis Evidence (h5_accuracy_results.json):**
+- **Overall accuracy:** 9,861% error (vs 20% target) - massive milestone failure
+- **Hardware baseline methodology failure:** PolyBench baselines 7,632-9,236 ns/inst vs expected ~0.3 ns/inst
+- **Simulation-hardware mismatch:** Valid sim CPI values (0.4-5.0) vs invalid hardware measurements
+- **Final blocker identified:** Issue #466 hardware baseline methodology fix unassigned
 
 **RECOVERY PROGRESS (February 12, 2026):**
-- ✅ **Simulation execution gap identified:** PolyBench benchmarks were never properly executed in M2Sim timing mode
-- ✅ **Solution implemented:** PR #465 provides working CI infrastructure for actual PolyBench simulation execution
-- ✅ **Data integrity restored:** polybench-sim.yml workflow produces realistic CPI measurements replacing dummy values
-- 🚧 **Hardware baseline methodology:** Issue #466 created to fix invalid baseline measurement approach (Issue #466)
+- ✅ **Simulation execution crisis RESOLVED:** PR #465 merged - PolyBench benchmarks now execute properly in M2Sim timing mode
+- ✅ **Data integrity restored:** Valid CPI measurements (0.4-5.0 range) available via polybench-sim.yml workflow
+- ✅ **Simulation infrastructure validated:** Benchmark execution confirmed functional, eliminating fallback/dummy values
+- 🚧 **Hardware baseline methodology crisis:** Issue #466 UNASSIGNED - critical final blocker
 
 **Current H5 Status:**
-- ✅ **Simulation data:** PR #465 MERGED - Valid CPI measurements available via polybench-sim.yml workflow
-- ❌ **Hardware baselines:** Invalid methodology causes massive errors (7,632 ns/inst vs expected ~0.3 ns/inst)
-- 🚧 **Milestone completion:** Issue #466 is final blocker - requires corrected hardware baselines for valid accuracy assessment
+- ✅ **Benchmark count:** 25 benchmarks operational (exceeds 15+ target)
+- ✅ **Simulation measurements:** Valid CPI data available for all benchmarks
+- ❌ **Hardware baseline methodology:** Catastrophic errors due to startup overhead (Issue #466 unassigned)
+- 🚧 **Final accuracy assessment:** Blocked pending Issue #466 completion
 
-**Root Cause Analysis:**
-- **Simulation execution gap:** PolyBench benchmarks were never properly executed in M2Sim timing mode (RESOLVED by PR #465)
-- **Data substitution:** Fallback/dummy CPI values (0.4-0.7) used instead of actual simulation measurements (RESOLVED by PR #465)
-- **Process breakdown:** Calibration framework bypassed or failed for intermediate benchmarks (RESOLVED by PR #465)
-- **Quality control failure:** Invalid data accepted without measurement validation (ADDRESSED by PR #465)
-- **Hardware baseline methodology failure:** Total ELF runtime ÷ instruction count without startup overhead correction (Issue #466 created)
-
-**Critical Recovery Actions:**
+**Critical Recovery Actions (Status Update):**
 1. ✅ **Halt false completion claims** - H5 milestone accurately reported as incomplete
-2. ✅ **Execute actual PolyBench simulations** - PR #465 provides working CI infrastructure
-3. ✅ **Validate simulation infrastructure** - PR #465 confirms benchmarks run successfully in timing mode
-4. ✅ **Implement data integrity checks** - PR #465 eliminates fallback/dummy values
-5. 🚧 **Fix hardware baseline methodology** - Issue #466 for multi-scale regression approach
-6. 🚧 **Establish honest milestone status** - requires corrected hardware baselines for valid accuracy assessment
+2. ✅ **Execute actual PolyBench simulations** - PR #465 MERGED, working CI infrastructure operational
+3. ✅ **Validate simulation infrastructure** - PolyBench benchmarks confirmed functional in timing mode
+4. ✅ **Implement data integrity checks** - Fallback/dummy values eliminated, valid CPI measurements available
+5. 🚧 **Fix hardware baseline methodology** - Issue #466 UNASSIGNED (critical blocker)
+6. 🚧 **Establish honest milestone completion** - requires Issue #466 execution for valid accuracy assessment
 
-**H5 Completion Status:** 🚧 **FINAL PHASE** - simulation data integrity restored (PR #465 MERGED), hardware baseline methodology correction required (Issue #466 unassigned).
+**H5 Completion Status:** 🚧 **FINAL BLOCKER** - Issue #466 hardware baseline methodology fix is the sole remaining barrier to H5 milestone completion. All simulation infrastructure functional, benchmark count achieved (25 vs 15+ target), accuracy assessment blocked on hardware baseline corrections.
 
 ## Scope
 
