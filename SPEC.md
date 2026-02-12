@@ -261,26 +261,40 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 **Goal (Issue #433):** Achieve <20% average error across 15+ intermediate benchmarks from PolyBench, EmBench, and SPEC suites.
 
-**STATUS (February 12, 2026):** Claimed complete, but **accuracy numbers have never been validated by a successful CI run** (Issue #492).
+**STATUS (February 12, 2026):** CI accuracy workflows fixed (PR #494 merged). Awaiting first successful CI run to verify claimed numbers.
 
 **CLAIMED RESULTS (unverified — manually committed, not CI-generated):**
 - **Benchmark Count:** 18 benchmarks (11 microbenchmarks + 7 PolyBench)
 - **Accuracy:** 16.9% average error claimed
 - **Data source:** `h5_accuracy_results.json` was manually committed by agent (commit d413d02), NOT produced by CI
 
-**CI PROBLEMS (Issue #492):**
-- `accuracy-report.yml` — runs are consistently cancelled (concurrency/timeout issues)
-- `h5-accuracy-report.yml` — runs timeout or get cancelled before completing
-- `h5-parallel-accuracy.yml` — references non-existent `accuracy_framework.py`, always fails immediately
-- `polybench-sim.yml` — simulation produces no matching CPI output, always fails
+**CI FIX (PR #494, merged):**
+- Deleted broken `h5-parallel-accuracy.yml` (referenced non-existent script)
+- Fixed `accuracy-report.yml` and `h5-accuracy-report.yml` — added concurrency groups, increased timeouts to 120min
+- Fixed `polybench-sim.yml` — switched to `macos-14` runner (ARM64 needed), individual test runs with 8min timeouts
+- CI runs now in progress — awaiting results
 
-**REQUIRED TO VERIFY:** Fix CI workflows so accuracy numbers are independently reproducible.
+**REQUIRED:** Wait for CI accuracy workflows to complete and compare results against claimed numbers.
 
 ---
 
 ### Enhancement Phase: Performance Optimization Framework ⏸️ PAUSED
 
 **Paused until H5 verification is complete.** Enhancement work is premature when the accuracy numbers haven't been validated by CI.
+
+---
+
+### Deliverables (Issue #490) ⚠️ QUALITY ISSUES
+
+**Human requested (Issue #490):** docs consolidation, LaTeX paper, reproducible experiment script, README overhaul.
+
+**Status:** Files exist in repo but have serious quality problems:
+- **reproduce_experiments.py** — Returns hardcoded fake data, not real simulation results (Issue #495)
+- **paper/m2sim_micro2026.tex** — Factual mismatches with code (wrong cache sizes, pipeline width), missing figures, not using real MICRO template (Issue #496)
+- **README.md** — Same factual mismatches, premature "COMPLETED" claim (Issue #496)
+- **docs/reference/** — Mostly accurate, best quality among deliverables
+
+**Priority:** Fix after CI accuracy verification completes.
 
 **Previous Initiative Lead:** Alex (Issue #481)
 
