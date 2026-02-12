@@ -52,13 +52,13 @@ jobs:
 
               return recent_runs
 
-          # Critical workflows to monitor
+          # Critical workflows to monitor (using display names from workflow YAML)
           workflows = [
-              'ci.yml',
-              'h5-accuracy-report.yml',
-              'polybench-sim.yml',
-              'cpi-comparison.yml',
-              'matmul-calibration.yml'
+              'CI',
+              'H5 Accuracy Report',
+              'PolyBench Simulation Measurements',
+              'CPI Comparison',
+              'Matmul Calibration'
           ]
 
           health_report = {
@@ -161,8 +161,8 @@ jobs:
               """Check if critical workflows have run recently enough"""
               alerts = []
 
-              # Workflows that should run on every push to main
-              critical_workflows = ['ci.yml', 'h5-accuracy-report.yml']
+              # Workflows that should run on every push to main (using display names)
+              critical_workflows = ['CI', 'H5 Accuracy Report']
 
               # Get recent commits to main
               result = subprocess.run(['git', 'log', '--since=1 day ago', '--oneline', 'main'],
