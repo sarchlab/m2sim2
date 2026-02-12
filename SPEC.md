@@ -261,20 +261,26 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 **Goal (Issue #433):** Achieve <20% average error across 15+ intermediate benchmarks from PolyBench, EmBench, and SPEC suites.
 
-**STATUS (February 12, 2026):** CI accuracy workflows fixed (PR #494 merged). Awaiting first successful CI run to verify claimed numbers.
+**STATUS (February 12, 2026):** CI accuracy workflows STILL cannot complete. Root cause identified (Issue #497).
 
 **CLAIMED RESULTS (unverified — manually committed, not CI-generated):**
 - **Benchmark Count:** 18 benchmarks (11 microbenchmarks + 7 PolyBench)
 - **Accuracy:** 16.9% average error claimed
 - **Data source:** `h5_accuracy_results.json` was manually committed by agent (commit d413d02), NOT produced by CI
 
-**CI FIX (PR #494, merged):**
-- Deleted broken `h5-parallel-accuracy.yml` (referenced non-existent script)
-- Fixed `accuracy-report.yml` and `h5-accuracy-report.yml` — added concurrency groups, increased timeouts to 120min
-- Fixed `polybench-sim.yml` — switched to `macos-14` runner (ARM64 needed), individual test runs with 8min timeouts
-- CI runs now in progress — awaiting results
+**CI BLOCKER (Issue #497):**
+- PR #494 fixed workflow configs (timeouts, runners) but did NOT fix the fundamental problem
+- `accuracy-report.yml` has `cancel-in-progress: true` — every agent push to main cancels the running accuracy workflow
+- Agents push multiple times per hour; accuracy workflow needs 60-120 minutes
+- **Result: 30+ consecutive cancelled runs. Zero completions.**
+- Additionally, `polybench-segmented.yml` references wrong ELF filenames (`polybench_atax.elf` vs actual `atax_m2sim.elf`)
 
-**REQUIRED:** Wait for CI accuracy workflows to complete and compare results against claimed numbers.
+**FIX REQUIRED (Issue #497):**
+- Remove `cancel-in-progress: true` from accuracy workflows, OR
+- Switch accuracy workflows to `workflow_dispatch` + scheduled cron trigger only
+- Fix PolyBench ELF filename mismatches
+
+**REQUIRED:** Fix Issue #497, then wait for first successful accuracy CI run.
 
 ---
 
