@@ -42,11 +42,11 @@ jobs:
                   return []
 
               runs = json.loads(result.stdout)
-              cutoff = datetime.now() - timedelta(hours=hours)
+              cutoff = datetime.now().replace(tzinfo=None) - timedelta(hours=hours)
 
               recent_runs = []
               for run in runs:
-                  created_at = datetime.fromisoformat(run['createdAt'].replace('Z', '+00:00'))
+                  created_at = datetime.fromisoformat(run['createdAt'].replace('Z', '+00:00')).replace(tzinfo=None)
                   if created_at > cutoff:
                       recent_runs.append(run)
 
@@ -177,8 +177,8 @@ jobs:
                       if result.returncode == 0:
                           runs = json.loads(result.stdout)
                           if runs:
-                              latest_run = datetime.fromisoformat(runs[0]['createdAt'].replace('Z', '+00:00'))
-                              hours_since = (datetime.now() - latest_run).total_seconds() / 3600
+                              latest_run = datetime.fromisoformat(runs[0]['createdAt'].replace('Z', '+00:00')).replace(tzinfo=None)
+                              hours_since = (datetime.now().replace(tzinfo=None) - latest_run).total_seconds() / 3600
 
                               if hours_since > 12:  # No runs in 12+ hours despite commits
                                   alerts.append(f"{workflow}: No runs in {hours_since:.1f} hours despite recent commits")
