@@ -35,7 +35,7 @@ jobs:
 
           def get_recent_runs(workflow_name, hours=24):
               """Get recent runs for a specific workflow"""
-              cmd = ['gh', 'run', 'list', '--workflow', workflow_name, '--json', 'status,conclusion,createdAt,id,name', '--limit', '20']
+              cmd = ['gh', 'run', 'list', '--workflow', workflow_name, '--json', 'status,conclusion,createdAt,number,name', '--limit', '20']
               result = subprocess.run(cmd, capture_output=True, text=True)
               if result.returncode != 0:
                   print(f"Warning: Could not fetch runs for {workflow_name}")
