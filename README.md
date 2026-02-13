@@ -61,7 +61,7 @@ python3 reproduce_experiments.py
 python3 paper/generate_figures.py
 
 # Compile LaTeX paper
-cd paper && pdflatex m2sim_micro2026.tex
+cd paper && pdflatex m2sim.tex
 ```
 
 ## 📊 Performance Results
@@ -189,7 +189,6 @@ m2sim/
 - **[Calibration Reference](docs/reference/calibration.md)** - Parameter tuning guide
 
 ### Research Papers
-- **[MICRO 2026 Paper](paper/m2sim_micro2026.pdf)** - Complete technical description
 - **[Project Report](results/final/project_report.md)** - Comprehensive completion analysis
 - **[Accuracy Validation](results/final/accuracy_validation.md)** - Detailed experimental results
 
