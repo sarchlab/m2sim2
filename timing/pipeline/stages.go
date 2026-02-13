@@ -99,7 +99,8 @@ func (s *DecodeStage) Decode(word uint32, pc uint64) DecodeResult {
 func (s *DecodeStage) isLoadOp(op insts.Op) bool {
 	switch op {
 	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
-		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ:
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ,
+		insts.OpLDRSW:
 		return true
 	default:
 		return false
@@ -128,10 +129,25 @@ func (s *DecodeStage) isRegWriteInst(inst *insts.Instruction) bool {
 		insts.OpBIC, insts.OpORN, insts.OpEON:
 		return true
 	case insts.OpLDR, insts.OpLDP, insts.OpLDRB, insts.OpLDRSB,
-		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ:
+		insts.OpLDRH, insts.OpLDRSH, insts.OpLDRLit, insts.OpLDRQ,
+		insts.OpLDRSW:
 		return true
 	case insts.OpBL, insts.OpBLR:
 		return true // BL/BLR write to X30
+	case insts.OpMOVZ, insts.OpMOVN, insts.OpMOVK:
+		return true
+	case insts.OpMADD, insts.OpMSUB:
+		return true
+	case insts.OpADRP, insts.OpADR:
+		return true
+	case insts.OpUBFM, insts.OpSBFM, insts.OpEXTR, insts.OpBFM:
+		return true
+	case insts.OpCSEL, insts.OpCSINC, insts.OpCSINV, insts.OpCSNEG:
+		return true
+	case insts.OpUDIV, insts.OpSDIV:
+		return true
+	case insts.OpLSLV, insts.OpLSRV, insts.OpASRV, insts.OpRORV:
+		return true
 	default:
 		return false
 	}
@@ -140,7 +156,8 @@ func (s *DecodeStage) isRegWriteInst(inst *insts.Instruction) bool {
 // isBranchInst determines if the instruction is a branch.
 func (s *DecodeStage) isBranchInst(inst *insts.Instruction) bool {
 	switch inst.Op {
-	case insts.OpB, insts.OpBL, insts.OpBCond, insts.OpBR, insts.OpBLR, insts.OpRET:
+	case insts.OpB, insts.OpBL, insts.OpBCond, insts.OpBR, insts.OpBLR, insts.OpRET,
+		insts.OpCBZ, insts.OpCBNZ, insts.OpTBZ, insts.OpTBNZ:
 		return true
 	default:
 		return false
@@ -277,11 +294,23 @@ func (s *ExecuteStage) ExecuteWithFlags(idex *IDEXRegister, rnValue, rmValue uin
 		// Handle indexed addressing modes
 		switch inst.IndexMode {
 		case insts.IndexPre:
-			// Pre-index: address = base + signed offset
-			result.ALUResult = uint64(int64(baseAddr) + inst.SignedImm)
+			// Pre-index: address = base + signed offset, writeback base
+			newAddr := uint64(int64(baseAddr) + inst.SignedImm)
+			result.ALUResult = newAddr
+			if inst.Rn == 31 {
+				s.regFile.SP = newAddr
+			} else {
+				s.regFile.WriteReg(inst.Rn, newAddr)
+			}
 		case insts.IndexPost:
-			// Post-index: address = base (writeback happens later)
+			// Post-index: address = base, writeback base + offset
 			result.ALUResult = baseAddr
+			newAddr := uint64(int64(baseAddr) + inst.SignedImm)
+			if inst.Rn == 31 {
+				s.regFile.SP = newAddr
+			} else {
+				s.regFile.WriteReg(inst.Rn, newAddr)
+			}
 		default:
 			// Unsigned offset or signed offset for LDP/STP
 			if inst.Format == insts.FormatLoadStorePair {
@@ -342,6 +371,376 @@ func (s *ExecuteStage) ExecuteWithFlags(idex *IDEXRegister, rnValue, rmValue uin
 		// Return (branch to Rn, typically X30)
 		result.BranchTaken = true
 		result.BranchTarget = rnValue
+
+	case insts.OpMOVZ:
+		shift := uint64(inst.Shift)
+		result.ALUResult = inst.Imm << shift
+
+	case insts.OpMOVN:
+		shift := uint64(inst.Shift)
+		result.ALUResult = ^(inst.Imm << shift)
+		if !inst.Is64Bit {
+			result.ALUResult &= 0xFFFFFFFF
+		}
+
+	case insts.OpMOVK:
+		shift := uint64(inst.Shift)
+		mask := ^(uint64(0xFFFF) << shift)
+		current := s.regFile.ReadReg(inst.Rd)
+		result.ALUResult = (current & mask) | (inst.Imm << shift)
+
+	case insts.OpMADD:
+		raValue := s.regFile.ReadReg(inst.Rt2)
+		if inst.Is64Bit {
+			result.ALUResult = raValue + rnValue*rmValue
+		} else {
+			result.ALUResult = uint64(uint32(raValue) + uint32(rnValue)*uint32(rmValue))
+		}
+
+	case insts.OpMSUB:
+		raValue := s.regFile.ReadReg(inst.Rt2)
+		if inst.Is64Bit {
+			result.ALUResult = raValue - rnValue*rmValue
+		} else {
+			result.ALUResult = uint64(uint32(raValue) - uint32(rnValue)*uint32(rmValue))
+		}
+
+	case insts.OpADRP:
+		pcPage := idex.PC &^ 0xFFF
+		pageOffset := int64(inst.Imm) << 12
+		result.ALUResult = uint64(int64(pcPage) + pageOffset)
+
+	case insts.OpADR:
+		result.ALUResult = uint64(int64(idex.PC) + int64(inst.Imm))
+
+	case insts.OpUBFM:
+		immr := inst.Imm
+		imms := inst.Imm2
+		if inst.Is64Bit {
+			if imms >= immr {
+				width := imms - immr + 1
+				mask := (uint64(1) << width) - 1
+				result.ALUResult = (rnValue >> immr) & mask
+			} else {
+				shift := uint64(64) - immr
+				width := imms + 1
+				mask := (uint64(1) << width) - 1
+				result.ALUResult = (rnValue & mask) << shift
+			}
+		} else {
+			rn32 := uint32(rnValue)
+			immr32 := uint32(immr)
+			imms32 := uint32(imms)
+			if imms32 >= immr32 {
+				width := imms32 - immr32 + 1
+				mask := (uint32(1) << width) - 1
+				result.ALUResult = uint64((rn32 >> immr32) & mask)
+			} else {
+				shift := uint32(32) - immr32
+				width := imms32 + 1
+				mask := (uint32(1) << width) - 1
+				result.ALUResult = uint64((rn32 & mask) << shift)
+			}
+		}
+
+	case insts.OpSBFM:
+		immr := inst.Imm
+		imms := inst.Imm2
+		if inst.Is64Bit {
+			if imms >= immr {
+				width := imms - immr + 1
+				mask := (uint64(1) << width) - 1
+				extracted := (rnValue >> immr) & mask
+				signBit := uint64(1) << (width - 1)
+				if extracted&signBit != 0 {
+					extracted |= ^mask
+				}
+				result.ALUResult = extracted
+			} else {
+				shift := uint64(64) - immr
+				width := imms + 1
+				mask := (uint64(1) << width) - 1
+				extracted := rnValue & mask
+				signBit := uint64(1) << (width - 1)
+				if extracted&signBit != 0 {
+					extracted |= ^mask
+				}
+				result.ALUResult = extracted << shift
+			}
+		} else {
+			rn32 := uint32(rnValue)
+			immr32 := uint32(immr)
+			imms32 := uint32(imms)
+			if imms32 >= immr32 {
+				width := imms32 - immr32 + 1
+				mask := (uint32(1) << width) - 1
+				extracted := (rn32 >> immr32) & mask
+				signBit := uint32(1) << (width - 1)
+				if extracted&signBit != 0 {
+					extracted |= ^mask
+				}
+				result.ALUResult = uint64(extracted)
+			} else {
+				shift := uint32(32) - immr32
+				width := imms32 + 1
+				mask := (uint32(1) << width) - 1
+				extracted := rn32 & mask
+				signBit := uint32(1) << (width - 1)
+				if extracted&signBit != 0 {
+					extracted |= ^mask
+				}
+				result.ALUResult = uint64(extracted << shift)
+			}
+		}
+
+	case insts.OpBFM:
+		rdVal := s.regFile.ReadReg(inst.Rd)
+		immr := uint32(inst.Imm)
+		imms := uint32(inst.Imm2)
+		if inst.Is64Bit {
+			if imms >= immr {
+				width := imms - immr + 1
+				srcMask := (uint64(1) << width) - 1
+				bits := (rnValue >> immr) & srcMask
+				result.ALUResult = (rdVal &^ srcMask) | bits
+			} else {
+				shift := 64 - immr
+				width := imms + 1
+				srcMask := (uint64(1) << width) - 1
+				bits := (rnValue & srcMask) << shift
+				dstMask := srcMask << shift
+				result.ALUResult = (rdVal &^ dstMask) | bits
+			}
+		} else {
+			rd32 := uint32(rdVal)
+			rn32 := uint32(rnValue)
+			if imms >= immr {
+				width := imms - immr + 1
+				srcMask := (uint32(1) << width) - 1
+				bits := (rn32 >> immr) & srcMask
+				result.ALUResult = uint64((rd32 &^ srcMask) | bits)
+			} else {
+				shift := 32 - immr
+				width := imms + 1
+				srcMask := (uint32(1) << width) - 1
+				bits := (rn32 & srcMask) << shift
+				dstMask := srcMask << shift
+				result.ALUResult = uint64((rd32 &^ dstMask) | bits)
+			}
+		}
+
+	case insts.OpEXTR:
+		lsb := uint32(inst.Imm)
+		if inst.Is64Bit {
+			if lsb == 0 {
+				result.ALUResult = rnValue
+			} else if lsb == 64 {
+				result.ALUResult = rmValue
+			} else {
+				result.ALUResult = (rnValue >> lsb) | (rmValue << (64 - lsb))
+			}
+		} else {
+			rn32 := uint32(rnValue)
+			rm32 := uint32(rmValue)
+			if lsb == 0 {
+				result.ALUResult = uint64(rn32)
+			} else if lsb == 32 {
+				result.ALUResult = uint64(rm32)
+			} else {
+				result.ALUResult = uint64((rn32 >> lsb) | (rm32 << (32 - lsb)))
+			}
+		}
+
+	case insts.OpCSEL:
+		if s.checkCondition(inst.Cond) {
+			result.ALUResult = rnValue
+		} else {
+			result.ALUResult = rmValue
+		}
+
+	case insts.OpCSINC:
+		if s.checkCondition(inst.Cond) {
+			result.ALUResult = rnValue
+		} else {
+			result.ALUResult = rmValue + 1
+		}
+
+	case insts.OpCSINV:
+		if s.checkCondition(inst.Cond) {
+			result.ALUResult = rnValue
+		} else {
+			result.ALUResult = ^rmValue
+		}
+
+	case insts.OpCSNEG:
+		if s.checkCondition(inst.Cond) {
+			result.ALUResult = rnValue
+		} else {
+			result.ALUResult = -rmValue
+		}
+
+	case insts.OpUDIV:
+		if inst.Is64Bit {
+			if rmValue == 0 {
+				result.ALUResult = 0
+			} else {
+				result.ALUResult = rnValue / rmValue
+			}
+		} else {
+			rn32 := uint32(rnValue)
+			rm32 := uint32(rmValue)
+			if rm32 == 0 {
+				result.ALUResult = 0
+			} else {
+				result.ALUResult = uint64(rn32 / rm32)
+			}
+		}
+
+	case insts.OpSDIV:
+		if inst.Is64Bit {
+			if rmValue == 0 {
+				result.ALUResult = 0
+			} else {
+				result.ALUResult = uint64(int64(rnValue) / int64(rmValue))
+			}
+		} else {
+			rn32 := int32(rnValue)
+			rm32 := int32(rmValue)
+			if rm32 == 0 {
+				result.ALUResult = 0
+			} else {
+				result.ALUResult = uint64(uint32(rn32 / rm32))
+			}
+		}
+
+	case insts.OpLSLV:
+		if inst.Is64Bit {
+			shift := rmValue & 0x3F
+			result.ALUResult = rnValue << shift
+		} else {
+			shift := uint32(rmValue) & 0x1F
+			result.ALUResult = uint64(uint32(rnValue) << shift)
+		}
+
+	case insts.OpLSRV:
+		if inst.Is64Bit {
+			shift := rmValue & 0x3F
+			result.ALUResult = rnValue >> shift
+		} else {
+			shift := uint32(rmValue) & 0x1F
+			result.ALUResult = uint64(uint32(rnValue) >> shift)
+		}
+
+	case insts.OpASRV:
+		if inst.Is64Bit {
+			shift := rmValue & 0x3F
+			result.ALUResult = uint64(int64(rnValue) >> shift)
+		} else {
+			shift := uint32(rmValue) & 0x1F
+			result.ALUResult = uint64(uint32(int32(rnValue) >> shift))
+		}
+
+	case insts.OpRORV:
+		if inst.Is64Bit {
+			shift := rmValue & 0x3F
+			result.ALUResult = (rnValue >> shift) | (rnValue << (64 - shift))
+		} else {
+			rn32 := uint32(rnValue)
+			shift := uint32(rmValue) & 0x1F
+			result.ALUResult = uint64((rn32 >> shift) | (rn32 << (32 - shift)))
+		}
+
+	case insts.OpCBZ:
+		// Compare and branch if zero - Rd holds the register to test
+		val := s.regFile.ReadReg(inst.Rd)
+		if !inst.Is64Bit {
+			val &= 0xFFFFFFFF
+		}
+		if val == 0 {
+			result.BranchTaken = true
+			result.BranchTarget = uint64(int64(idex.PC) + inst.BranchOffset)
+		}
+
+	case insts.OpCBNZ:
+		// Compare and branch if not zero
+		val := s.regFile.ReadReg(inst.Rd)
+		if !inst.Is64Bit {
+			val &= 0xFFFFFFFF
+		}
+		if val != 0 {
+			result.BranchTaken = true
+			result.BranchTarget = uint64(int64(idex.PC) + inst.BranchOffset)
+		}
+
+	case insts.OpTBZ:
+		// Test bit and branch if zero
+		val := s.regFile.ReadReg(inst.Rd)
+		bitNum := inst.Imm
+		bit := (val >> bitNum) & 1
+		if bit == 0 {
+			result.BranchTaken = true
+			result.BranchTarget = uint64(int64(idex.PC) + inst.BranchOffset)
+		}
+
+	case insts.OpTBNZ:
+		// Test bit and branch if not zero
+		val := s.regFile.ReadReg(inst.Rd)
+		bitNum := inst.Imm
+		bit := (val >> bitNum) & 1
+		if bit != 0 {
+			result.BranchTaken = true
+			result.BranchTarget = uint64(int64(idex.PC) + inst.BranchOffset)
+		}
+
+	case insts.OpCCMP:
+		if s.checkCondition(inst.Cond) {
+			var op2 uint64
+			if inst.Rm == 0xFF {
+				op2 = inst.Imm2
+			} else {
+				op2 = rmValue
+			}
+			subResult := rnValue - op2
+			if inst.Is64Bit {
+				s.regFile.PSTATE.N = (subResult >> 63) == 1
+				s.regFile.PSTATE.Z = subResult == 0
+				s.regFile.PSTATE.C = rnValue >= op2
+				s.regFile.PSTATE.V = ((rnValue^op2)&(rnValue^subResult))>>63 == 1
+			} else {
+				rn32 := uint32(rnValue)
+				op32 := uint32(op2)
+				r32 := rn32 - op32
+				s.regFile.PSTATE.N = (r32 >> 31) == 1
+				s.regFile.PSTATE.Z = r32 == 0
+				s.regFile.PSTATE.C = rn32 >= op32
+				s.regFile.PSTATE.V = ((rn32^op32)&(rn32^r32))>>31 == 1
+			}
+		} else {
+			nzcv := inst.Imm & 0xF
+			s.regFile.PSTATE.N = (nzcv>>3)&1 == 1
+			s.regFile.PSTATE.Z = (nzcv>>2)&1 == 1
+			s.regFile.PSTATE.C = (nzcv>>1)&1 == 1
+			s.regFile.PSTATE.V = nzcv&1 == 1
+		}
+
+	case insts.OpLDRSW:
+		// Address calculation for LDRSW (same as LDR)
+		baseAddr := rnValue
+		if inst.Rn == 31 {
+			baseAddr = s.regFile.SP
+		}
+		switch inst.IndexMode {
+		case insts.IndexPre:
+			result.ALUResult = uint64(int64(baseAddr) + inst.SignedImm)
+		case insts.IndexPost:
+			result.ALUResult = baseAddr
+		default:
+			result.ALUResult = baseAddr + inst.Imm
+		}
+
+	case insts.OpLDRLit:
+		// PC-relative literal load
+		result.ALUResult = uint64(int64(idex.PC) + inst.BranchOffset)
 	}
 
 	return result
@@ -550,7 +949,10 @@ func (s *MemoryStage) Access(exmem *EXMEMRegister) MemoryResult {
 
 	if exmem.MemRead {
 		// Load: read from memory
-		if exmem.Inst != nil && exmem.Inst.Is64Bit {
+		if exmem.Inst != nil && exmem.Inst.Op == insts.OpLDRSW {
+			// LDRSW: read 32-bit and sign-extend to 64-bit
+			result.MemData = uint64(int64(int32(s.memory.Read32(addr))))
+		} else if exmem.Inst != nil && exmem.Inst.Is64Bit {
 			result.MemData = s.memory.Read64(addr)
 		} else {
 			result.MemData = uint64(s.memory.Read32(addr))
@@ -595,7 +997,10 @@ func (s *MemoryStage) MemorySlot(slot MemorySlot) MemoryResult {
 
 	if slot.GetMemRead() {
 		// Load: read from memory
-		if inst != nil && inst.Is64Bit {
+		if inst != nil && inst.Op == insts.OpLDRSW {
+			// LDRSW: read 32-bit and sign-extend to 64-bit
+			result.MemData = uint64(int64(int32(s.memory.Read32(addr))))
+		} else if inst != nil && inst.Is64Bit {
 			result.MemData = s.memory.Read64(addr)
 		} else {
 			result.MemData = uint64(s.memory.Read32(addr))
