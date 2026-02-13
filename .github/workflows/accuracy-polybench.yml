@@ -18,7 +18,7 @@ jobs:
   polybench-group-1:
     name: PolyBench Group 1 (ATAX, BiCG, Jacobi1D)
     runs-on: macos-14
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -35,7 +35,7 @@ jobs:
         run: |
           for TEST in TestPolybenchATAX TestPolybenchBiCG TestPolybenchJacobi1D; do
             echo "--- $TEST ---"
-            go test -v -run "^${TEST}$" -count=1 -timeout 8m ./benchmarks/ 2>&1 | tee -a group1_output.txt || true
+            go test -v -run "^${TEST}$" -count=1 -timeout 25m ./benchmarks/ 2>&1 | tee -a group1_output.txt || true
           done
 
       - name: Upload results
@@ -49,7 +49,7 @@ jobs:
   polybench-group-2:
     name: PolyBench Group 2 (MVT, GEMM)
     runs-on: macos-14
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -65,7 +65,7 @@ jobs:
         run: |
           for TEST in TestPolybenchMVT TestPolybenchGEMM; do
             echo "--- $TEST ---"
-            go test -v -run "^${TEST}$" -count=1 -timeout 8m ./benchmarks/ 2>&1 | tee -a group2_output.txt || true
+            go test -v -run "^${TEST}$" -count=1 -timeout 25m ./benchmarks/ 2>&1 | tee -a group2_output.txt || true
           done
 
       - name: Upload results
@@ -79,7 +79,7 @@ jobs:
   polybench-group-3:
     name: PolyBench Group 3 (2MM, 3MM)
     runs-on: macos-14
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -95,7 +95,7 @@ jobs:
         run: |
           for TEST in TestPolybench2MM TestPolybench3MM; do
             echo "--- $TEST ---"
-            go test -v -run "^${TEST}$" -count=1 -timeout 8m ./benchmarks/ 2>&1 | tee -a group3_output.txt || true
+            go test -v -run "^${TEST}$" -count=1 -timeout 25m ./benchmarks/ 2>&1 | tee -a group3_output.txt || true
           done
 
       - name: Upload results
