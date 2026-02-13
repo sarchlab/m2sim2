@@ -52,17 +52,6 @@ go build -o m2sim ./cmd/m2sim
 ./m2sim -elf benchmarks/arithmetic.elf -fasttiming
 ```
 
-### Reproduce Paper Results
-```bash
-# Run complete experimental validation
-python3 reproduce_experiments.py
-
-# Generate figures for paper
-python3 paper/generate_figures.py
-
-# Compile LaTeX paper
-cd paper && pdflatex m2sim.tex
-```
 
 ## 📊 Performance Results
 
@@ -231,19 +220,6 @@ go build -o profile ./cmd/profile
 3. **Document:** Update relevant documentation for changes
 4. **Validate:** Verify accuracy on affected benchmarks
 
-## 📄 Citation
-
-If you use M2Sim in your research, please cite:
-
-```bibtex
-@inproceedings{m2sim2026,
-  title={M2Sim: Cycle-Accurate Apple M2 CPU Simulation with 16.9\% Average Timing Error},
-  author={M2Sim Team},
-  booktitle={Proceedings of the 59th IEEE/ACM International Symposium on Microarchitecture},
-  year={2026},
-  organization={IEEE/ACM}
-}
-```
 
 ## 🤝 Related Projects
 
