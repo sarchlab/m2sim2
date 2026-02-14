@@ -6,6 +6,7 @@ on:
     workflows:
       - "Accuracy - Microbenchmarks"
       - "Accuracy - PolyBench"
+      - "Hardware CPI Collection - PolyBench"
     types:
       - completed
 
@@ -45,6 +46,20 @@ jobs:
           else
             gh api "$ARTIFACT_URL" > /tmp/polybench.zip
             unzip -o /tmp/polybench.zip -d artifacts/polybench
+          fi
+
+      - name: Download latest hardware-cpi-polybench artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/hardware-cpi
+          ARTIFACT_URL=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=hardware-cpi-polybench" \
+            --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .archive_download_url')
+          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
+            echo "::warning::No hardware-cpi-polybench artifact found"
+          else
+            gh api "$ARTIFACT_URL" > /tmp/hardware-cpi.zip
+            unzip -o /tmp/hardware-cpi.zip -d artifacts/hardware-cpi
           fi
 
       - name: Download latest embench-accuracy artifact
@@ -141,6 +156,28 @@ jobs:
                       "error": None,
                       "note": "infeasible - no simulation result",
                   }
+          # Load hardware CPI for PolyBench (from hardware-cpi-collection workflow)
+          hw_cpi_poly_path = "artifacts/hardware-cpi/hardware-cpi-polybench.json"
+          if os.path.exists(hw_cpi_poly_path):
+              with open(hw_cpi_poly_path) as f:
+                  hw_data = json.load(f)
+              hw_cpi_poly = {name: bench["cpi"] for name, bench in hw_data.get("benchmarks", {}).items()}
+          else:
+              hw_cpi_poly = {}
+
+          # Compute error for PolyBench benchmarks
+          poly_results = consolidated["polybench"].get("results", {})
+          for bench_name, ref_cpi in hw_cpi_poly.items():
+              if bench_name in poly_results:
+                  sim_cpi = poly_results[bench_name]["cpi"]
+                  error = abs(sim_cpi - ref_cpi) / min(sim_cpi, ref_cpi)
+                  errors[bench_name] = {
+                      "sim_cpi": sim_cpi,
+                      "hw_cpi": ref_cpi,
+                      "error": round(error, 4),
+                      "suite": "polybench",
+                  }
+
           consolidated["error_metrics"] = errors
 
           with open("accuracy_consolidated.json", "w") as f:
@@ -231,6 +268,8 @@ jobs:
               print("| Benchmark | Sim CPI | HW CPI | Error |")
               print("|-----------|---------|--------|-------|")
               for name, m in sorted(d["error_metrics"].items()):
+                  if m.get("suite") == "polybench":
+                      continue
                   sim = f'{m["sim_cpi"]:.3f}' if m["sim_cpi"] is not None else "N/A"
                   err = f'{m["error"]:.1%}' if m["error"] is not None else "infeasible"
                   print(f'| {name} | {sim} | {m["hw_cpi"]:.3f} | {err} |')
@@ -242,10 +281,20 @@ jobs:
           if poly["available"] and poly.get("results"):
               print(f'Benchmarks run: {poly["benchmarks_run"]}/7')
               print()
-              print("| Benchmark | CPI |")
-              print("|-----------|-----|")
-              for name, r in sorted(poly["results"].items()):
-                  print(f'| {name} | {r["cpi"]:.3f} |')
+              # If hardware CPI available, show comparison table
+              poly_errors = {k: v for k, v in d["error_metrics"].items() if v.get("suite") == "polybench"}
+              if poly_errors:
+                  print("| Benchmark | Sim CPI | HW CPI | Error |")
+                  print("|-----------|---------|--------|-------|")
+                  for name, m in sorted(poly_errors.items()):
+                      sim = f'{m["sim_cpi"]:.3f}' if m["sim_cpi"] is not None else "N/A"
+                      err = f'{m["error"]:.1%}' if m["error"] is not None else "N/A"
+                      print(f'| {name} | {sim} | {m["hw_cpi"]:.3f} | {err} |')
+              else:
+                  print("| Benchmark | CPI |")
+                  print("|-----------|-----|")
+                  for name, r in sorted(poly["results"].items()):
+                      print(f'| {name} | {r["cpi"]:.3f} |')
           print()
 
           # EmBench summary
