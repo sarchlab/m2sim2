@@ -6,11 +6,11 @@
     "polybench_with_error": 5,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 9,
-    "average_error": 0.4685,
-    "micro_average_error": 0.1340,
+    "average_error": 0.4740,
+    "micro_average_error": 0.1421,
     "polybench_average_error": 1.2043,
     "h5_target_met": false,
-    "note": "16 benchmarks with error data (11 micro + 5 polybench). Both sim and HW use SMALL dataset for polybench. Overall 46.85% average error does NOT meet <20% target due to polybench (in-order vs OoO gap)."
+    "note": "16 benchmarks with error data (11 micro + 5 polybench). Both sim and HW use SMALL dataset for polybench. Overall 47.40% average error does NOT meet <20% target due to polybench (in-order vs OoO gap)."
   },
   "benchmarks": [
     {
@@ -40,9 +40,9 @@
     {
       "name": "memorystrided",
       "category": "microbenchmark",
-      "simulated_cpi": 2.6,
+      "simulated_cpi": 2.933,
       "hardware_cpi": 2.648,
-      "error": 0.0185,
+      "error": 0.1076,
       "ci_verified": true
     },
     {

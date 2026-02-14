@@ -166,7 +166,7 @@ SPEC benchmarks will likely exercise ARM64 instructions not yet implemented. Exp
 |-----------|--------|---------|
 | dependency | 6.7% | ✅ **Production calibrated** |
 | branch | 1.3% | ✅ **Production calibrated** |
-| memorystrided | 2.0% | ✅ **Production calibrated** |
+| memorystrided | 10.8% | ✅ **Production calibrated** |
 
 **Current average: 14.1% (target <20% ✅)**
 
@@ -261,23 +261,23 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 **Goal:** Achieve <20% average error across 15+ benchmarks with hardware CPI comparison.
 
-**STATUS: CI-VERIFIED** — Data from accuracy-consolidated workflow run #22015703964.
+**STATUS: CI-VERIFIED** — Data from accuracy-consolidated workflow run #22015703964. Microbenchmark data verified against run #22019560948.
 
 **Results:**
 - **Total benchmarks with error data:** 16 (11 microbenchmarks + 5 PolyBench)
-- **Overall average error:** 46.85% — does **NOT** meet <20% target
-- **Microbenchmark average error:** 13.40% (11 benchmarks) — meets <20% target
+- **Overall average error:** 47.40% — does **NOT** meet <20% target
+- **Microbenchmark average error:** 14.21% (11 benchmarks) — meets <20% target
 - **PolyBench average error:** ~120% (5 benchmarks) — does **NOT** meet target
 - **Data source:** `h5_accuracy_results.json` produced by CI accuracy-consolidated workflow
 
-#### Microbenchmark Results (13.40% average error)
+#### Microbenchmark Results (14.21% average error)
 
 | Benchmark | Sim CPI | HW CPI | Error |
 |-----------|---------|--------|-------|
 | arithmetic | 0.270 | 0.296 | 9.63% |
 | dependency | 1.020 | 1.088 | 6.67% |
 | branch | 1.320 | 1.303 | 1.30% |
-| memorystrided | 2.600 | 2.648 | 1.85% |
+| memorystrided | 2.933 | 2.648 | 10.76% |
 | loadheavy | 0.361 | 0.429 | 18.84% |
 | storeheavy | 0.491 | 0.612 | 24.64% |
 | branchheavy | 0.829 | 0.714 | 16.11% |
@@ -302,7 +302,7 @@ Both simulation and hardware use SMALL dataset for PolyBench, so error compariso
 
 **Root cause of PolyBench error:** M2Sim models an in-order pipeline, but the real Apple M2 is out-of-order. PolyBench kernels with heavy memory and computation patterns benefit enormously from OoO execution, resulting in 66-262% CPI overestimation by the in-order model.
 
-The microbenchmark accuracy (13.40%) validates the core timing model for individual microarchitectural features. The PolyBench gap is an architectural limitation, not a calibration error.
+The microbenchmark accuracy (14.21%) validates the core timing model for individual microarchitectural features. The PolyBench gap is an architectural limitation, not a calibration error.
 
 #### Infeasible Benchmarks
 
