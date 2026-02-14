@@ -41,7 +41,7 @@ While M2Sim uses Akita (like MGPUSim) and draws inspiration from MGPUSim's archi
 | H2 | SPEC benchmark enablement (syscalls, ELF loading, validation) | ✅ COMPLETE |
 | H3 | Accuracy calibration (<20% error on microbenchmarks) | ✅ COMPLETE (14.1%) |
 | H4 | Multi-core support | ⬜ NOT STARTED |
-| H5 | 15+ Intermediate Benchmarks (<20% average error) | ⚠️ UNVERIFIED — CI never succeeded |
+| H5 | 15+ Intermediate Benchmarks (<20% average error) | 18 benchmarks with error data; 57.23% avg error |
 
 ---
 
@@ -257,18 +257,18 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 ---
 
-### H5: 16 Benchmarks with Error Data — CI-VERIFIED (February 14, 2026)
+### H5: 18 Benchmarks with Error Data (February 14, 2026)
 
 **Goal:** Achieve <20% average error across 15+ benchmarks with hardware CPI comparison.
 
-**STATUS: CI-VERIFIED** — Data from accuracy-consolidated workflow run #22015703964. Microbenchmark data verified against run #22019560948.
+**STATUS:** 18 benchmarks with error data (11 microbenchmarks + 7 PolyBench). 5/7 polybench CI-verified; 2mm/3mm use Leo's verified local sim CPI (PR #46 pending merge), HW CPI from CI run 22023389932.
 
 **Results:**
-- **Total benchmarks with error data:** 16 (11 microbenchmarks + 5 PolyBench)
-- **Overall average error:** 47.40% — does **NOT** meet <20% target
+- **Total benchmarks with error data:** 18 (11 microbenchmarks + 7 PolyBench)
+- **Overall average error:** 57.23% — does **NOT** meet <20% target
 - **Microbenchmark average error:** 14.21% (11 benchmarks) — meets <20% target
-- **PolyBench average error:** ~120% (5 benchmarks) — does **NOT** meet target
-- **Data source:** `h5_accuracy_results.json` produced by CI accuracy-consolidated workflow
+- **PolyBench average error:** 124.84% (7 benchmarks) — does **NOT** meet target
+- **Data source:** `h5_accuracy_results.json` — 5 polybench from CI; 2mm/3mm from Leo's local runs + CI HW CPI
 
 #### Microbenchmark Results (14.21% average error)
 
@@ -286,17 +286,19 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 | reductiontree | 0.452 | 0.480 | 6.19% |
 | strideindirect | 0.612 | 0.528 | 15.91% |
 
-#### PolyBench Results (~120% average error)
+#### PolyBench Results (124.84% average error — 7/7 benchmarks)
 
-| Benchmark | Sim CPI | HW CPI | Error |
-|-----------|---------|--------|-------|
-| atax | 0.394 | 0.2178 | 80.9% |
-| bicg | 0.467 | 0.2270 | 105.7% |
-| gemm | 0.437 | 0.2333 | 87.3% |
-| mvt | 0.361 | 0.2169 | 66.4% |
-| jacobi-1d | 0.547 | 0.1512 | 261.8% |
+| Benchmark | Sim CPI | HW CPI | Error | Dataset |
+|-----------|---------|--------|-------|---------|
+| atax | 0.394 | 0.2185 | 80.3% | SMALL |
+| bicg | 0.467 | 0.2295 | 103.5% | SMALL |
+| gemm | 0.437 | 0.2332 | 87.4% | SMALL |
+| mvt | 0.361 | 0.2156 | 67.4% | SMALL |
+| jacobi-1d | 0.547 | 0.1510 | 262.3% | SMALL |
+| 2mm | 0.340 | 0.1435 | 136.9% | MINI |
+| 3mm | 0.343 | 0.1453 | 136.1% | MINI |
 
-Both simulation and hardware use SMALL dataset for PolyBench, so error comparison is valid.
+SMALL dataset used for atax/bicg/gemm/mvt/jacobi-1d; MINI dataset for 2mm/3mm. 2mm/3mm sim CPI from Leo's local verified runs (PR #46 pending); HW CPI from CI run 22023389932.
 
 #### Known Gap: In-Order vs Out-of-Order
 
@@ -316,12 +318,12 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 | primecount | embench | 9,999,999,968 | 0.500 | 42m49s | No — already at SZ=3, NPRIMES=9 (minimum) |
 | huffbench | embench | CI timeout (2h30m) | — | 2h30m | Maybe — TEST_SIZE=500 (needs rebuild) |
 | matmult-int | embench | CI timeout (never started) | — | — | Maybe — UPPERLIMIT=20 (needs rebuild) |
-| 2mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
-| 3mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
 
 **Key finding:** Even at minimum workload, these benchmarks execute 9-13 billion instructions before completion, far exceeding the 5B cycle limit. The working EmBench benchmark (aha_mont64) completes in just 4,378 instructions / 1,518 cycles — roughly 6 orders of magnitude smaller. The infeasible benchmarks' workloads are inherently large even at scale factor 1.
 
 **Benchmarks with potential further reduction** (edn, huffbench, matmult-int) would require a RISC-V cross-compiler to rebuild the ELF binaries with smaller parameters.
+
+**Previously infeasible, now resolved:** 2mm and 3mm (PolyBench) were rebuilt with MINI_DATASET and now complete successfully (PR #46).
 
 #### Full Benchmark Coverage Table
 
@@ -338,14 +340,14 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 | vectoradd | microbenchmark | complete | 0.401 | 0.329 | 21.88% | |
 | reductiontree | microbenchmark | complete | 0.452 | 0.480 | 6.19% | |
 | strideindirect | microbenchmark | complete | 0.612 | 0.528 | 15.91% | |
-| atax | polybench | complete | 0.394 | 0.2178 | 80.9% | In-order vs OoO gap |
-| bicg | polybench | complete | 0.467 | 0.2270 | 105.7% | In-order vs OoO gap |
-| gemm | polybench | complete | 0.437 | 0.2333 | 87.3% | In-order vs OoO gap |
-| mvt | polybench | complete | 0.361 | 0.2169 | 66.4% | In-order vs OoO gap |
-| jacobi-1d | polybench | complete | 0.547 | 0.1512 | 261.8% | In-order vs OoO gap |
+| atax | polybench | complete | 0.394 | 0.2185 | 80.3% | In-order vs OoO gap |
+| bicg | polybench | complete | 0.467 | 0.2295 | 103.5% | In-order vs OoO gap |
+| gemm | polybench | complete | 0.437 | 0.2332 | 87.4% | In-order vs OoO gap |
+| mvt | polybench | complete | 0.361 | 0.2156 | 67.4% | In-order vs OoO gap |
+| jacobi-1d | polybench | complete | 0.547 | 0.1510 | 262.3% | In-order vs OoO gap |
+| 2mm | polybench | complete | 0.340 | 0.1435 | 136.9% | MINI dataset; in-order vs OoO gap |
+| 3mm | polybench | complete | 0.343 | 0.1453 | 136.1% | MINI dataset; in-order vs OoO gap |
 | aha_mont64 | embench | sim-only | 0.347 | — | — | No HW CPI data |
-| 2mm | polybench | infeasible | — | — | — | CI timeout; rebuilding with MINI_DATASET |
-| 3mm | polybench | infeasible | — | — | — | CI timeout; rebuilding with MINI_DATASET |
 | crc32 | embench | infeasible | — | — | — | 12.5B insts in 5B cycles; min workload |
 | edn | embench | infeasible | — | — | — | 13.0B insts in 5B cycles; N/ORDER reducible |
 | statemate | embench | infeasible | — | — | — | 9.2B insts in 5B cycles; no size knob |
