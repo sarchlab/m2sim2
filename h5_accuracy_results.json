@@ -155,57 +155,78 @@
       "name": "2mm",
       "category": "polybench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
+      "reason": "MINI_DATASET build completed but did not finish within CI timeout. Being rebuilt with MINI_DATASET in branch leo/polybench-mini-2mm-3mm.",
       "ci_verified": false
     },
     {
       "name": "3mm",
       "category": "polybench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
+      "reason": "MINI_DATASET build completed but did not finish within CI timeout. Being rebuilt with MINI_DATASET in branch leo/polybench-mini-2mm-3mm.",
       "ci_verified": false
     },
     {
       "name": "crc32",
       "category": "embench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
-      "ci_verified": false
+      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. Retired 12,499,991,230 instructions in 5B cycles (44m29s wall time). CPI at limit: 0.400. Single iteration of 1024 CRC ops — already at minimum workload, no further reduction possible without altering benchmark semantics.",
+      "ci_verified": true,
+      "cycles_at_limit": 5000000000,
+      "instructions_at_limit": 12499991230,
+      "wall_time_at_limit": "44m29s",
+      "ci_run": 22019560953
     },
     {
       "name": "edn",
       "category": "embench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
-      "ci_verified": false
+      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. Retired 13,000,000,936 instructions in 5B cycles (45m10s wall time). CPI at limit: 0.385. Parameters N=100, ORDER=50 could theoretically be reduced, but requires cross-compilation rebuild.",
+      "ci_verified": true,
+      "cycles_at_limit": 5000000000,
+      "instructions_at_limit": 13000000936,
+      "wall_time_at_limit": "45m10s",
+      "ci_run": 22019560953,
+      "reduction_possible": "N=100, ORDER=50 could be reduced but requires cross-compiler rebuild"
     },
     {
       "name": "statemate",
       "category": "embench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
-      "ci_verified": false
+      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. Retired 9,210,526,236 instructions in 5B cycles (35m17s wall time). CPI at limit: 0.543. Complex auto-generated state machine with no obvious size reduction parameter.",
+      "ci_verified": true,
+      "cycles_at_limit": 5000000000,
+      "instructions_at_limit": 9210526236,
+      "wall_time_at_limit": "35m17s",
+      "ci_run": 22019560953
     },
     {
       "name": "primecount",
       "category": "embench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
-      "ci_verified": false
+      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1, SZ=3, NPRIMES=9 (already maximally reduced). Retired 9,999,999,968 instructions in 5B cycles (42m49s wall time). CPI at limit: 0.500. No further reduction possible — SZ=3 is the absolute minimum.",
+      "ci_verified": true,
+      "cycles_at_limit": 5000000000,
+      "instructions_at_limit": 9999999968,
+      "wall_time_at_limit": "42m49s",
+      "ci_run": 22019560953
     },
     {
       "name": "huffbench",
       "category": "embench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
-      "ci_verified": false
+      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. CI run 22019560953 Group 2 still in progress. TEST_SIZE=500 could theoretically be reduced, but requires cross-compilation rebuild.",
+      "ci_verified": false,
+      "ci_run": 22019560953,
+      "reduction_possible": "TEST_SIZE=500 could be reduced but requires cross-compiler rebuild"
     },
     {
       "name": "matmult-int",
       "category": "embench",
       "status": "infeasible",
-      "reason": "did not complete in CI within timeout",
-      "ci_verified": false
+      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. CI run 22019560953 Group 2 still in progress. UPPERLIMIT=20 (20x20 matrix) could theoretically be reduced, but requires cross-compilation rebuild.",
+      "ci_verified": false,
+      "ci_run": 22019560953,
+      "reduction_possible": "UPPERLIMIT=20 could be reduced (e.g. to 5) but requires cross-compiler rebuild"
     }
   ]
 }
