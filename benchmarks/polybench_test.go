@@ -16,13 +16,13 @@ func polybenchELFPath(name string) string {
 }
 
 // GetPolybenchBenchmarks returns the PolyBench benchmarks suitable for CI
-// timing tests (~5K instructions each, complete in under 60s).
+// timing tests (SMALL dataset, 49K-131K instructions each).
 func GetPolybenchBenchmarks() []Benchmark {
 	return []Benchmark{
-		BenchmarkFromELF("polybench_atax", "ATAX: Matrix transpose and vector multiply (16x16)", polybenchELFPath("atax")),
-		BenchmarkFromELF("polybench_bicg", "BiCG: Bi-conjugate gradient sub-kernel (16x16)", polybenchELFPath("bicg")),
-		BenchmarkFromELF("polybench_mvt", "MVT: Matrix vector product and transpose (16x16)", polybenchELFPath("mvt")),
-		BenchmarkFromELF("polybench_jacobi1d", "Jacobi-1D: 1D Jacobi stencil computation (32 points, 8 steps)", polybenchELFPath("jacobi-1d")),
+		BenchmarkFromELF("polybench_atax", "ATAX: Matrix transpose and vector multiply (80x80)", polybenchELFPath("atax")),
+		BenchmarkFromELF("polybench_bicg", "BiCG: Bi-conjugate gradient sub-kernel (80x80)", polybenchELFPath("bicg")),
+		BenchmarkFromELF("polybench_mvt", "MVT: Matrix vector product and transpose (60x70)", polybenchELFPath("mvt")),
+		BenchmarkFromELF("polybench_jacobi1d", "Jacobi-1D: 1D Jacobi stencil computation (120 points, 20 steps)", polybenchELFPath("jacobi-1d")),
 	}
 }
 

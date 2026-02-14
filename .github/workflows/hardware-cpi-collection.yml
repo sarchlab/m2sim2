@@ -1,4 +1,4 @@
-name: Hardware CPI Collection - PolyBench MINI
+name: Hardware CPI Collection - PolyBench SMALL
 
 on:
   workflow_dispatch:
@@ -22,13 +22,13 @@ jobs:
           import subprocess, json, re, statistics, os
 
           BENCHMARKS = {
-              "atax":      {"dir": "atax",      "instructions": 5000,   "kernel": "kernel_atax",      "iters": 100000},
-              "bicg":      {"dir": "bicg",      "instructions": 4830,   "kernel": "kernel_bicg",      "iters": 100000},
-              "gemm":      {"dir": "gemm",      "instructions": 37000,  "kernel": "kernel_gemm",      "iters": 100000},
-              "mvt":       {"dir": "mvt",       "instructions": 5000,   "kernel": "kernel_mvt",       "iters": 100000},
-              "jacobi-1d": {"dir": "jacobi-1d", "instructions": 5349,   "kernel": "kernel_jacobi_1d", "iters": 100000},
-              "2mm":       {"dir": "2mm",       "instructions": 70000,  "kernel": "kernel_2mm",       "iters": 50000},
-              "3mm":       {"dir": "3mm",       "instructions": 105410, "kernel": "kernel_3mm",       "iters": 10000},
+              "atax":      {"dir": "atax",      "instructions": 130927,  "kernel": "kernel_atax",      "iters": 5000},
+              "bicg":      {"dir": "bicg",      "instructions": 112372,  "kernel": "kernel_bicg",      "iters": 5000},
+              "gemm":      {"dir": "gemm",      "instructions": 2516282, "kernel": "kernel_gemm",      "iters": 1000},
+              "mvt":       {"dir": "mvt",       "instructions": 124920,  "kernel": "kernel_mvt",       "iters": 5000},
+              "jacobi-1d": {"dir": "jacobi-1d", "instructions": 49248,   "kernel": "kernel_jacobi_1d", "iters": 10000},
+              "2mm":       {"dir": "2mm",       "instructions": 4555010, "kernel": "kernel_2mm",       "iters": 500},
+              "3mm":       {"dir": "3mm",       "instructions": 8760634, "kernel": "kernel_3mm",       "iters": 250},
           }
 
           FREQUENCY_GHZ = 3.5
@@ -40,7 +40,7 @@ jobs:
           CFLAGS = [
               "-O2", "-mcpu=apple-m2",
               "-fno-vectorize", "-fno-slp-vectorize",
-              "-DMINI_DATASET", "-DPOLYBENCH_USE_RESTRICT",
+              "-DSMALL_DATASET", "-DPOLYBENCH_USE_RESTRICT",
               f"-I{INCLUDE_DIR}",
           ]
 
@@ -121,7 +121,7 @@ jobs:
               os.remove(binary)
 
           output = {
-              "dataset": "MINI",
+              "dataset": "SMALL",
               "runner": "macos-14",
               "frequency_ghz": FREQUENCY_GHZ,
               "kernel_iterations": {n: info["iters"] for n, info in BENCHMARKS.items()},
@@ -139,7 +139,7 @@ jobs:
       - name: Post summary
         if: always()
         run: |
-          echo "## Hardware CPI Collection — PolyBench MINI on Apple M2" >> $GITHUB_STEP_SUMMARY
+          echo "## Hardware CPI Collection — PolyBench SMALL on Apple M2" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ ! -f hardware-cpi-polybench.json ]; then
             echo "No results generated." >> $GITHUB_STEP_SUMMARY
