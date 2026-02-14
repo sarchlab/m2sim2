@@ -257,91 +257,56 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 ---
 
-### H5: 15+ Intermediate Benchmarks ⚠️ UNVERIFIED
+### H5: 16 Benchmarks with Error Data — CI-VERIFIED (February 14, 2026)
 
-**Goal (Issue #433):** Achieve <20% average error across 15+ intermediate benchmarks from PolyBench, EmBench, and SPEC suites.
+**Goal:** Achieve <20% average error across 15+ benchmarks with hardware CPI comparison.
 
-**STATUS (February 12, 2026):** CI accuracy workflows STILL cannot complete. Root cause identified (Issue #497).
+**STATUS: CI-VERIFIED** — Data from accuracy-consolidated workflow run #22015703964.
 
-**CLAIMED RESULTS (unverified — manually committed, not CI-generated):**
-- **Benchmark Count:** 18 benchmarks (11 microbenchmarks + 7 PolyBench)
-- **Accuracy:** 16.9% average error claimed
-- **Data source:** `h5_accuracy_results.json` was manually committed by agent (commit d413d02), NOT produced by CI
+**Results:**
+- **Total benchmarks with error data:** 16 (11 microbenchmarks + 5 PolyBench)
+- **Overall average error:** 46.85% — does **NOT** meet <20% target
+- **Microbenchmark average error:** 13.40% (11 benchmarks) — meets <20% target
+- **PolyBench average error:** ~120% (5 benchmarks) — does **NOT** meet target
+- **Data source:** `h5_accuracy_results.json` produced by CI accuracy-consolidated workflow
 
-**CI BLOCKER (Issue #497):**
-- PR #494 fixed workflow configs (timeouts, runners) but did NOT fix the fundamental problem
-- `accuracy-report.yml` has `cancel-in-progress: true` — every agent push to main cancels the running accuracy workflow
-- Agents push multiple times per hour; accuracy workflow needs 60-120 minutes
-- **Result: 30+ consecutive cancelled runs. Zero completions.**
-- Additionally, `polybench-segmented.yml` references wrong ELF filenames (`polybench_atax.elf` vs actual `atax_m2sim.elf`)
+#### Microbenchmark Results (13.40% average error)
 
-**FIX REQUIRED (Issue #497):**
-- Remove `cancel-in-progress: true` from accuracy workflows, OR
-- Switch accuracy workflows to `workflow_dispatch` + scheduled cron trigger only
-- Fix PolyBench ELF filename mismatches
+| Benchmark | Sim CPI | HW CPI | Error |
+|-----------|---------|--------|-------|
+| arithmetic | 0.270 | 0.296 | 9.63% |
+| dependency | 1.020 | 1.088 | 6.67% |
+| branch | 1.320 | 1.303 | 1.30% |
+| memorystrided | 2.600 | 2.648 | 1.85% |
+| loadheavy | 0.361 | 0.429 | 18.84% |
+| storeheavy | 0.491 | 0.612 | 24.64% |
+| branchheavy | 0.829 | 0.714 | 16.11% |
+| vectorsum | 0.500 | 0.402 | 24.38% |
+| vectoradd | 0.401 | 0.329 | 21.88% |
+| reductiontree | 0.452 | 0.480 | 6.19% |
+| strideindirect | 0.612 | 0.528 | 15.91% |
 
-**REQUIRED:** Fix Issue #497, then wait for first successful accuracy CI run.
+#### PolyBench Results (~120% average error)
 
----
+| Benchmark | Sim CPI | HW CPI | Error |
+|-----------|---------|--------|-------|
+| atax | 0.394 | 0.2178 | 80.9% |
+| bicg | 0.467 | 0.2270 | 105.7% |
+| gemm | 0.437 | 0.2333 | 87.3% |
+| mvt | 0.361 | 0.2169 | 66.4% |
+| jacobi-1d | 0.547 | 0.1512 | 261.8% |
 
-### Enhancement Phase: Performance Optimization Framework ⏸️ PAUSED
+Both simulation and hardware use SMALL dataset for PolyBench, so error comparison is valid.
 
-**Paused until H5 verification is complete.** Enhancement work is premature when the accuracy numbers haven't been validated by CI.
+#### Known Gap: In-Order vs Out-of-Order
 
----
+**Root cause of PolyBench error:** M2Sim models an in-order pipeline, but the real Apple M2 is out-of-order. PolyBench kernels with heavy memory and computation patterns benefit enormously from OoO execution, resulting in 66-262% CPI overestimation by the in-order model.
 
-### Deliverables (Issue #490) ⚠️ QUALITY ISSUES
+The microbenchmark accuracy (13.40%) validates the core timing model for individual microarchitectural features. The PolyBench gap is an architectural limitation, not a calibration error.
 
-**Human requested (Issue #490):** docs consolidation, LaTeX paper, reproducible experiment script, README overhaul.
+#### Infeasible Benchmarks
 
-**Status:** Files exist in repo but have serious quality problems:
-- **reproduce_experiments.py** — Returns hardcoded fake data, not real simulation results (Issue #495)
-- **paper/m2sim_micro2026.tex** — Factual mismatches with code (wrong cache sizes, pipeline width), missing figures, not using real MICRO template (Issue #496)
-- **README.md** — Same factual mismatches, premature "COMPLETED" claim (Issue #496)
-- **docs/reference/** — Mostly accurate, best quality among deliverables
-
-**Priority:** Fix after CI accuracy verification completes.
-
-**Previous Initiative Lead:** Alex (Issue #481)
-
-#### H5.1: PolyBench Integration ✅ COMPLETE
-
-**Achievement:** 7 PolyBench benchmarks operational (PR #448 MERGED February 11, 2026)
-- [x] ARM64 ELF compilation complete (atax, bicg, mvt, jacobi-1d, gemm, 2mm, 3mm)
-- [x] ELF loading infrastructure integrated into timing harness
-- [x] Test coverage with CI integration and timeout management
-- [x] Production deployment achieving goal contribution
-
-#### H5.2: Calibrated Microbenchmark Suite ✅ COMPLETE
-
-**Achievement:** 7 calibrated **microbenchmarks** with 13.3% average accuracy
-- [x] Core microbenchmarks: arithmetic (9.6%), dependency (6.7%), branch (1.3%)
-- [x] Memory benchmarks: memorystrided (2.0%), loadheavy (28.1%), storeheavy (11.3%)
-- [x] Specialized benchmarks: branchheavy (16.1%)
-- [x] Autonomous calibration methodology with hardware baseline validation
-
-**Important:** This 13.3% accuracy applies only to microbenchmarks, **NOT** to intermediate benchmarks.
-
-#### H5.3: Intermediate Benchmark Calibration ⚠️ UNVERIFIED
-
-**Claimed Results (h5_accuracy_results.json — manually committed, not CI-generated):**
-- **Overall accuracy:** 16.9% error claimed
-- **Microbenchmark accuracy:** 14.4% error (11 benchmarks)
-- **PolyBench accuracy:** 20.8% error (7 benchmarks)
-- **Benchmark count:** 18 total benchmarks
-
-**Verification Blocker (Issue #492):** No CI workflow has ever successfully generated these numbers. The h5_accuracy_results.json was committed by an agent, not produced by an automated CI run.
-
-**Previous Crisis Resolution (Issue #466 by Leo):**
-- Hardware baselines corrected via multi-scale linear regression methodology (PRs #469, #470, #471)
-- Baselines in calibration_results.json appear reasonable (R² > 0.999)
-- But end-to-end CI verification never completed successfully
-
-**Final Benchmark Results:**
-
-**Microbenchmarks (14.4% avg):** arithmetic (9.6%), dependency (6.7%), branch (1.3%), memorystrided (10.8%), loadheavy (3.4%), storeheavy (47.4%), branchheavy (16.1%), vectorsum (29.6%), vectoradd (24.3%), reductiontree (6.1%), strideindirect (3.1%)
-
-**PolyBench (20.8% avg):** atax (33.6%), bicg (29.3%), gemm (19.5%), mvt (22.6%), jacobi-1d (11.1%), 2mm (17.4%), 3mm (12.4%)
+2mm, 3mm (PolyBench) and crc32, edn, statemate, primecount, huffbench, matmult-int (EmBench) did not complete within CI timeout limits.
 
 ## Scope
 
