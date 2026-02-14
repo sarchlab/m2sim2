@@ -304,9 +304,54 @@ Both simulation and hardware use SMALL dataset for PolyBench, so error compariso
 
 The microbenchmark accuracy (14.21%) validates the core timing model for individual microarchitectural features. The PolyBench gap is an architectural limitation, not a calibration error.
 
-#### Infeasible Benchmarks
+#### Infeasible Benchmarks — Detailed Analysis (CI Run #22019560953)
 
-2mm, 3mm (PolyBench) and crc32, edn, statemate, primecount, huffbench, matmult-int (EmBench) did not complete within CI timeout limits.
+All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minimum workload). They all hit the 5B cycle limit and were skipped in CI.
+
+| Benchmark | Category | Insts at 5B Cycles | CPI at Limit | Wall Time | Reduction Possible? |
+|-----------|----------|--------------------:|:------------:|----------:|---------------------|
+| crc32 | embench | 12,499,991,230 | 0.400 | 44m29s | No — single iteration of 1024 CRC ops |
+| edn | embench | 13,000,000,936 | 0.385 | 45m10s | Maybe — N=100, ORDER=50 (needs rebuild) |
+| statemate | embench | 9,210,526,236 | 0.543 | 35m17s | No — complex state machine, no size knob |
+| primecount | embench | 9,999,999,968 | 0.500 | 42m49s | No — already at SZ=3, NPRIMES=9 (minimum) |
+| huffbench | embench | CI timeout (2h30m) | — | 2h30m | Maybe — TEST_SIZE=500 (needs rebuild) |
+| matmult-int | embench | CI timeout (never started) | — | — | Maybe — UPPERLIMIT=20 (needs rebuild) |
+| 2mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
+| 3mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
+
+**Key finding:** Even at minimum workload, these benchmarks execute 9-13 billion instructions before completion, far exceeding the 5B cycle limit. The working EmBench benchmark (aha_mont64) completes in just 4,378 instructions / 1,518 cycles — roughly 6 orders of magnitude smaller. The infeasible benchmarks' workloads are inherently large even at scale factor 1.
+
+**Benchmarks with potential further reduction** (edn, huffbench, matmult-int) would require a RISC-V cross-compiler to rebuild the ELF binaries with smaller parameters.
+
+#### Full Benchmark Coverage Table
+
+| Benchmark | Category | Status | Sim CPI | HW CPI | Error | Notes |
+|-----------|----------|--------|--------:|-------:|------:|-------|
+| arithmetic | microbenchmark | complete | 0.270 | 0.296 | 9.63% | |
+| dependency | microbenchmark | complete | 1.020 | 1.088 | 6.67% | |
+| branch | microbenchmark | complete | 1.320 | 1.303 | 1.30% | |
+| memorystrided | microbenchmark | complete | 2.933 | 2.648 | 10.76% | |
+| loadheavy | microbenchmark | complete | 0.361 | 0.429 | 18.84% | |
+| storeheavy | microbenchmark | complete | 0.491 | 0.612 | 24.64% | |
+| branchheavy | microbenchmark | complete | 0.829 | 0.714 | 16.11% | |
+| vectorsum | microbenchmark | complete | 0.500 | 0.402 | 24.38% | |
+| vectoradd | microbenchmark | complete | 0.401 | 0.329 | 21.88% | |
+| reductiontree | microbenchmark | complete | 0.452 | 0.480 | 6.19% | |
+| strideindirect | microbenchmark | complete | 0.612 | 0.528 | 15.91% | |
+| atax | polybench | complete | 0.394 | 0.2178 | 80.9% | In-order vs OoO gap |
+| bicg | polybench | complete | 0.467 | 0.2270 | 105.7% | In-order vs OoO gap |
+| gemm | polybench | complete | 0.437 | 0.2333 | 87.3% | In-order vs OoO gap |
+| mvt | polybench | complete | 0.361 | 0.2169 | 66.4% | In-order vs OoO gap |
+| jacobi-1d | polybench | complete | 0.547 | 0.1512 | 261.8% | In-order vs OoO gap |
+| aha_mont64 | embench | sim-only | 0.347 | — | — | No HW CPI data |
+| 2mm | polybench | infeasible | — | — | — | CI timeout; rebuilding with MINI_DATASET |
+| 3mm | polybench | infeasible | — | — | — | CI timeout; rebuilding with MINI_DATASET |
+| crc32 | embench | infeasible | — | — | — | 12.5B insts in 5B cycles; min workload |
+| edn | embench | infeasible | — | — | — | 13.0B insts in 5B cycles; N/ORDER reducible |
+| statemate | embench | infeasible | — | — | — | 9.2B insts in 5B cycles; no size knob |
+| primecount | embench | infeasible | — | — | — | 10.0B insts in 5B cycles; SZ=3 is minimum |
+| huffbench | embench | infeasible | — | — | — | CI timeout after 2h30m; memory-intensive loop; TEST_SIZE reducible |
+| matmult-int | embench | infeasible | — | — | — | CI timeout; never started (huffbench consumed 4h10m job); UPPERLIMIT reducible |
 
 ## Scope
 
