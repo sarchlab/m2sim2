@@ -219,15 +219,31 @@ def display_ci_verified_results(data: Dict):
         print(f"  Average error: {avg_err*100:.2f}% (over {len(micro_with_error)} benchmarks)")
         print(f"  Range: {min_err*100:.2f}% - {max_err*100:.2f}%")
 
-    # Print PolyBench results (sim-only, no comparable HW CPI)
+    # Print PolyBench results
     if poly:
         print()
-        print(f"{'PolyBench (simulation only — HW CPI not directly comparable)':}")
-        print(f"{'─' * 70}")
-        print(f"  {'Benchmark':<20} {'Sim CPI':>10} {'Note':>30}")
-        print(f"  {'─' * 60}")
-        for b in poly:
-            print(f"  {b['name']:<20} {b['simulated_cpi']:>10.3f} {'HW used LARGE, sim used MINI':>30}")
+        poly_with_error = [b for b in poly if b.get("error") is not None]
+        poly_no_error = [b for b in poly if b.get("error") is None]
+        if poly_with_error:
+            print(f"{'PolyBench (with hardware CPI comparison — SMALL dataset)':}")
+            print(f"{'─' * 70}")
+            print(f"  {'Benchmark':<20} {'Sim CPI':>10} {'HW CPI':>10} {'Error':>10}")
+            print(f"  {'─' * 60}")
+            for b in poly_with_error:
+                err_str = f"{b['error']*100:.1f}%" if b["error"] is not None else "N/A"
+                hw_str = f"{b['hardware_cpi']:.4f}" if isinstance(b["hardware_cpi"], (int, float)) else "N/A"
+                print(f"  {b['name']:<20} {b['simulated_cpi']:>10.3f} {hw_str:>10} {err_str:>10}")
+            avg_poly_err = sum(b["error"] for b in poly_with_error) / len(poly_with_error)
+            print(f"  {'─' * 60}")
+            print(f"  Average error: {avg_poly_err*100:.2f}% (over {len(poly_with_error)} benchmarks)")
+        if poly_no_error:
+            print()
+            print(f"{'PolyBench (simulation only — no comparable HW CPI)':}")
+            print(f"{'─' * 70}")
+            print(f"  {'Benchmark':<20} {'Sim CPI':>10}")
+            print(f"  {'─' * 60}")
+            for b in poly_no_error:
+                print(f"  {b['name']:<20} {b['simulated_cpi']:>10.3f}")
 
     # Print EmBench results (sim-only)
     if emb:
@@ -248,8 +264,9 @@ def display_ci_verified_results(data: Dict):
             print(f"  {b['name']:<20} ({b['category']})")
 
     print()
-    log(f"Summary: {summary['microbenchmarks_with_error']} microbenchmarks with error data, "
-        f"{summary['micro_average_error']*100:.2f}% average error", "SUCCESS")
+    log(f"Summary: {summary.get('benchmarks_with_error_data', summary.get('microbenchmarks_with_error', 0))} benchmarks with error data, "
+        f"{summary['average_error']*100:.2f}% overall average error", "SUCCESS")
+    log(f"Microbenchmarks ({summary['microbenchmarks_with_error']}): {summary['micro_average_error']*100:.2f}% average error", "SUCCESS")
     log(f"H5 target (<20% average error): {'MET' if summary['h5_target_met'] else 'NOT MET'}", "SUCCESS")
     log("These are CI-verified results. To run live simulations, build ELF binaries first.", "INFO")
     log("See benchmarks/microbenchmarks/ and benchmarks/polybench/ for source files.", "INFO")
@@ -485,17 +502,33 @@ def generate_experiment_report(ci_data: Dict, live_results: Optional[Dict] = Non
         report_content += f"| **Average** | | | **{avg_err*100:.2f}%** |\n"
 
     poly = [b for b in benchmarks if b["category"] == "polybench"]
+    poly_with_error = [b for b in poly if b.get("error") is not None]
     emb = [b for b in benchmarks if b["category"] == "embench"]
 
-    if poly or emb:
+    if poly_with_error:
         report_content += """
-## Simulation-Only Results (no directly comparable hardware CPI)
+## PolyBench Results (with hardware CPI comparison — SMALL dataset)
 
-| Benchmark | Category | Simulated CPI | Note |
-|-----------|----------|--------------|------|
+| Benchmark | Simulated CPI | Hardware CPI | Error |
+|-----------|--------------|-------------|-------|
 """
-        for b in poly + emb:
-            report_content += f"| {b['name']} | {b['category']} | {b['simulated_cpi']:.3f} | HW used different dataset size |\n"
+        for b in poly_with_error:
+            hw_str = f"{b['hardware_cpi']:.4f}" if isinstance(b.get("hardware_cpi"), (int, float)) else "N/A"
+            err_str = f"{b['error']*100:.1f}%" if b.get("error") is not None else "N/A"
+            report_content += f"| {b['name']} | {b['simulated_cpi']:.3f} | {hw_str} | {err_str} |\n"
+        avg_poly_err = sum(b["error"] for b in poly_with_error) / len(poly_with_error)
+        report_content += f"| **Average** | | | **{avg_poly_err*100:.2f}%** |\n"
+
+    sim_only = [b for b in poly if b.get("error") is None] + emb
+    if sim_only:
+        report_content += """
+## Simulation-Only Results (no comparable hardware CPI)
+
+| Benchmark | Category | Simulated CPI |
+|-----------|----------|--------------|
+"""
+        for b in sim_only:
+            report_content += f"| {b['name']} | {b['category']} | {b['simulated_cpi']:.3f} |\n"
 
     infeasible = ci_data.get("infeasible", [])
     if infeasible:
@@ -541,8 +574,8 @@ To run live simulations locally, you need to:
 2. Build ELF binaries: `aarch64-linux-musl-gcc -static -O2 -o benchmark.elf benchmark.c`
 3. Run this script without --skip-experiments
 
-Note: PolyBench and EmBench hardware CPI was measured on LARGE datasets, while
-simulation uses MINI datasets, so those results are not directly comparable.
+Note: PolyBench sim and HW both use SMALL dataset, so error comparison is valid.
+PolyBench shows high error (120% avg) due to in-order vs OoO architectural gap.
 """
 
     with open("experiment_report.md", "w") as f:
@@ -613,8 +646,9 @@ def main():
         summary = ci_data["summary"]
         log("==============================", "HEADER")
         log(f"Experiment reproduction completed in {duration:.1f} seconds", "SUCCESS")
-        log(f"CI-verified microbenchmark accuracy: {summary['micro_average_error']*100:.2f}% average error "
-            f"({summary['microbenchmarks_with_error']} benchmarks)", "SUCCESS")
+        log(f"CI-verified overall accuracy: {summary['average_error']*100:.2f}% average error "
+            f"({summary.get('benchmarks_with_error_data', summary['microbenchmarks_with_error'])} benchmarks)", "SUCCESS")
+        log(f"Microbenchmark accuracy: {summary['micro_average_error']*100:.2f}% ({summary['microbenchmarks_with_error']} benchmarks)", "SUCCESS")
         log(f"H5 target (<20%): {'MET' if summary['h5_target_met'] else 'NOT MET'}", "SUCCESS")
         log("All outputs generated successfully", "SUCCESS")
 

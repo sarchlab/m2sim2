@@ -42,7 +42,8 @@ func runPolybenchTest(t *testing.T, name, elfName string) {
 
 	config := DefaultConfig()
 	config.Output = &bytes.Buffer{}
-	config.EnableDCache = false      // D-cache stalls hurt CPI accuracy in in-order pipeline
+	config.EnableICache = false
+	config.EnableDCache = false
 	config.MaxCycles = 5_000_000_000 // 5B cycle safety limit to prevent hangs
 
 	harness := NewHarness(config)
