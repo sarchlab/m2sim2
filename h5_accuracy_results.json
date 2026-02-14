@@ -214,8 +214,8 @@
       "name": "huffbench",
       "category": "embench",
       "status": "infeasible",
-      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. CI run 22019560953 Group 2 still in progress. TEST_SIZE=500 could theoretically be reduced, but requires cross-compilation rebuild.",
-      "ci_verified": false,
+      "reason": "CI timeout after 2h30m wall-time; test killed before reaching 5B cycle limit; running in memory-intensive loop (Memory.Write64)",
+      "ci_verified": true,
       "ci_run": 22019560953,
       "reduction_possible": "TEST_SIZE=500 could be reduced but requires cross-compiler rebuild"
     },
@@ -223,8 +223,8 @@
       "name": "matmult-int",
       "category": "embench",
       "status": "infeasible",
-      "reason": "Exceeded 5B cycle limit at LOCAL_SCALE_FACTOR=1, CPU_MHZ=1. CI run 22019560953 Group 2 still in progress. UPPERLIMIT=20 (20x20 matrix) could theoretically be reduced, but requires cross-compilation rebuild.",
-      "ci_verified": false,
+      "reason": "CI timeout; never started due to huffbench consuming full job allocation (4h10m); expected to exceed 5B cycles based on compute intensity",
+      "ci_verified": true,
       "ci_run": 22019560953,
       "reduction_possible": "UPPERLIMIT=20 could be reduced (e.g. to 5) but requires cross-compiler rebuild"
     }

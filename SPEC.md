@@ -314,8 +314,8 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 | edn | embench | 13,000,000,936 | 0.385 | 45m10s | Maybe — N=100, ORDER=50 (needs rebuild) |
 | statemate | embench | 9,210,526,236 | 0.543 | 35m17s | No — complex state machine, no size knob |
 | primecount | embench | 9,999,999,968 | 0.500 | 42m49s | No — already at SZ=3, NPRIMES=9 (minimum) |
-| huffbench | embench | (Group 2 pending) | — | — | Maybe — TEST_SIZE=500 (needs rebuild) |
-| matmult-int | embench | (Group 2 pending) | — | — | Maybe — UPPERLIMIT=20 (needs rebuild) |
+| huffbench | embench | CI timeout (2h30m) | — | 2h30m | Maybe — TEST_SIZE=500 (needs rebuild) |
+| matmult-int | embench | CI timeout (never started) | — | — | Maybe — UPPERLIMIT=20 (needs rebuild) |
 | 2mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
 | 3mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
 
@@ -350,8 +350,8 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 | edn | embench | infeasible | — | — | — | 13.0B insts in 5B cycles; N/ORDER reducible |
 | statemate | embench | infeasible | — | — | — | 9.2B insts in 5B cycles; no size knob |
 | primecount | embench | infeasible | — | — | — | 10.0B insts in 5B cycles; SZ=3 is minimum |
-| huffbench | embench | infeasible | — | — | — | 5B cycle limit hit; TEST_SIZE reducible |
-| matmult-int | embench | infeasible | — | — | — | 5B cycle limit hit; UPPERLIMIT reducible |
+| huffbench | embench | infeasible | — | — | — | CI timeout after 2h30m; memory-intensive loop; TEST_SIZE reducible |
+| matmult-int | embench | infeasible | — | — | — | CI timeout; never started (huffbench consumed 4h10m job); UPPERLIMIT reducible |
 
 ## Scope
 
