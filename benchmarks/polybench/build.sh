@@ -19,7 +19,7 @@ CFLAGS="-O2 -ffreestanding -nostdlib -mcpu=apple-m2"
 CFLAGS+=" -fno-tree-vectorize -fno-tree-loop-vectorize"
 CFLAGS+=" -I$SCRIPT_DIR/common"
 CFLAGS+=" -DPOLYBENCH_USE_RESTRICT"
-CFLAGS+=" -DMINI_DATASET"
+CFLAGS+=" -DSMALL_DATASET"
 
 # Available benchmarks
 BENCHMARKS="gemm atax 2mm mvt jacobi-1d 3mm bicg"

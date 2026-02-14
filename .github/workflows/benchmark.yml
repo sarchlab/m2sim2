@@ -25,7 +25,7 @@ on:
         description: 'Dataset size for PolyBench'
         type: choice
         required: false
-        default: 'MINI'
+        default: 'SMALL'
         options:
           - MINI
           - SMALL

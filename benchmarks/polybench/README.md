@@ -9,7 +9,7 @@ the M2Sim simulator. The benchmarks use:
 
 - Integer arithmetic (no FPU dependencies)
 - Static array allocation (no malloc/libc)
-- MINI dataset sizes (16×16 matrices)
+- SMALL dataset sizes (60-120 element dimensions)
 - Exit via syscall (bare-metal compatible)
 
 ## Benchmarks
