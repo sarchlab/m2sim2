@@ -41,7 +41,7 @@ While M2Sim uses Akita (like MGPUSim) and draws inspiration from MGPUSim's archi
 | H2 | SPEC benchmark enablement (syscalls, ELF loading, validation) | ✅ COMPLETE |
 | H3 | Accuracy calibration (<20% error on microbenchmarks) | ✅ COMPLETE (14.1%) |
 | H4 | Multi-core support | ⬜ NOT STARTED |
-| H5 | 15+ Intermediate Benchmarks (<20% average error) | ⚠️ UNVERIFIED — CI never succeeded |
+| H5 | 15+ Intermediate Benchmarks (<20% average error) | 18 benchmarks with error data; 61.71% avg error (all CI-verified) |
 
 ---
 
@@ -257,18 +257,18 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 ---
 
-### H5: 16 Benchmarks with Error Data — CI-VERIFIED (February 14, 2026)
+### H5: 18 Benchmarks with Error Data (February 14, 2026)
 
 **Goal:** Achieve <20% average error across 15+ benchmarks with hardware CPI comparison.
 
-**STATUS: CI-VERIFIED** — Data from accuracy-consolidated workflow run #22015703964. Microbenchmark data verified against run #22019560948.
+**STATUS:** 18 benchmarks with error data (11 microbenchmarks + 7 PolyBench). All 7/7 polybench CI-verified from accuracy-consolidated run 22024974797 (includes Leo's PR #46 fix).
 
 **Results:**
-- **Total benchmarks with error data:** 16 (11 microbenchmarks + 5 PolyBench)
-- **Overall average error:** 47.40% — does **NOT** meet <20% target
+- **Total benchmarks with error data:** 18 (11 microbenchmarks + 7 PolyBench)
+- **Overall average error:** 61.71% — does **NOT** meet <20% target
 - **Microbenchmark average error:** 14.21% (11 benchmarks) — meets <20% target
-- **PolyBench average error:** ~120% (5 benchmarks) — does **NOT** meet target
-- **Data source:** `h5_accuracy_results.json` produced by CI accuracy-consolidated workflow
+- **PolyBench average error:** 136.36% (7 benchmarks) — does **NOT** meet target
+- **Data source:** `h5_accuracy_results.json` — all benchmarks CI-verified
 
 #### Microbenchmark Results (14.21% average error)
 
@@ -286,21 +286,23 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 | reductiontree | 0.452 | 0.480 | 6.19% |
 | strideindirect | 0.612 | 0.528 | 15.91% |
 
-#### PolyBench Results (~120% average error)
+#### PolyBench Results (136.36% average error — 7/7 benchmarks, all CI-verified)
 
-| Benchmark | Sim CPI | HW CPI | Error |
-|-----------|---------|--------|-------|
-| atax | 0.394 | 0.2178 | 80.9% |
-| bicg | 0.467 | 0.2270 | 105.7% |
-| gemm | 0.437 | 0.2333 | 87.3% |
-| mvt | 0.361 | 0.2169 | 66.4% |
-| jacobi-1d | 0.547 | 0.1512 | 261.8% |
+| Benchmark | Sim CPI | HW CPI | Error | Dataset |
+|-----------|---------|--------|-------|---------|
+| atax | 0.450 | 0.2185 | 105.9% | SMALL |
+| bicg | 0.470 | 0.2295 | 104.8% | SMALL |
+| gemm | 0.437 | 0.2332 | 87.4% | SMALL |
+| mvt | 0.474 | 0.2156 | 119.9% | SMALL |
+| jacobi-1d | 0.549 | 0.1510 | 263.6% | SMALL |
+| 2mm | 0.340 | 0.1435 | 136.9% | MINI |
+| 3mm | 0.343 | 0.1453 | 136.1% | MINI |
 
-Both simulation and hardware use SMALL dataset for PolyBench, so error comparison is valid.
+SMALL dataset used for atax/bicg/gemm/mvt/jacobi-1d; MINI dataset for 2mm/3mm. All sim CPI values from CI run 22024974797 (after Leo's PR #46 hazard fix).
 
 #### Known Gap: In-Order vs Out-of-Order
 
-**Root cause of PolyBench error:** M2Sim models an in-order pipeline, but the real Apple M2 is out-of-order. PolyBench kernels with heavy memory and computation patterns benefit enormously from OoO execution, resulting in 66-262% CPI overestimation by the in-order model.
+**Root cause of PolyBench error:** M2Sim models an in-order pipeline, but the real Apple M2 is out-of-order. PolyBench kernels with heavy memory and computation patterns benefit enormously from OoO execution, resulting in 87-264% CPI overestimation by the in-order model.
 
 The microbenchmark accuracy (14.21%) validates the core timing model for individual microarchitectural features. The PolyBench gap is an architectural limitation, not a calibration error.
 
@@ -316,12 +318,12 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 | primecount | embench | 9,999,999,968 | 0.500 | 42m49s | No — already at SZ=3, NPRIMES=9 (minimum) |
 | huffbench | embench | CI timeout (2h30m) | — | 2h30m | Maybe — TEST_SIZE=500 (needs rebuild) |
 | matmult-int | embench | CI timeout (never started) | — | — | Maybe — UPPERLIMIT=20 (needs rebuild) |
-| 2mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
-| 3mm | polybench | — | — | — | Being rebuilt with MINI_DATASET |
 
 **Key finding:** Even at minimum workload, these benchmarks execute 9-13 billion instructions before completion, far exceeding the 5B cycle limit. The working EmBench benchmark (aha_mont64) completes in just 4,378 instructions / 1,518 cycles — roughly 6 orders of magnitude smaller. The infeasible benchmarks' workloads are inherently large even at scale factor 1.
 
 **Benchmarks with potential further reduction** (edn, huffbench, matmult-int) would require a RISC-V cross-compiler to rebuild the ELF binaries with smaller parameters.
+
+**Previously infeasible, now resolved:** 2mm and 3mm (PolyBench) were rebuilt with MINI_DATASET and now complete successfully (PR #46).
 
 #### Full Benchmark Coverage Table
 
@@ -338,14 +340,14 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 | vectoradd | microbenchmark | complete | 0.401 | 0.329 | 21.88% | |
 | reductiontree | microbenchmark | complete | 0.452 | 0.480 | 6.19% | |
 | strideindirect | microbenchmark | complete | 0.612 | 0.528 | 15.91% | |
-| atax | polybench | complete | 0.394 | 0.2178 | 80.9% | In-order vs OoO gap |
-| bicg | polybench | complete | 0.467 | 0.2270 | 105.7% | In-order vs OoO gap |
-| gemm | polybench | complete | 0.437 | 0.2333 | 87.3% | In-order vs OoO gap |
-| mvt | polybench | complete | 0.361 | 0.2169 | 66.4% | In-order vs OoO gap |
-| jacobi-1d | polybench | complete | 0.547 | 0.1512 | 261.8% | In-order vs OoO gap |
+| atax | polybench | complete | 0.450 | 0.2185 | 105.9% | In-order vs OoO gap |
+| bicg | polybench | complete | 0.470 | 0.2295 | 104.8% | In-order vs OoO gap |
+| gemm | polybench | complete | 0.437 | 0.2332 | 87.4% | In-order vs OoO gap |
+| mvt | polybench | complete | 0.474 | 0.2156 | 119.9% | In-order vs OoO gap |
+| jacobi-1d | polybench | complete | 0.549 | 0.1510 | 263.6% | In-order vs OoO gap |
+| 2mm | polybench | complete | 0.340 | 0.1435 | 136.9% | MINI dataset; in-order vs OoO gap |
+| 3mm | polybench | complete | 0.343 | 0.1453 | 136.1% | MINI dataset; in-order vs OoO gap |
 | aha_mont64 | embench | sim-only | 0.347 | — | — | No HW CPI data |
-| 2mm | polybench | infeasible | — | — | — | CI timeout; rebuilding with MINI_DATASET |
-| 3mm | polybench | infeasible | — | — | — | CI timeout; rebuilding with MINI_DATASET |
 | crc32 | embench | infeasible | — | — | — | 12.5B insts in 5B cycles; min workload |
 | edn | embench | infeasible | — | — | — | 13.0B insts in 5B cycles; N/ORDER reducible |
 | statemate | embench | infeasible | — | — | — | 9.2B insts in 5B cycles; no size knob |
