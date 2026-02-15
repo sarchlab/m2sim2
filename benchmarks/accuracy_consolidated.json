@@ -1,0 +1,192 @@
+{
+  "microbench": {
+    "available": true,
+    "benchmarks_run": 11,
+    "results": {
+      "arithmetic": {
+        "cpi": 0.267
+      },
+      "dependency": {
+        "cpi": 1.02
+      },
+      "branch": {
+        "cpi": 1.333
+      },
+      "memorystrided": {
+        "cpi": 0.857
+      },
+      "loadheavy": {
+        "cpi": 0.391
+      },
+      "storeheavy": {
+        "cpi": 0.522
+      },
+      "branchheavy": {
+        "cpi": 0.97
+      },
+      "vectorsum": {
+        "cpi": 0.771
+      },
+      "vectoradd": {
+        "cpi": 0.574
+      },
+      "reductiontree": {
+        "cpi": 0.452
+      },
+      "strideindirect": {
+        "cpi": 0.878
+      }
+    }
+  },
+  "polybench": {
+    "available": true,
+    "benchmarks_run": 7,
+    "results": {
+      "atax": {
+        "cycles": 27596,
+        "instructions": 41439,
+        "cpi": 0.666
+      },
+      "bicg": {
+        "cycles": 2009,
+        "instructions": 3121,
+        "cpi": 0.644
+      },
+      "jacobi-1d": {
+        "cycles": 31846,
+        "instructions": 48774,
+        "cpi": 0.653
+      },
+      "mvt": {
+        "cycles": 73350,
+        "instructions": 113353,
+        "cpi": 0.647
+      },
+      "gemm": {
+        "cycles": 68542,
+        "instructions": 104418,
+        "cpi": 0.656
+      },
+      "2mm": {
+        "cycles": 53153,
+        "instructions": 75095,
+        "cpi": 0.708
+      },
+      "3mm": {
+        "cycles": 81263,
+        "instructions": 114111,
+        "cpi": 0.712
+      }
+    }
+  },
+  "embench": {
+    "available": true,
+    "benchmarks_run": 1,
+    "results": {
+      "embench_aha_mont64": {
+        "cycles": 1011,
+        "instructions": 4309,
+        "cpi": 0.235
+      }
+    }
+  },
+  "error_metrics": {
+    "arithmetic": {
+      "sim_cpi": 0.267,
+      "hw_cpi": 0.296,
+      "error": 0.1086
+    },
+    "dependency": {
+      "sim_cpi": 1.02,
+      "hw_cpi": 1.088,
+      "error": 0.0667
+    },
+    "branch": {
+      "sim_cpi": 1.333,
+      "hw_cpi": 1.303,
+      "error": 0.023
+    },
+    "memorystrided": {
+      "sim_cpi": 0.857,
+      "hw_cpi": 2.648,
+      "error": 2.0898
+    },
+    "loadheavy": {
+      "sim_cpi": 0.391,
+      "hw_cpi": 0.429,
+      "error": 0.0972
+    },
+    "storeheavy": {
+      "sim_cpi": 0.522,
+      "hw_cpi": 0.612,
+      "error": 0.1724
+    },
+    "branchheavy": {
+      "sim_cpi": 0.97,
+      "hw_cpi": 0.714,
+      "error": 0.3585
+    },
+    "vectorsum": {
+      "sim_cpi": 0.771,
+      "hw_cpi": 0.402,
+      "error": 0.9179
+    },
+    "vectoradd": {
+      "sim_cpi": 0.574,
+      "hw_cpi": 0.329,
+      "error": 0.7447
+    },
+    "reductiontree": {
+      "sim_cpi": 0.452,
+      "hw_cpi": 0.48,
+      "error": 0.0619
+    },
+    "strideindirect": {
+      "sim_cpi": 0.878,
+      "hw_cpi": 0.528,
+      "error": 0.6629
+    },
+    "atax": {
+      "sim_cpi": 0.666,
+      "hw_cpi": 0.2185,
+      "error": 2.0481,
+      "suite": "polybench"
+    },
+    "bicg": {
+      "sim_cpi": 0.644,
+      "hw_cpi": 0.2295,
+      "error": 1.8061,
+      "suite": "polybench"
+    },
+    "gemm": {
+      "sim_cpi": 0.656,
+      "hw_cpi": 0.2332,
+      "error": 1.813,
+      "suite": "polybench"
+    },
+    "mvt": {
+      "sim_cpi": 0.647,
+      "hw_cpi": 0.2156,
+      "error": 2.0009,
+      "suite": "polybench"
+    },
+    "jacobi-1d": {
+      "sim_cpi": 0.653,
+      "hw_cpi": 0.151,
+      "error": 3.3245,
+      "suite": "polybench"
+    },
+    "2mm": {
+      "sim_cpi": 0.708,
+      "hw_cpi": 0.1435,
+      "error": 3.9338,
+      "suite": "polybench"
+    },
+    "3mm": {
+      "sim_cpi": 0.712,
+      "hw_cpi": 0.1453,
+      "error": 3.9002,
+      "suite": "polybench"
+    }
+  }
+}
