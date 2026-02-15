@@ -1025,6 +1025,12 @@ func canIssueWith(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCount
 			continue
 		}
 
+		// Block instructions after a branch: instructions following a branch
+		// in program order cannot issue until the branch resolves.
+		if prev.IsBranch {
+			return false
+		}
+
 		// Store-to-load forwarding: M2's 56-entry store buffer handles
 		// forwarding transparently. No blanket blocking needed.
 
