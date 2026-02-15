@@ -3737,7 +3737,6 @@ func (p *Pipeline) tickSextupleIssue() {
 	p.ifid6 = nextIFID6
 }
 
-
 // Reset clears all pipeline state.
 func (p *Pipeline) Reset() {
 	p.ifid.Clear()
@@ -5974,4 +5973,3 @@ func (p *Pipeline) collectPendingFetchInstructionsSelective(consumed []bool) ([8
 
 	return result, count
 }
-
