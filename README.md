@@ -4,18 +4,18 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/sarchlab/m2sim)](https://goreportcard.com/report/github.com/sarchlab/m2sim)
 [![License](https://img.shields.io/github/license/sarchlab/m2sim.svg)](LICENSE)
 
-**M2Sim** is a cycle-accurate simulator for the Apple M2 CPU that achieves **14.22% average timing error** across 11 microbenchmarks with hardware CPI comparison. Built on the [Akita simulation framework](https://github.com/sarchlab/akita), M2Sim enables detailed performance analysis of ARM64 workloads on Apple Silicon architectures.
+**M2Sim** is a cycle-accurate simulator for the Apple M2 CPU that achieves **61.71% average timing error** across 18 benchmarks (11 microbenchmarks + 7 PolyBench) with hardware CPI comparison. Built on the [Akita simulation framework](https://github.com/sarchlab/akita), M2Sim enables detailed performance analysis of ARM64 workloads on Apple Silicon architectures.
 
 ## Project Status: In Development
 
-**Current Achievement:** 14.22% average timing error across 11 microbenchmarks with hardware CPI comparison.
+**Current Achievement:** 61.71% average timing error across 18 benchmarks with hardware CPI comparison.
 
 | Success Criterion | Target | Achieved | Status |
 |------------------|---------|----------|--------|
 | **Functional Emulation** | ARM64 user-space execution | Complete | Done |
 | **Timing Accuracy** | <20% average error | 14.22% (11 microbenchmarks) | Done |
 | **Modular Design** | Separate functional/timing | Implemented | Done |
-| **Benchmark Coverage** | μs to ms range | 11 micro + 4 PolyBench + 1 EmBench | Done |
+| **Benchmark Coverage** | μs to ms range | 11 micro + 7 PolyBench + 1 EmBench (sim-only) | Done |
 
 ## 🚀 Quick Start
 
@@ -60,11 +60,11 @@ go build -o m2sim ./cmd/m2sim
 | **Benchmark Category** | **Count** | **Average Error** | **Range** |
 |----------------------|-----------|------------------|-----------|
 | **Microbenchmarks** | 11 | 14.22% | 1.27% - 24.67% |
-| **PolyBench** | 4 | sim-only | no hardware CPI comparison |
+| **PolyBench** | 7 | 136.36% | 87.39% - 263.58% |
 | **EmBench** | 1 | sim-only | no hardware CPI comparison |
-| **Total with error** | **11** | **14.22%** | **1.27% - 24.67%** |
+| **Total with error** | **18** | **61.71%** | **1.27% - 263.58%** |
 
-> **Note:** PolyBench and EmBench benchmarks run successfully in simulation but use different dataset scales than hardware measurements (MINI vs LARGE), so direct error comparison is not possible.
+> **Note:** PolyBench benchmarks use SMALL dataset (atax, bicg, gemm, mvt, jacobi-1d) or MINI dataset (2mm, 3mm). Hardware CPI collected at matching dataset sizes. Error is dominated by in-order vs OoO architectural gap.
 
 ### Key Architectural Insights
 
@@ -195,13 +195,13 @@ m2sim/
 - **H2:** SPEC benchmark enablement with syscall coverage
 - **H3:** Microbenchmark calibration achieving 14.22% accuracy
 - **H4:** Multi-core analysis framework (statistical foundation complete)
-- **H5:** 16 CI-verified benchmarks with 14.22% average accuracy (11 microbenchmarks with hardware CPI)
+- **H5:** 19 CI-verified benchmarks with 61.71% average error (18 with hardware CPI comparison)
 
 ### Research Contributions
 1. **First Open-Source M2 Simulator:** Enables reproducible Apple Silicon research
 2. **Validated Methodology:** Multi-scale regression baseline collection
 3. **Architectural Insights:** Quantified M2 performance characteristics
-4. **Production Accuracy:** 14.22% error on 11 microbenchmarks suitable for research conclusions
+4. **Production Accuracy:** 61.71% average error on 18 benchmarks with hardware CPI comparison
 
 ## 🔧 Development
 
