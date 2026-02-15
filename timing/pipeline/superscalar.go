@@ -179,6 +179,7 @@ type SecondaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // SecondaryIDEXRegister holds the second decoded instruction for dual-issue.
@@ -330,6 +331,7 @@ type TertiaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // TertiaryIDEXRegister holds the third decoded instruction for 4-wide issue.
@@ -483,6 +485,7 @@ type QuaternaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // QuaternaryIDEXRegister holds the fourth decoded instruction for 4-wide issue.
@@ -636,6 +639,7 @@ type QuinaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // QuinaryIDEXRegister holds the decoded instruction for wide issue.
@@ -787,6 +791,7 @@ type SenaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // SenaryIDEXRegister holds the decoded instruction for wide issue.
@@ -1322,6 +1327,7 @@ type SeptenaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // SeptenaryIDEXRegister holds the decoded instruction for wide issue.
@@ -1496,6 +1502,7 @@ type OctonaryIFIDRegister struct {
 	PredictedTaken  bool
 	PredictedTarget uint64
 	EarlyResolved   bool
+	AfterBranch     bool
 }
 
 // OctonaryIDEXRegister holds the decoded instruction for wide issue.
