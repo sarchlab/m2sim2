@@ -5380,74 +5380,78 @@ func (p *Pipeline) tickOctupleIssue() {
 		p.stats.Stalls++ // count as a stall for stat tracking
 	}
 
-	if p.ifid.Valid && !stallResult.StallID && !stallResult.FlushID && !execStall && !memStall {
-		decResult := p.decodeStage.Decode(p.ifid.InstructionWord, p.ifid.PC)
+	if p.ifid.Valid && !stallResult.StallID && !stallResult.FlushID && !memStall {
+		// During exec stall, the primary slot (slot 0) stays stalled in IDEX.
+		// We still decode secondary slots so independent instructions can issue.
+		if !execStall {
+			decResult := p.decodeStage.Decode(p.ifid.InstructionWord, p.ifid.PC)
 
-		// CMP+B.cond fusion detection: check if slot 0 is CMP and slot 1 is B.cond
-		// Disable fusion during load-use bypass since slot 0 may be held.
-		if !loadUseHazard && IsCMP(decResult.Inst) && p.ifid2.Valid {
-			decResult2 := p.decodeStage.Decode(p.ifid2.InstructionWord, p.ifid2.PC)
-			if IsBCond(decResult2.Inst) {
-				// Fuse CMP+B.cond: put B.cond in slot 0 with CMP operands
-				fusedCMPBcond = true
-				nextIDEX = IDEXRegister{
-					Valid:           true,
-					PC:              p.ifid2.PC,
-					Inst:            decResult2.Inst,
-					RnValue:         decResult2.RnValue,
-					RmValue:         decResult2.RmValue,
-					Rd:              decResult2.Rd,
-					Rn:              decResult2.Rn,
-					Rm:              decResult2.Rm,
-					MemRead:         decResult2.MemRead,
-					MemWrite:        decResult2.MemWrite,
-					RegWrite:        decResult2.RegWrite,
-					MemToReg:        decResult2.MemToReg,
-					IsBranch:        decResult2.IsBranch,
-					PredictedTaken:  p.ifid2.PredictedTaken,
-					PredictedTarget: p.ifid2.PredictedTarget,
-					EarlyResolved:   p.ifid2.EarlyResolved,
-					// Fusion fields from CMP
-					IsFused:    true,
-					FusedRnVal: decResult.RnValue,
-					FusedRmVal: decResult.RmValue,
-					FusedIs64:  decResult.Inst.Is64Bit,
-					FusedIsImm: decResult.Inst.Format == insts.FormatDPImm,
-					FusedImmVal: func() uint64 {
-						if decResult.Inst.Format == insts.FormatDPImm {
-							imm := decResult.Inst.Imm
-							if decResult.Inst.Shift > 0 {
-								imm <<= decResult.Inst.Shift
+			// CMP+B.cond fusion detection: check if slot 0 is CMP and slot 1 is B.cond
+			// Disable fusion during load-use bypass since slot 0 may be held.
+			if !loadUseHazard && IsCMP(decResult.Inst) && p.ifid2.Valid {
+				decResult2 := p.decodeStage.Decode(p.ifid2.InstructionWord, p.ifid2.PC)
+				if IsBCond(decResult2.Inst) {
+					// Fuse CMP+B.cond: put B.cond in slot 0 with CMP operands
+					fusedCMPBcond = true
+					nextIDEX = IDEXRegister{
+						Valid:           true,
+						PC:              p.ifid2.PC,
+						Inst:            decResult2.Inst,
+						RnValue:         decResult2.RnValue,
+						RmValue:         decResult2.RmValue,
+						Rd:              decResult2.Rd,
+						Rn:              decResult2.Rn,
+						Rm:              decResult2.Rm,
+						MemRead:         decResult2.MemRead,
+						MemWrite:        decResult2.MemWrite,
+						RegWrite:        decResult2.RegWrite,
+						MemToReg:        decResult2.MemToReg,
+						IsBranch:        decResult2.IsBranch,
+						PredictedTaken:  p.ifid2.PredictedTaken,
+						PredictedTarget: p.ifid2.PredictedTarget,
+						EarlyResolved:   p.ifid2.EarlyResolved,
+						// Fusion fields from CMP
+						IsFused:    true,
+						FusedRnVal: decResult.RnValue,
+						FusedRmVal: decResult.RmValue,
+						FusedIs64:  decResult.Inst.Is64Bit,
+						FusedIsImm: decResult.Inst.Format == insts.FormatDPImm,
+						FusedImmVal: func() uint64 {
+							if decResult.Inst.Format == insts.FormatDPImm {
+								imm := decResult.Inst.Imm
+								if decResult.Inst.Shift > 0 {
+									imm <<= decResult.Inst.Shift
+								}
+								return imm
 							}
-							return imm
-						}
-						return 0
-					}(),
+							return 0
+						}(),
+					}
 				}
 			}
-		}
 
-		if !fusedCMPBcond {
-			// During load-use hazard, skip the dependent instruction (slot 0).
-			// It will be re-queued to IFID for the next cycle via consumed tracking.
-			if !loadUseHazard {
-				nextIDEX = IDEXRegister{
-					Valid:           true,
-					PC:              p.ifid.PC,
-					Inst:            decResult.Inst,
-					RnValue:         decResult.RnValue,
-					RmValue:         decResult.RmValue,
-					Rd:              decResult.Rd,
-					Rn:              decResult.Rn,
-					Rm:              decResult.Rm,
-					MemRead:         decResult.MemRead,
-					MemWrite:        decResult.MemWrite,
-					RegWrite:        decResult.RegWrite,
-					MemToReg:        decResult.MemToReg,
-					IsBranch:        decResult.IsBranch,
-					PredictedTaken:  p.ifid.PredictedTaken,
-					PredictedTarget: p.ifid.PredictedTarget,
-					EarlyResolved:   p.ifid.EarlyResolved,
+			if !fusedCMPBcond {
+				// During load-use hazard, skip the dependent instruction (slot 0).
+				// It will be re-queued to IFID for the next cycle via consumed tracking.
+				if !loadUseHazard {
+					nextIDEX = IDEXRegister{
+						Valid:           true,
+						PC:              p.ifid.PC,
+						Inst:            decResult.Inst,
+						RnValue:         decResult.RnValue,
+						RmValue:         decResult.RmValue,
+						Rd:              decResult.Rd,
+						Rn:              decResult.Rn,
+						Rm:              decResult.Rm,
+						MemRead:         decResult.MemRead,
+						MemWrite:        decResult.MemWrite,
+						RegWrite:        decResult.RegWrite,
+						MemToReg:        decResult.MemToReg,
+						IsBranch:        decResult.IsBranch,
+						PredictedTaken:  p.ifid.PredictedTaken,
+						PredictedTarget: p.ifid.PredictedTarget,
+						EarlyResolved:   p.ifid.EarlyResolved,
+					}
 				}
 			}
 		}
@@ -5456,9 +5460,19 @@ func (p *Pipeline) tickOctupleIssue() {
 		// Uses fixed-size array to avoid heap allocation per tick.
 		var issuedInsts [8]*IDEXRegister
 		var issued [8]bool
-		issuedInsts[0] = &nextIDEX
-		if nextIDEX.Valid {
-			issued[0] = true
+
+		// During exec stall, the stalled instruction in p.idex occupies slot 0.
+		// Include it in the issued set so canIssueWith checks RAW hazards against it.
+		if execStall {
+			issuedInsts[0] = &p.idex
+			if p.idex.Valid {
+				issued[0] = true
+			}
+		} else {
+			issuedInsts[0] = &nextIDEX
+			if nextIDEX.Valid {
+				issued[0] = true
+			}
 		}
 		issuedCount := 1
 
@@ -5711,7 +5725,13 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Track which IFID slots were consumed (issued to IDEX) for fetch re-queuing
 	var consumed [8]bool
-	consumed[0] = nextIDEX.Valid || fusedCMPBcond
+	// During exec stall, slot 0 was NOT decoded — the stalled instruction
+	// is in IDEX from a previous cycle, so IFID slot 0 is not consumed.
+	if execStall {
+		consumed[0] = false
+	} else {
+		consumed[0] = nextIDEX.Valid || fusedCMPBcond
+	}
 	consumed[1] = nextIDEX2.Valid || fusedCMPBcond // fusion consumes IFID2
 	consumed[2] = nextIDEX3.Valid
 	consumed[3] = nextIDEX4.Valid
@@ -5731,7 +5751,7 @@ func (p *Pipeline) tickOctupleIssue() {
 	var nextIFID8 OctonaryIFIDRegister
 	fetchStall := false
 
-	if !stallResult.StallIF && !stallResult.FlushIF && !memStall && !execStall {
+	if !stallResult.StallIF && !stallResult.FlushIF && !memStall {
 		// Shift unissued instructions forward
 		pendingInsts, pendingCount := p.collectPendingFetchInstructionsSelective(consumed[:])
 
@@ -5936,7 +5956,7 @@ func (p *Pipeline) tickOctupleIssue() {
 			nextEXMEM7 = p.exmem7
 			nextEXMEM8 = p.exmem8
 		}
-	} else if (stallResult.StallIF || memStall || execStall) && !stallResult.FlushIF {
+	} else if (stallResult.StallIF || memStall) && !stallResult.FlushIF {
 		nextIFID = p.ifid
 		nextIFID2 = p.ifid2
 		nextIFID3 = p.ifid3
