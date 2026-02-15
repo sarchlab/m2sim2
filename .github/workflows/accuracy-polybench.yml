@@ -8,6 +8,13 @@ on:
       - 'benchmarks/polybench_test.go'
       - 'benchmarks/timing_harness.go'
       - 'timing/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'benchmarks/polybench/**'
+      - 'benchmarks/polybench_test.go'
+      - 'benchmarks/timing_harness.go'
+      - 'timing/**'
   workflow_dispatch:
 
 concurrency:

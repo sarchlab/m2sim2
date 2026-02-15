@@ -7,6 +7,12 @@ on:
       - 'benchmarks/**'
       - 'timing/**'
       - 'emu/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'benchmarks/**'
+      - 'timing/**'
+      - 'emu/**'
   workflow_dispatch:
 
 concurrency:
