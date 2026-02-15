@@ -2134,13 +2134,13 @@ func (p *Pipeline) tickQuadIssue() {
 
 			if canIssueWith(&tempIDEX2, &issuedInsts, issuedCount) {
 				nextIDEX2.fromIDEX(&tempIDEX2)
-				issuedInsts[issuedCount] = &tempIDEX2
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX2
+			issuedCount++
 		}
 
 		// Decode slot 3
-		if p.ifid3.Valid && nextIDEX2.Valid {
+		if p.ifid3.Valid {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			tempIDEX3 := IDEXRegister{
 				Valid:           true,
@@ -2163,13 +2163,13 @@ func (p *Pipeline) tickQuadIssue() {
 
 			if canIssueWith(&tempIDEX3, &issuedInsts, issuedCount) {
 				nextIDEX3.fromIDEX(&tempIDEX3)
-				issuedInsts[issuedCount] = &tempIDEX3
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX3
+			issuedCount++
 		}
 
 		// Decode slot 4
-		if p.ifid4.Valid && nextIDEX3.Valid {
+		if p.ifid4.Valid {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			tempIDEX4 := IDEXRegister{
 				Valid:           true,
@@ -2201,20 +2201,12 @@ func (p *Pipeline) tickQuadIssue() {
 		nextIDEX4 = p.idex4
 	}
 
-	// Count how many instructions were issued this cycle for fetch advancement
-	issueCount := 0
-	if nextIDEX.Valid {
-		issueCount++
-	}
-	if nextIDEX2.Valid {
-		issueCount++
-	}
-	if nextIDEX3.Valid {
-		issueCount++
-	}
-	if nextIDEX4.Valid {
-		issueCount++
-	}
+	// Track which IFID slots were consumed (issued to IDEX) for fetch re-queuing
+	var consumed [8]bool
+	consumed[0] = nextIDEX.Valid
+	consumed[1] = nextIDEX2.Valid
+	consumed[2] = nextIDEX3.Valid
+	consumed[3] = nextIDEX4.Valid
 
 	// Stage 1: Fetch (all 4 slots)
 	var nextIFID IFIDRegister
@@ -2225,7 +2217,7 @@ func (p *Pipeline) tickQuadIssue() {
 
 	if !stallResult.StallIF && !stallResult.FlushIF && !memStall && !execStall {
 		// Shift unissued instructions forward
-		pendingInsts, pendingCount := p.collectPendingFetchInstructions(issueCount)
+		pendingInsts, pendingCount := p.collectPendingFetchInstructionsSelective(consumed[:4])
 
 		// Fill slots with pending instructions first, then fetch new ones
 		fetchPC := p.pc
@@ -3369,13 +3361,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			}
 			if canIssueWith(&tempIDEX2, &issuedInsts, issuedCount) {
 				nextIDEX2.fromIDEX(&tempIDEX2)
-				issuedInsts[issuedCount] = &tempIDEX2
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX2
+			issuedCount++
 		}
 
 		// Decode slot 3
-		if p.ifid3.Valid && nextIDEX2.Valid {
+		if p.ifid3.Valid {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			tempIDEX3 := IDEXRegister{
 				Valid:           true,
@@ -3397,13 +3389,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			}
 			if canIssueWith(&tempIDEX3, &issuedInsts, issuedCount) {
 				nextIDEX3.fromIDEX(&tempIDEX3)
-				issuedInsts[issuedCount] = &tempIDEX3
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX3
+			issuedCount++
 		}
 
 		// Decode slot 4
-		if p.ifid4.Valid && nextIDEX3.Valid {
+		if p.ifid4.Valid {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			tempIDEX4 := IDEXRegister{
 				Valid:           true,
@@ -3425,13 +3417,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			}
 			if canIssueWith(&tempIDEX4, &issuedInsts, issuedCount) {
 				nextIDEX4.fromIDEX(&tempIDEX4)
-				issuedInsts[issuedCount] = &tempIDEX4
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX4
+			issuedCount++
 		}
 
 		// Decode slot 5
-		if p.ifid5.Valid && nextIDEX4.Valid {
+		if p.ifid5.Valid {
 			decResult5 := p.decodeStage.Decode(p.ifid5.InstructionWord, p.ifid5.PC)
 			tempIDEX5 := IDEXRegister{
 				Valid:           true,
@@ -3453,13 +3445,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			}
 			if canIssueWith(&tempIDEX5, &issuedInsts, issuedCount) {
 				nextIDEX5.fromIDEX(&tempIDEX5)
-				issuedInsts[issuedCount] = &tempIDEX5
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX5
+			issuedCount++
 		}
 
 		// Decode slot 6
-		if p.ifid6.Valid && nextIDEX5.Valid {
+		if p.ifid6.Valid {
 			decResult6 := p.decodeStage.Decode(p.ifid6.InstructionWord, p.ifid6.PC)
 			tempIDEX6 := IDEXRegister{
 				Valid:           true,
@@ -3492,31 +3484,14 @@ func (p *Pipeline) tickSextupleIssue() {
 		nextIDEX6 = p.idex6
 	}
 
-	// Count how many instructions were issued this cycle for fetch advancement
-	issueCount := 0
-	if nextIDEX.Valid {
-		issueCount++
-	}
-	if nextIDEX2.Valid {
-		issueCount++
-	}
-	if nextIDEX3.Valid {
-		issueCount++
-	}
-	if nextIDEX4.Valid {
-		issueCount++
-	}
-	if nextIDEX5.Valid {
-		issueCount++
-	}
-	if nextIDEX6.Valid {
-		issueCount++
-	}
-	// CMP+B.cond fusion consumes 2 IFID slots but produces 1 IDEX,
-	// so add 1 to issueCount to advance fetch properly
-	if fusedCMPBcond {
-		issueCount++
-	}
+	// Track which IFID slots were consumed (issued to IDEX) for fetch re-queuing
+	var consumed [8]bool
+	consumed[0] = nextIDEX.Valid || fusedCMPBcond
+	consumed[1] = nextIDEX2.Valid || fusedCMPBcond // fusion consumes IFID2
+	consumed[2] = nextIDEX3.Valid
+	consumed[3] = nextIDEX4.Valid
+	consumed[4] = nextIDEX5.Valid
+	consumed[5] = nextIDEX6.Valid
 
 	// Stage 1: Fetch (all 6 slots)
 	var nextIFID IFIDRegister
@@ -3529,7 +3504,7 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	if !stallResult.StallIF && !stallResult.FlushIF && !memStall && !execStall {
 		// Shift unissued instructions forward
-		pendingInsts, pendingCount := p.collectPendingFetchInstructions6(issueCount)
+		pendingInsts, pendingCount := p.collectPendingFetchInstructionsSelective(consumed[:6])
 
 		// Fill slots with pending instructions first, then fetch new ones
 		fetchPC := p.pc
@@ -5523,13 +5498,13 @@ func (p *Pipeline) tickOctupleIssue() {
 			}
 			if canIssueWith(&tempIDEX2, &issuedInsts, issuedCount) {
 				nextIDEX2.fromIDEX(&tempIDEX2)
-				issuedInsts[issuedCount] = &tempIDEX2
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX2
+			issuedCount++
 		}
 
 		// Decode slot 3
-		if p.ifid3.Valid && nextIDEX2.Valid {
+		if p.ifid3.Valid {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			tempIDEX3 := IDEXRegister{
 				Valid:           true,
@@ -5551,13 +5526,13 @@ func (p *Pipeline) tickOctupleIssue() {
 			}
 			if canIssueWith(&tempIDEX3, &issuedInsts, issuedCount) {
 				nextIDEX3.fromIDEX(&tempIDEX3)
-				issuedInsts[issuedCount] = &tempIDEX3
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX3
+			issuedCount++
 		}
 
 		// Decode slot 4
-		if p.ifid4.Valid && nextIDEX3.Valid {
+		if p.ifid4.Valid {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			tempIDEX4 := IDEXRegister{
 				Valid:           true,
@@ -5579,13 +5554,13 @@ func (p *Pipeline) tickOctupleIssue() {
 			}
 			if canIssueWith(&tempIDEX4, &issuedInsts, issuedCount) {
 				nextIDEX4.fromIDEX(&tempIDEX4)
-				issuedInsts[issuedCount] = &tempIDEX4
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX4
+			issuedCount++
 		}
 
 		// Decode slot 5
-		if p.ifid5.Valid && nextIDEX4.Valid {
+		if p.ifid5.Valid {
 			decResult5 := p.decodeStage.Decode(p.ifid5.InstructionWord, p.ifid5.PC)
 			tempIDEX5 := IDEXRegister{
 				Valid:           true,
@@ -5607,13 +5582,13 @@ func (p *Pipeline) tickOctupleIssue() {
 			}
 			if canIssueWith(&tempIDEX5, &issuedInsts, issuedCount) {
 				nextIDEX5.fromIDEX(&tempIDEX5)
-				issuedInsts[issuedCount] = &tempIDEX5
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX5
+			issuedCount++
 		}
 
 		// Decode slot 6
-		if p.ifid6.Valid && nextIDEX5.Valid {
+		if p.ifid6.Valid {
 			decResult6 := p.decodeStage.Decode(p.ifid6.InstructionWord, p.ifid6.PC)
 			tempIDEX6 := IDEXRegister{
 				Valid:           true,
@@ -5635,13 +5610,13 @@ func (p *Pipeline) tickOctupleIssue() {
 			}
 			if canIssueWith(&tempIDEX6, &issuedInsts, issuedCount) {
 				nextIDEX6.fromIDEX(&tempIDEX6)
-				issuedInsts[issuedCount] = &tempIDEX6
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX6
+			issuedCount++
 		}
 
 		// Decode slot 7
-		if p.ifid7.Valid && nextIDEX6.Valid {
+		if p.ifid7.Valid {
 			decResult7 := p.decodeStage.Decode(p.ifid7.InstructionWord, p.ifid7.PC)
 			tempIDEX7 := IDEXRegister{
 				Valid:           true,
@@ -5663,13 +5638,13 @@ func (p *Pipeline) tickOctupleIssue() {
 			}
 			if canIssueWith(&tempIDEX7, &issuedInsts, issuedCount) {
 				nextIDEX7.fromIDEX(&tempIDEX7)
-				issuedInsts[issuedCount] = &tempIDEX7
-				issuedCount++
 			}
+			issuedInsts[issuedCount] = &tempIDEX7
+			issuedCount++
 		}
 
 		// Decode slot 8
-		if p.ifid8.Valid && nextIDEX7.Valid {
+		if p.ifid8.Valid {
 			decResult8 := p.decodeStage.Decode(p.ifid8.InstructionWord, p.ifid8.PC)
 			tempIDEX8 := IDEXRegister{
 				Valid:           true,
@@ -5692,6 +5667,8 @@ func (p *Pipeline) tickOctupleIssue() {
 			if canIssueWith(&tempIDEX8, &issuedInsts, issuedCount) {
 				nextIDEX8.fromIDEX(&tempIDEX8)
 			}
+			issuedInsts[issuedCount] = &tempIDEX8
+			issuedCount++
 		}
 	} else if (stallResult.StallID || memStall) && !stallResult.FlushID {
 		nextIDEX = p.idex
@@ -5707,37 +5684,16 @@ func (p *Pipeline) tickOctupleIssue() {
 		nextIDEX = p.idex
 	}
 
-	// Count how many instructions were issued this cycle for fetch advancement
-	issueCount := 0
-	if nextIDEX.Valid {
-		issueCount++
-	}
-	if nextIDEX2.Valid {
-		issueCount++
-	}
-	if nextIDEX3.Valid {
-		issueCount++
-	}
-	if nextIDEX4.Valid {
-		issueCount++
-	}
-	if nextIDEX5.Valid {
-		issueCount++
-	}
-	if nextIDEX6.Valid {
-		issueCount++
-	}
-	if nextIDEX7.Valid {
-		issueCount++
-	}
-	if nextIDEX8.Valid {
-		issueCount++
-	}
-	// CMP+B.cond fusion consumes 2 IFID slots but produces 1 IDEX,
-	// so add 1 to issueCount to advance fetch properly
-	if fusedCMPBcond {
-		issueCount++
-	}
+	// Track which IFID slots were consumed (issued to IDEX) for fetch re-queuing
+	var consumed [8]bool
+	consumed[0] = nextIDEX.Valid || fusedCMPBcond
+	consumed[1] = nextIDEX2.Valid || fusedCMPBcond // fusion consumes IFID2
+	consumed[2] = nextIDEX3.Valid
+	consumed[3] = nextIDEX4.Valid
+	consumed[4] = nextIDEX5.Valid
+	consumed[5] = nextIDEX6.Valid
+	consumed[6] = nextIDEX7.Valid
+	consumed[7] = nextIDEX8.Valid
 
 	// Stage 1: Fetch (all 8 slots)
 	var nextIFID IFIDRegister
@@ -5752,7 +5708,7 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	if !stallResult.StallIF && !stallResult.FlushIF && !memStall && !execStall {
 		// Shift unissued instructions forward
-		pendingInsts, pendingCount := p.collectPendingFetchInstructions8(issueCount)
+		pendingInsts, pendingCount := p.collectPendingFetchInstructionsSelective(consumed[:])
 
 		// Fill slots with pending instructions first, then fetch new ones
 		fetchPC := p.pc
@@ -6024,6 +5980,41 @@ func (p *Pipeline) tickOctupleIssue() {
 	p.ifid6 = nextIFID6
 	p.ifid7 = nextIFID7
 	p.ifid8 = nextIFID8
+}
+
+// collectPendingFetchInstructionsSelective returns unissued IFID instructions,
+// using a per-slot consumed flag. Supports OoO-style dispatch where
+// non-contiguous slots may be consumed. The consumed slice length determines
+// how many IFID slots to consider (4, 6, or 8).
+func (p *Pipeline) collectPendingFetchInstructionsSelective(consumed []bool) ([8]pendingFetchInst, int) {
+	var result [8]pendingFetchInst
+	count := 0
+
+	type ifidSlot struct {
+		valid bool
+		pc    uint64
+		word  uint32
+	}
+	slots := [8]ifidSlot{
+		{p.ifid.Valid, p.ifid.PC, p.ifid.InstructionWord},
+		{p.ifid2.Valid, p.ifid2.PC, p.ifid2.InstructionWord},
+		{p.ifid3.Valid, p.ifid3.PC, p.ifid3.InstructionWord},
+		{p.ifid4.Valid, p.ifid4.PC, p.ifid4.InstructionWord},
+		{p.ifid5.Valid, p.ifid5.PC, p.ifid5.InstructionWord},
+		{p.ifid6.Valid, p.ifid6.PC, p.ifid6.InstructionWord},
+		{p.ifid7.Valid, p.ifid7.PC, p.ifid7.InstructionWord},
+		{p.ifid8.Valid, p.ifid8.PC, p.ifid8.InstructionWord},
+	}
+
+	n := len(consumed)
+	for i := 0; i < n; i++ {
+		if slots[i].valid && !consumed[i] {
+			result[count] = pendingFetchInst{PC: slots[i].pc, Word: slots[i].word}
+			count++
+		}
+	}
+
+	return result, count
 }
 
 // collectPendingFetchInstructions8 returns unissued instructions for 8-wide.
