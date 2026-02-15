@@ -1053,8 +1053,17 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 		// the next iteration that are speculatively correct and can issue
 		// in the same cycle (OoO-style loop overlap). RAW hazard checks
 		// below still guard against data dependencies.
-		if prev.IsBranch && !prev.PredictedTaken {
-			return false, false
+		//
+		// Store instructions are always blocked after predicted-taken
+		// branches because memory writes cannot be rolled back on
+		// misprediction (no speculative store buffer).
+		if prev.IsBranch {
+			if !prev.PredictedTaken {
+				return false, false
+			}
+			if newInst.MemWrite {
+				return false, false
+			}
 		}
 
 		// Store-to-load forwarding: M2's 56-entry store buffer handles
