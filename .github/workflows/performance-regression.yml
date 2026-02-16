@@ -64,7 +64,11 @@ jobs:
           echo "Benchmarks: pipeline tick throughput across ALU, memory, mixed workloads." >> report.md
           echo "" >> report.md
           echo '```' >> report.md
-          cat benchstat-output.txt >> report.md
+          if [ -f benchstat-output.txt ]; then
+            cat benchstat-output.txt >> report.md
+          else
+            echo "Benchstat output not available (benchmark steps may have timed out)." >> report.md
+          fi
           echo '```' >> report.md
           echo "" >> report.md
           if [ "${{ steps.compare.outputs.regression }}" = "true" ]; then
