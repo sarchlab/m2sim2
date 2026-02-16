@@ -257,54 +257,54 @@ Microbenchmark accuracy target met (14.1%). Now validate on real SPEC workloads.
 
 ---
 
-### H5: 18 Benchmarks with Error Data (February 14, 2026)
+### H5: 15 Benchmarks with Error Data (February 16, 2026)
 
 **Goal:** Achieve <20% average error across 15+ benchmarks with hardware CPI comparison.
 
-**STATUS:** 18 benchmarks with error data (11 microbenchmarks + 7 PolyBench). All 7/7 polybench CI-verified from accuracy-consolidated run 22024974797 (includes Leo's PR #46 fix).
+**STATUS:** 15 benchmarks with error data (11 microbenchmarks + 4 PolyBench). 4/7 PolyBench kernels produce CPI data; Jacobi-1D/2MM timeout due to branch relaxation bug, GEMM exceeds 5B cycle limit. Data from accuracy-consolidated run after PR #67 merge (register checkpoint + speculative store fixes).
 
 **Results:**
-- **Total benchmarks with error data:** 18 (11 microbenchmarks + 7 PolyBench)
-- **Overall average error:** 61.71% — does **NOT** meet <20% target
-- **Microbenchmark average error:** 14.21% (11 benchmarks) — meets <20% target
-- **PolyBench average error:** 136.36% (7 benchmarks) — does **NOT** meet target
+- **Total benchmarks with error data:** 15 (11 microbenchmarks + 4 PolyBench)
+- **Overall average error:** 43.16% — does **NOT** meet <20% target
+- **Microbenchmark average error:** 41.17% (11 benchmarks) — does **NOT** meet <20% target
+- **PolyBench average error:** 48.64% (4 benchmarks) — does **NOT** meet target
 - **Data source:** `h5_accuracy_results.json` — all benchmarks CI-verified
 
-#### Microbenchmark Results (14.21% average error)
+#### Microbenchmark Results (41.17% average error)
 
 | Benchmark | Sim CPI | HW CPI | Error |
 |-----------|---------|--------|-------|
-| arithmetic | 0.270 | 0.296 | 9.63% |
-| dependency | 1.020 | 1.088 | 6.67% |
-| branch | 1.320 | 1.303 | 1.30% |
-| memorystrided | 2.933 | 2.648 | 10.76% |
-| loadheavy | 0.361 | 0.429 | 18.84% |
-| storeheavy | 0.491 | 0.612 | 24.64% |
-| branchheavy | 0.829 | 0.714 | 16.11% |
-| vectorsum | 0.500 | 0.402 | 24.38% |
-| vectoradd | 0.401 | 0.329 | 21.88% |
-| reductiontree | 0.452 | 0.480 | 6.19% |
-| strideindirect | 0.612 | 0.528 | 15.91% |
+| arithmetic | 0.219 | 0.296 | 35.2% |
+| dependency | 1.015 | 1.088 | 7.2% |
+| branch | 1.311 | 1.303 | 0.6% |
+| memorystrided | 0.750 | 2.648 | 253.1% |
+| loadheavy | 0.349 | 0.429 | 22.9% |
+| storeheavy | 0.522 | 0.612 | 17.2% |
+| branchheavy | 0.941 | 0.714 | 31.8% |
+| vectorsum | 0.354 | 0.402 | 13.6% |
+| vectoradd | 0.302 | 0.329 | 8.9% |
+| reductiontree | 0.406 | 0.480 | 18.2% |
+| strideindirect | 0.761 | 0.528 | 44.1% |
 
-#### PolyBench Results (136.36% average error — 7/7 benchmarks, all CI-verified)
+#### PolyBench Results (48.64% average error — 4/7 benchmarks working)
 
-| Benchmark | Sim CPI | HW CPI | Error | Dataset |
-|-----------|---------|--------|-------|---------|
-| atax | 0.450 | 0.2185 | 105.9% | SMALL |
-| bicg | 0.470 | 0.2295 | 104.8% | SMALL |
-| gemm | 0.437 | 0.2332 | 87.4% | SMALL |
-| mvt | 0.474 | 0.2156 | 119.9% | SMALL |
-| jacobi-1d | 0.549 | 0.1510 | 263.6% | SMALL |
-| 2mm | 0.340 | 0.1435 | 136.9% | MINI |
-| 3mm | 0.343 | 0.1453 | 136.1% | MINI |
+| Benchmark | Sim CPI | HW CPI | Error | Dataset | Status |
+|-----------|---------|--------|-------|---------|--------|
+| atax | 0.186 | 0.2185 | 17.5% | SMALL | working |
+| bicg | 0.392 | 0.2295 | 70.8% | SMALL | working |
+| mvt | 0.279 | 0.2156 | 29.4% | SMALL | working |
+| 3mm | 0.257 | 0.1453 | 76.9% | MINI | working |
+| jacobi-1d | — | 0.1510 | — | SMALL | timeout (branch relaxation bug) |
+| gemm | — | 0.2332 | — | SMALL | exceeds 5B cycle limit |
+| 2mm | — | 0.1435 | — | MINI | timeout (branch relaxation bug) |
 
-SMALL dataset used for atax/bicg/gemm/mvt/jacobi-1d; MINI dataset for 2mm/3mm. All sim CPI values from CI run 22024974797 (after Leo's PR #46 hazard fix).
+SMALL dataset used for atax/bicg/gemm/mvt/jacobi-1d; MINI dataset for 2mm/3mm. Sim CPI values from CI after PR #67 merge (register checkpoint + secondary slot store blocking fixes).
 
-#### Known Gap: In-Order vs Out-of-Order
+#### Known Gap: Memory Subsystem
 
-**Root cause of PolyBench error:** M2Sim models an in-order pipeline, but the real Apple M2 is out-of-order. PolyBench kernels with heavy memory and computation patterns benefit enormously from OoO execution, resulting in 87-264% CPI overestimation by the in-order model.
+**Root cause of high error:** The memorystrided benchmark shows 253% error, dominating the average. The simulator's memory subsystem underestimates latency for strided access patterns (sim CPI 0.750 vs HW CPI 2.648). Excluding memorystrided, the microbenchmark average drops to ~19.8%.
 
-The microbenchmark accuracy (14.21%) validates the core timing model for individual microarchitectural features. The PolyBench gap is an architectural limitation, not a calibration error.
+The PolyBench accuracy improved significantly (from 136% to 49%) after the register checkpoint and speculative store fixes, though bicg and 3mm still show >70% error due to the in-order vs out-of-order gap.
 
 #### Infeasible Benchmarks — Detailed Analysis (CI Run #22019560953)
 
@@ -329,24 +329,24 @@ All 6 EmBench benchmarks below are at `LOCAL_SCALE_FACTOR=1`, `CPU_MHZ=1` (minim
 
 | Benchmark | Category | Status | Sim CPI | HW CPI | Error | Notes |
 |-----------|----------|--------|--------:|-------:|------:|-------|
-| arithmetic | microbenchmark | complete | 0.270 | 0.296 | 9.63% | |
-| dependency | microbenchmark | complete | 1.020 | 1.088 | 6.67% | |
-| branch | microbenchmark | complete | 1.320 | 1.303 | 1.30% | |
-| memorystrided | microbenchmark | complete | 2.933 | 2.648 | 10.76% | |
-| loadheavy | microbenchmark | complete | 0.361 | 0.429 | 18.84% | |
-| storeheavy | microbenchmark | complete | 0.491 | 0.612 | 24.64% | |
-| branchheavy | microbenchmark | complete | 0.829 | 0.714 | 16.11% | |
-| vectorsum | microbenchmark | complete | 0.500 | 0.402 | 24.38% | |
-| vectoradd | microbenchmark | complete | 0.401 | 0.329 | 21.88% | |
-| reductiontree | microbenchmark | complete | 0.452 | 0.480 | 6.19% | |
-| strideindirect | microbenchmark | complete | 0.612 | 0.528 | 15.91% | |
-| atax | polybench | complete | 0.450 | 0.2185 | 105.9% | In-order vs OoO gap |
-| bicg | polybench | complete | 0.470 | 0.2295 | 104.8% | In-order vs OoO gap |
-| gemm | polybench | complete | 0.437 | 0.2332 | 87.4% | In-order vs OoO gap |
-| mvt | polybench | complete | 0.474 | 0.2156 | 119.9% | In-order vs OoO gap |
-| jacobi-1d | polybench | complete | 0.549 | 0.1510 | 263.6% | In-order vs OoO gap |
-| 2mm | polybench | complete | 0.340 | 0.1435 | 136.9% | MINI dataset; in-order vs OoO gap |
-| 3mm | polybench | complete | 0.343 | 0.1453 | 136.1% | MINI dataset; in-order vs OoO gap |
+| arithmetic | microbenchmark | complete | 0.219 | 0.296 | 35.2% | |
+| dependency | microbenchmark | complete | 1.015 | 1.088 | 7.2% | |
+| branch | microbenchmark | complete | 1.311 | 1.303 | 0.6% | |
+| memorystrided | microbenchmark | complete | 0.750 | 2.648 | 253.1% | Memory subsystem gap |
+| loadheavy | microbenchmark | complete | 0.349 | 0.429 | 22.9% | |
+| storeheavy | microbenchmark | complete | 0.522 | 0.612 | 17.2% | |
+| branchheavy | microbenchmark | complete | 0.941 | 0.714 | 31.8% | |
+| vectorsum | microbenchmark | complete | 0.354 | 0.402 | 13.6% | |
+| vectoradd | microbenchmark | complete | 0.302 | 0.329 | 8.9% | |
+| reductiontree | microbenchmark | complete | 0.406 | 0.480 | 18.2% | |
+| strideindirect | microbenchmark | complete | 0.761 | 0.528 | 44.1% | |
+| atax | polybench | complete | 0.186 | 0.2185 | 17.5% | |
+| bicg | polybench | complete | 0.392 | 0.2295 | 70.8% | In-order vs OoO gap |
+| gemm | polybench | broken | — | 0.2332 | — | Exceeds 5B cycle limit |
+| mvt | polybench | complete | 0.279 | 0.2156 | 29.4% | |
+| jacobi-1d | polybench | broken | — | 0.1510 | — | Timeout (branch relaxation bug) |
+| 2mm | polybench | broken | — | 0.1435 | — | MINI dataset; timeout (branch relaxation bug) |
+| 3mm | polybench | complete | 0.257 | 0.1453 | 76.9% | MINI dataset; in-order vs OoO gap |
 | aha_mont64 | embench | sim-only | 0.347 | — | — | No HW CPI data |
 | crc32 | embench | infeasible | — | — | — | 12.5B insts in 5B cycles; min workload |
 | edn | embench | infeasible | — | — | — | 13.0B insts in 5B cycles; N/ORDER reducible |
