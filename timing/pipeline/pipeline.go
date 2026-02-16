@@ -5892,6 +5892,11 @@ func (p *Pipeline) tickOctupleIssue() {
 			p.instrWindow[p.instrWindowLen-1].EarlyResolved = isUncondBranch
 
 			if pred.Taken && pred.TargetKnown {
+				if fetchedAfterBranch {
+					// Already past one predicted-taken branch.
+					// Stop fetching to limit speculation depth to one branch.
+					break
+				}
 				fetchPC = pred.Target
 				fetchedAfterBranch = true
 			} else {
