@@ -1116,13 +1116,28 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 				// Same-cycle ALU forwarding: if the producer is a non-memory
 				// ALU op that was issued (not just decoded), its result is
 				// available via nextEXMEM forwarding in the EX stage.
-				// Allow co-issue with max 1-hop depth: the producer must
-				// not itself be a forwarding consumer (to prevent unrealistic
-				// deep chaining like A→B→C in one cycle).
 				producerIsALU := isIssued && !prev.MemRead && !prev.MemWrite && !prev.IsBranch
-				producerNotForwarded := forwarded == nil || !forwarded[i]
-				if forwarded != nil && producerIsALU && producerNotForwarded {
+
+				// ALU→Load address forwarding: always allow when the
+				// consumer is a load instruction reading a register that
+				// an issued ALU op writes. The AGU can receive the
+				// forwarded ALU result for address computation. This
+				// cannot chain (load results aren't available until MEM),
+				// so no depth tracking is needed.
+				consumerIsLoad := newInst.MemRead && !newInst.MemWrite
+				if producerIsALU && consumerIsLoad {
 					usesForwarding = true
+				} else if forwarded != nil && producerIsALU {
+					// General ALU→ALU forwarding with 1-hop depth limit:
+					// the producer must not itself be a forwarding consumer
+					// (to prevent unrealistic deep chaining like A→B→C in
+					// one cycle).
+					producerNotForwarded := !forwarded[i]
+					if producerNotForwarded {
+						usesForwarding = true
+					} else {
+						return false, false
+					}
 				} else {
 					return false, false
 				}

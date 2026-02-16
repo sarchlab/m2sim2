@@ -536,6 +536,22 @@ func (p *Pipeline) accessTertiaryMem(slot MemorySlot) (MemoryResult, bool) {
 	return p.memoryStage.MemorySlot(slot), false
 }
 
+// getExLatency returns the execute-stage latency for an instruction.
+// Load instructions always use minCacheLoadLatency (1 cycle) for the address
+// calculation in EX. The remaining load-to-use latency comes from the pipeline
+// stages (MEM→WB) and the load-use hazard bubble, totaling 3 cycles — matching
+// the Apple M2's L1 load-to-use latency. When D-cache is enabled, the actual
+// memory access time is handled by the cache in the MEM stage.
+func (p *Pipeline) getExLatency(inst *insts.Instruction) uint64 {
+	if p.latencyTable == nil {
+		return 1
+	}
+	if p.useDCache && p.latencyTable.IsLoadOp(inst) {
+		return minCacheLoadLatency
+	}
+	return p.latencyTable.GetLatency(inst)
+}
+
 // Tick executes one pipeline cycle.
 //
 // The method models a classic 5-stage in-order pipeline (IF→ID→EX→MEM→WB)
@@ -696,12 +712,8 @@ func (p *Pipeline) tickSingleIssue() {
 	var nextEXMEM EXMEMRegister
 	execStall := false
 	if p.idex.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency == 0 {
-			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
-				p.exLatency = minCacheLoadLatency
-			} else {
-				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
-			}
+		if p.exLatency == 0 {
+			p.exLatency = p.getExLatency(p.idex.Inst)
 		}
 
 		if p.exLatency > 0 {
@@ -1056,12 +1068,8 @@ func (p *Pipeline) tickSuperscalar() {
 
 	// Execute primary slot
 	if p.idex.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency == 0 {
-			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
-				p.exLatency = minCacheLoadLatency
-			} else {
-				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
-			}
+		if p.exLatency == 0 {
+			p.exLatency = p.getExLatency(p.idex.Inst)
 		}
 
 		if p.exLatency > 0 {
@@ -1223,8 +1231,8 @@ func (p *Pipeline) tickSuperscalar() {
 			}
 		}
 
-		if p.latencyTable != nil && p.exLatency2 == 0 {
-			p.exLatency2 = p.latencyTable.GetLatency(p.idex2.Inst)
+		if p.exLatency2 == 0 {
+			p.exLatency2 = p.getExLatency(p.idex2.Inst)
 		}
 
 		if p.exLatency2 > 0 {
@@ -1766,12 +1774,8 @@ func (p *Pipeline) tickQuadIssue() {
 
 	// Execute primary slot
 	if p.idex.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency == 0 {
-			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
-				p.exLatency = minCacheLoadLatency
-			} else {
-				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
-			}
+		if p.exLatency == 0 {
+			p.exLatency = p.getExLatency(p.idex.Inst)
 		}
 
 		if p.exLatency > 0 {
@@ -1916,8 +1920,8 @@ func (p *Pipeline) tickQuadIssue() {
 
 	// Execute secondary slot (if not stalled and slot is valid)
 	if p.idex2.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency2 == 0 {
-			p.exLatency2 = p.latencyTable.GetLatency(p.idex2.Inst)
+		if p.exLatency2 == 0 {
+			p.exLatency2 = p.getExLatency(p.idex2.Inst)
 		}
 
 		if p.exLatency2 > 0 {
@@ -1967,8 +1971,8 @@ func (p *Pipeline) tickQuadIssue() {
 
 	// Execute tertiary slot
 	if p.idex3.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency3 == 0 {
-			p.exLatency3 = p.latencyTable.GetLatency(p.idex3.Inst)
+		if p.exLatency3 == 0 {
+			p.exLatency3 = p.getExLatency(p.idex3.Inst)
 		}
 
 		if p.exLatency3 > 0 {
@@ -2026,8 +2030,8 @@ func (p *Pipeline) tickQuadIssue() {
 
 	// Execute quaternary slot
 	if p.idex4.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency4 == 0 {
-			p.exLatency4 = p.latencyTable.GetLatency(p.idex4.Inst)
+		if p.exLatency4 == 0 {
+			p.exLatency4 = p.getExLatency(p.idex4.Inst)
 		}
 
 		if p.exLatency4 > 0 {
@@ -2820,12 +2824,8 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	// Execute primary slot
 	if p.idex.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency == 0 {
-			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
-				p.exLatency = minCacheLoadLatency
-			} else {
-				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
-			}
+		if p.exLatency == 0 {
+			p.exLatency = p.getExLatency(p.idex.Inst)
 		}
 
 		if p.exLatency > 0 {
@@ -2983,8 +2983,8 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	// Execute secondary slot
 	if p.idex2.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency2 == 0 {
-			p.exLatency2 = p.latencyTable.GetLatency(p.idex2.Inst)
+		if p.exLatency2 == 0 {
+			p.exLatency2 = p.getExLatency(p.idex2.Inst)
 		}
 		if p.exLatency2 > 0 {
 			p.exLatency2--
@@ -3024,8 +3024,8 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	// Execute tertiary slot
 	if p.idex3.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency3 == 0 {
-			p.exLatency3 = p.latencyTable.GetLatency(p.idex3.Inst)
+		if p.exLatency3 == 0 {
+			p.exLatency3 = p.getExLatency(p.idex3.Inst)
 		}
 		if p.exLatency3 > 0 {
 			p.exLatency3--
@@ -3073,8 +3073,8 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	// Execute quaternary slot
 	if p.idex4.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency4 == 0 {
-			p.exLatency4 = p.latencyTable.GetLatency(p.idex4.Inst)
+		if p.exLatency4 == 0 {
+			p.exLatency4 = p.getExLatency(p.idex4.Inst)
 		}
 		if p.exLatency4 > 0 {
 			p.exLatency4--
@@ -3130,8 +3130,8 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	// Execute quinary slot
 	if p.idex5.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency5 == 0 {
-			p.exLatency5 = p.latencyTable.GetLatency(p.idex5.Inst)
+		if p.exLatency5 == 0 {
+			p.exLatency5 = p.getExLatency(p.idex5.Inst)
 		}
 		if p.exLatency5 > 0 {
 			p.exLatency5--
@@ -3195,8 +3195,8 @@ func (p *Pipeline) tickSextupleIssue() {
 
 	// Execute senary slot
 	if p.idex6.Valid && !memStall && !execStall {
-		if p.latencyTable != nil && p.exLatency6 == 0 {
-			p.exLatency6 = p.latencyTable.GetLatency(p.idex6.Inst)
+		if p.exLatency6 == 0 {
+			p.exLatency6 = p.getExLatency(p.idex6.Inst)
 		}
 		if p.exLatency6 > 0 {
 			p.exLatency6--
@@ -4099,12 +4099,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute primary slot
 	if p.idex.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency == 0 {
-			if p.useDCache && p.latencyTable.IsLoadOp(p.idex.Inst) {
-				p.exLatency = minCacheLoadLatency
-			} else {
-				p.exLatency = p.latencyTable.GetLatency(p.idex.Inst)
-			}
+		if p.exLatency == 0 {
+			p.exLatency = p.getExLatency(p.idex.Inst)
 		}
 
 		if p.exLatency > 0 {
@@ -4302,8 +4298,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute secondary slot
 	if p.idex2.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency2 == 0 {
-			p.exLatency2 = p.latencyTable.GetLatency(p.idex2.Inst)
+		if p.exLatency2 == 0 {
+			p.exLatency2 = p.getExLatency(p.idex2.Inst)
 		}
 		if p.exLatency2 > 0 {
 			p.exLatency2--
@@ -4430,8 +4426,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute tertiary slot
 	if p.idex3.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency3 == 0 {
-			p.exLatency3 = p.latencyTable.GetLatency(p.idex3.Inst)
+		if p.exLatency3 == 0 {
+			p.exLatency3 = p.getExLatency(p.idex3.Inst)
 		}
 		if p.exLatency3 > 0 {
 			p.exLatency3--
@@ -4572,8 +4568,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute quaternary slot
 	if p.idex4.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency4 == 0 {
-			p.exLatency4 = p.latencyTable.GetLatency(p.idex4.Inst)
+		if p.exLatency4 == 0 {
+			p.exLatency4 = p.getExLatency(p.idex4.Inst)
 		}
 		if p.exLatency4 > 0 {
 			p.exLatency4--
@@ -4719,8 +4715,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute quinary slot
 	if p.idex5.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency5 == 0 {
-			p.exLatency5 = p.latencyTable.GetLatency(p.idex5.Inst)
+		if p.exLatency5 == 0 {
+			p.exLatency5 = p.getExLatency(p.idex5.Inst)
 		}
 		if p.exLatency5 > 0 {
 			p.exLatency5--
@@ -4873,8 +4869,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute senary slot
 	if p.idex6.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency6 == 0 {
-			p.exLatency6 = p.latencyTable.GetLatency(p.idex6.Inst)
+		if p.exLatency6 == 0 {
+			p.exLatency6 = p.getExLatency(p.idex6.Inst)
 		}
 		if p.exLatency6 > 0 {
 			p.exLatency6--
@@ -5038,8 +5034,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute septenary slot
 	if p.idex7.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency7 == 0 {
-			p.exLatency7 = p.latencyTable.GetLatency(p.idex7.Inst)
+		if p.exLatency7 == 0 {
+			p.exLatency7 = p.getExLatency(p.idex7.Inst)
 		}
 		if p.exLatency7 > 0 {
 			p.exLatency7--
@@ -5214,8 +5210,8 @@ func (p *Pipeline) tickOctupleIssue() {
 
 	// Execute octonary slot
 	if p.idex8.Valid && !memStall {
-		if p.latencyTable != nil && p.exLatency8 == 0 {
-			p.exLatency8 = p.latencyTable.GetLatency(p.idex8.Inst)
+		if p.exLatency8 == 0 {
+			p.exLatency8 = p.getExLatency(p.idex8.Inst)
 		}
 		if p.exLatency8 > 0 {
 			p.exLatency8--
@@ -6030,45 +6026,28 @@ func (p *Pipeline) collectPendingFetchInstructionsSelective(consumed []bool) ([8
 }
 
 // clearAndRemarkAfterBranch clears AfterBranch flags from IFID registers and
-// the instruction window, stopping at the first unresolved predicted-taken
-// branch. Instructions after that branch remain protected. This is called when
-// a branch resolves correctly so stores between the resolved branch and the
-// next unresolved branch can issue, while stores after the next unresolved
-// branch stay blocked.
+// the instruction window when a branch resolves correctly. This allows stores
+// that were blocked behind the resolved branch to issue.
+//
+// All flags are cleared unconditionally because every instruction in the
+// pipeline after a correctly-resolved branch is on the correct execution
+// path. If a subsequent branch mispredicts, the pipeline flush discards all
+// younger instructions and the register checkpoint restores processor state.
+// Re-fetched instructions get fresh AfterBranch flags from the fetch stage.
+// Memory writes from correct-path stores between two correctly-predicted
+// branches are valid and don't need rollback.
 func (p *Pipeline) clearAndRemarkAfterBranch() {
-	type ifidEntry struct {
-		valid, predictedTaken, earlyResolved, afterBranch *bool
-	}
-	ifids := [8]ifidEntry{
-		{&p.ifid.Valid, &p.ifid.PredictedTaken, &p.ifid.EarlyResolved, &p.ifid.AfterBranch},
-		{&p.ifid2.Valid, &p.ifid2.PredictedTaken, &p.ifid2.EarlyResolved, &p.ifid2.AfterBranch},
-		{&p.ifid3.Valid, &p.ifid3.PredictedTaken, &p.ifid3.EarlyResolved, &p.ifid3.AfterBranch},
-		{&p.ifid4.Valid, &p.ifid4.PredictedTaken, &p.ifid4.EarlyResolved, &p.ifid4.AfterBranch},
-		{&p.ifid5.Valid, &p.ifid5.PredictedTaken, &p.ifid5.EarlyResolved, &p.ifid5.AfterBranch},
-		{&p.ifid6.Valid, &p.ifid6.PredictedTaken, &p.ifid6.EarlyResolved, &p.ifid6.AfterBranch},
-		{&p.ifid7.Valid, &p.ifid7.PredictedTaken, &p.ifid7.EarlyResolved, &p.ifid7.AfterBranch},
-		{&p.ifid8.Valid, &p.ifid8.PredictedTaken, &p.ifid8.EarlyResolved, &p.ifid8.AfterBranch},
-	}
-
-	// Scan IFID registers (oldest instructions first).
-	for i := 0; i < 8; i++ {
-		if !*ifids[i].valid {
-			continue
-		}
-		// Stop at the next unresolved predicted-taken branch.
-		if *ifids[i].predictedTaken && !*ifids[i].earlyResolved {
-			return
-		}
-		*ifids[i].afterBranch = false
-	}
-
-	// Continue scanning the instruction window (newer instructions).
 	for i := 0; i < p.instrWindowLen; i++ {
-		if p.instrWindow[i].PredictedTaken && !p.instrWindow[i].EarlyResolved {
-			return
-		}
 		p.instrWindow[i].AfterBranch = false
 	}
+	p.ifid.AfterBranch = false
+	p.ifid2.AfterBranch = false
+	p.ifid3.AfterBranch = false
+	p.ifid4.AfterBranch = false
+	p.ifid5.AfterBranch = false
+	p.ifid6.AfterBranch = false
+	p.ifid7.AfterBranch = false
+	p.ifid8.AfterBranch = false
 }
 
 // pushUnconsumedToWindow pushes un-consumed IFID instructions into the
