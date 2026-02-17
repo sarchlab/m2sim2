@@ -340,3 +340,283 @@ var _ = Describe("Cache Hierarchy", func() {
 		})
 	})
 })
+
+var _ = Describe("Akita Cache Verification", func() {
+	var (
+		memory  *emu.Memory
+		backing *cache.MemoryBacking
+	)
+
+	BeforeEach(func() {
+		memory = emu.NewMemory()
+		backing = cache.NewMemoryBacking(memory)
+	})
+
+	Describe("LRU ordering", func() {
+		It("should evict the least recently used block", func() {
+			// 4KB, 4-way, 64B lines = 16 sets. Set stride = 1024 (0x400).
+			config := cache.Config{
+				Size:          4 * 1024,
+				Associativity: 4,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			// Fill set 0 with blocks A, B, C, D (all map to set 0)
+			addrA := uint64(0x0000) // set 0
+			addrB := uint64(0x0400) // set 0
+			addrC := uint64(0x0800) // set 0
+			addrD := uint64(0x0C00) // set 0
+
+			c.Write(addrA, 8, 0xAAAA)
+			c.Write(addrB, 8, 0xBBBB)
+			c.Write(addrC, 8, 0xCCCC)
+			c.Write(addrD, 8, 0xDDDD)
+
+			// Access B and D to make them recently used.
+			// LRU order (oldest first): A, C, B, D
+			c.Read(addrB, 8)
+			c.Read(addrD, 8)
+
+			// 5th block should evict A (the LRU)
+			addrE := uint64(0x1000) // set 0
+			result := c.Write(addrE, 8, 0xEEEE)
+			Expect(result.Evicted).To(BeTrue())
+			Expect(result.EvictedAddr).To(Equal(addrA))
+
+			// B/C/D/E should still be present (don't read A — it would
+			// cause another eviction and disturb the set)
+			Expect(c.Read(addrB, 8).Hit).To(BeTrue())
+			Expect(c.Read(addrC, 8).Hit).To(BeTrue())
+			Expect(c.Read(addrD, 8).Hit).To(BeTrue())
+			Expect(c.Read(addrE, 8).Hit).To(BeTrue())
+		})
+
+		It("should track LRU order across reads and writes", func() {
+			config := cache.Config{
+				Size:          4 * 1024,
+				Associativity: 4,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			addrA := uint64(0x0000)
+			addrB := uint64(0x0400)
+			addrC := uint64(0x0800)
+			addrD := uint64(0x0C00)
+
+			// Fill set 0: A, B, C, D
+			c.Write(addrA, 8, 0xAA)
+			c.Write(addrB, 8, 0xBB)
+			c.Write(addrC, 8, 0xCC)
+			c.Write(addrD, 8, 0xDD)
+
+			// Touch A via write, making B the new LRU
+			c.Write(addrA, 8, 0xA2)
+
+			// Evict should pick B
+			addrE := uint64(0x1000)
+			result := c.Write(addrE, 8, 0xEE)
+			Expect(result.Evicted).To(BeTrue())
+			Expect(result.EvictedAddr).To(Equal(addrB))
+		})
+	})
+
+	Describe("Default M2 config behavior", func() {
+		It("should produce correct latencies with DefaultL1DConfig", func() {
+			l1dConfig := cache.DefaultL1DConfig()
+			c := cache.New(l1dConfig, backing)
+
+			memory.Write64(0x2000, 0xFACE)
+
+			// Cold miss — latency = MissLatency (12)
+			result := c.Read(0x2000, 8)
+			Expect(result.Hit).To(BeFalse())
+			Expect(result.Latency).To(Equal(uint64(12)))
+			Expect(result.Data).To(Equal(uint64(0xFACE)))
+
+			// Warm hit — latency = HitLatency (4)
+			result = c.Read(0x2000, 8)
+			Expect(result.Hit).To(BeTrue())
+			Expect(result.Latency).To(Equal(uint64(4)))
+			Expect(result.Data).To(Equal(uint64(0xFACE)))
+		})
+
+		It("should produce correct latencies with DefaultL1IConfig", func() {
+			l1iConfig := cache.DefaultL1IConfig()
+			c := cache.New(l1iConfig, backing)
+
+			memory.Write64(0x3000, 0xC0DE)
+
+			// Cold miss — latency = MissLatency (12)
+			result := c.Read(0x3000, 8)
+			Expect(result.Hit).To(BeFalse())
+			Expect(result.Latency).To(Equal(uint64(12)))
+
+			// Warm hit — latency = HitLatency (1)
+			result = c.Read(0x3000, 8)
+			Expect(result.Hit).To(BeTrue())
+			Expect(result.Latency).To(Equal(uint64(1)))
+		})
+
+		It("should correctly configure set count from M2 configs", func() {
+			// L1D: 128KB / (8 ways * 64B) = 256 sets
+			l1d := cache.DefaultL1DConfig()
+			expectedSetsL1D := l1d.Size / (l1d.Associativity * l1d.BlockSize)
+			Expect(expectedSetsL1D).To(Equal(256))
+
+			// L1I: 192KB / (6 ways * 64B) = 512 sets
+			l1i := cache.DefaultL1IConfig()
+			expectedSetsL1I := l1i.Size / (l1i.Associativity * l1i.BlockSize)
+			Expect(expectedSetsL1I).To(Equal(512))
+		})
+	})
+
+	Describe("Associativity enforcement", func() {
+		It("should hold exactly N blocks in an N-way set without eviction", func() {
+			// 4-way cache: 4 blocks can coexist in the same set
+			config := cache.Config{
+				Size:          4 * 1024,
+				Associativity: 4,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			// Set stride = 16 sets * 64B = 1024
+			addrs := []uint64{0x0000, 0x0400, 0x0800, 0x0C00}
+
+			for i, addr := range addrs {
+				result := c.Write(addr, 8, uint64(i+1))
+				Expect(result.Evicted).To(BeFalse(),
+					"block %d at 0x%X should not evict", i, addr)
+			}
+
+			// All 4 should be present
+			for _, addr := range addrs {
+				Expect(c.Read(addr, 8).Hit).To(BeTrue())
+			}
+
+			stats := c.Stats()
+			Expect(stats.Evictions).To(Equal(uint64(0)))
+		})
+
+		It("should evict on the (N+1)th block in the same set", func() {
+			config := cache.Config{
+				Size:          4 * 1024,
+				Associativity: 4,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			// Fill 4 ways
+			addrs := []uint64{0x0000, 0x0400, 0x0800, 0x0C00}
+			for i, addr := range addrs {
+				c.Write(addr, 8, uint64(i+1))
+			}
+
+			// 5th block triggers eviction
+			result := c.Write(0x1000, 8, 0x55)
+			Expect(result.Evicted).To(BeTrue())
+
+			stats := c.Stats()
+			Expect(stats.Evictions).To(Equal(uint64(1)))
+		})
+
+		It("should enforce associativity with 2-way cache", func() {
+			// 2-way cache: 1KB, 2-way, 64B = 8 sets; stride = 512
+			config := cache.Config{
+				Size:          1024,
+				Associativity: 2,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			// Fill 2 ways in set 0
+			c.Write(0x0000, 8, 0x11) // set 0, way 0
+			c.Write(0x0200, 8, 0x22) // set 0, way 1
+
+			Expect(c.Read(0x0000, 8).Hit).To(BeTrue())
+			Expect(c.Read(0x0200, 8).Hit).To(BeTrue())
+			Expect(c.Stats().Evictions).To(Equal(uint64(0)))
+
+			// 3rd in same set triggers eviction
+			result := c.Write(0x0400, 8, 0x33)
+			Expect(result.Evicted).To(BeTrue())
+			Expect(c.Stats().Evictions).To(Equal(uint64(1)))
+		})
+	})
+
+	Describe("Cache-line boundary behavior", func() {
+		It("should treat last byte and first byte of adjacent lines as separate lines", func() {
+			config := cache.Config{
+				Size:          4 * 1024,
+				Associativity: 4,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			// Last byte of cache line starting at 0x0000 is at offset 63 (0x003F)
+			lastByteAddr := uint64(0x003F)
+			// First byte of the next cache line is at 0x0040
+			firstByteNextLine := uint64(0x0040)
+
+			memory.Write8(lastByteAddr, 0xAA)
+			memory.Write8(firstByteNextLine, 0xBB)
+
+			// Access last byte — brings in cache line [0x0000, 0x003F]
+			r1 := c.Read(lastByteAddr, 1)
+			Expect(r1.Hit).To(BeFalse())
+			Expect(byte(r1.Data)).To(Equal(byte(0xAA)))
+
+			// Access first byte of next line — should be a separate miss
+			r2 := c.Read(firstByteNextLine, 1)
+			Expect(r2.Hit).To(BeFalse())
+			Expect(byte(r2.Data)).To(Equal(byte(0xBB)))
+
+			// Both are now cached — re-access should hit
+			Expect(c.Read(lastByteAddr, 1).Hit).To(BeTrue())
+			Expect(c.Read(firstByteNextLine, 1).Hit).To(BeTrue())
+
+			// Exactly 2 misses, 2 hits on the re-reads
+			stats := c.Stats()
+			Expect(stats.Misses).To(Equal(uint64(2)))
+			Expect(stats.Hits).To(Equal(uint64(2)))
+		})
+
+		It("should treat accesses within the same cache line as one line", func() {
+			config := cache.Config{
+				Size:          4 * 1024,
+				Associativity: 4,
+				BlockSize:     64,
+				HitLatency:    1,
+				MissLatency:   10,
+			}
+			c := cache.New(config, backing)
+
+			// Byte 0 and byte 63 are in the same 64-byte cache line
+			memory.Write8(0x1000, 0x11)
+			memory.Write8(0x103F, 0xFF)
+
+			c.Read(0x1000, 1) // Miss, fetches line [0x1000, 0x103F]
+			r := c.Read(0x103F, 1)
+			Expect(r.Hit).To(BeTrue())
+			Expect(byte(r.Data)).To(Equal(byte(0xFF)))
+
+			stats := c.Stats()
+			Expect(stats.Misses).To(Equal(uint64(1)))
+			Expect(stats.Hits).To(Equal(uint64(1)))
+		})
+	})
+})
