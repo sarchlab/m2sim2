@@ -959,6 +959,12 @@ const maxMemPorts = 4
 // The arithmetic benchmark is limited by register count (5 unique), not write ports.
 const maxWritePorts = 6
 
+// maxMemIssuePerCycle limits total memory operations (loads + stores) that can
+// be issued per cycle in the OoO issue path. Without this limit, removing
+// issueBlocked allows too many loads to issue in parallel for strided memory
+// workloads. M2 has 1 load + 1 store = 2 typical memory issue slots.
+const maxMemIssuePerCycle = 2
+
 // isALUOp returns true if the instruction uses an integer ALU execution port.
 func isALUOp(inst *IDEXRegister) bool {
 	if inst == nil || !inst.Valid {
@@ -1066,11 +1072,16 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 			}
 		}
 
-		// Store-to-load forwarding: M2's 56-entry store buffer handles
-		// forwarding transparently. No blanket blocking needed.
-
 		// Only count port usage for actually-issued instructions.
 		isIssued := issued != nil && issued[i]
+
+		// Memory ordering: a load cannot bypass a non-issued store.
+		// The store's address is unknown until it issues, so the load
+		// might depend on it. Conservative blocking matches real
+		// hardware behavior for in-order issue.
+		if !isIssued && prev.MemWrite && newInst.MemRead {
+			return false, false
+		}
 		if isIssued {
 			if prev.MemRead {
 				loadCount++
@@ -1234,6 +1245,13 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 			newInst.Rn == prev.Rd {
 			return false, false
 		}
+	}
+
+	// Per-cycle memory issue limit: restrict total memory ops (load+store)
+	// issued in one cycle to prevent strided-memory workloads from issuing
+	// too many parallel loads when OoO bypass is enabled.
+	if newAccessesMem && loadCount+storeCount > maxMemIssuePerCycle {
+		return false, false
 	}
 
 	// Limit total memory operations to AGU bandwidth
