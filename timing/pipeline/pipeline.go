@@ -2208,11 +2208,8 @@ func (p *Pipeline) tickQuadIssue() {
 		issuedCount := 1
 
 		// Decode slot 2
-		// In-order issue: once an instruction is blocked, all subsequent
-		// instructions must also be blocked to prevent WAR hazards from
-		// out-of-order writeback.
-		issueBlocked := false
-		if p.ifid2.Valid && !issueBlocked {
+		// OoO-style issue: each slot independently checks canIssueWith().
+		if p.ifid2.Valid {
 			decResult2 := p.decodeStage.Decode(p.ifid2.InstructionWord, p.ifid2.PC)
 			tempIDEX2 := IDEXRegister{
 				Valid:           true,
@@ -2236,15 +2233,13 @@ func (p *Pipeline) tickQuadIssue() {
 			if canIssueWith(&tempIDEX2, &issuedInsts, issuedCount, &issued) {
 				nextIDEX2.fromIDEX(&tempIDEX2)
 				issued[issuedCount] = true
-			} else {
-				issueBlocked = true
 			}
 			issuedInsts[issuedCount] = &tempIDEX2
 			issuedCount++
 		}
 
 		// Decode slot 3
-		if p.ifid3.Valid && !issueBlocked {
+		if p.ifid3.Valid {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			tempIDEX3 := IDEXRegister{
 				Valid:           true,
@@ -2268,15 +2263,13 @@ func (p *Pipeline) tickQuadIssue() {
 			if canIssueWith(&tempIDEX3, &issuedInsts, issuedCount, &issued) {
 				nextIDEX3.fromIDEX(&tempIDEX3)
 				issued[issuedCount] = true
-			} else {
-				issueBlocked = true
 			}
 			issuedInsts[issuedCount] = &tempIDEX3
 			issuedCount++
 		}
 
 		// Decode slot 4
-		if p.ifid4.Valid && !issueBlocked {
+		if p.ifid4.Valid {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			tempIDEX4 := IDEXRegister{
 				Valid:           true,
@@ -3463,11 +3456,8 @@ func (p *Pipeline) tickSextupleIssue() {
 		ifid2ConsumedByFusion := fusedCMPBcond
 
 		// Decode slot 2 (IFID2) - skip if consumed by fusion
-		// In-order issue: once an instruction is blocked, all subsequent
-		// instructions must also be blocked to prevent WAR hazards from
-		// out-of-order writeback.
-		issueBlocked := false
-		if p.ifid2.Valid && !ifid2ConsumedByFusion && !issueBlocked {
+		// OoO-style issue: each slot independently checks canIssueWith().
+		if p.ifid2.Valid && !ifid2ConsumedByFusion {
 			decResult2 := p.decodeStage.Decode(p.ifid2.InstructionWord, p.ifid2.PC)
 			tempIDEX2 := IDEXRegister{
 				Valid:           true,
@@ -3490,15 +3480,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			if canIssueWith(&tempIDEX2, &issuedInsts, issuedCount, &issued) {
 				nextIDEX2.fromIDEX(&tempIDEX2)
 				issued[issuedCount] = true
-			} else {
-				issueBlocked = true
 			}
 			issuedInsts[issuedCount] = &tempIDEX2
 			issuedCount++
 		}
 
 		// Decode slot 3
-		if p.ifid3.Valid && !issueBlocked {
+		if p.ifid3.Valid {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			tempIDEX3 := IDEXRegister{
 				Valid:           true,
@@ -3521,15 +3509,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			if canIssueWith(&tempIDEX3, &issuedInsts, issuedCount, &issued) {
 				nextIDEX3.fromIDEX(&tempIDEX3)
 				issued[issuedCount] = true
-			} else {
-				issueBlocked = true
 			}
 			issuedInsts[issuedCount] = &tempIDEX3
 			issuedCount++
 		}
 
 		// Decode slot 4
-		if p.ifid4.Valid && !issueBlocked {
+		if p.ifid4.Valid {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			tempIDEX4 := IDEXRegister{
 				Valid:           true,
@@ -3552,15 +3538,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			if canIssueWith(&tempIDEX4, &issuedInsts, issuedCount, &issued) {
 				nextIDEX4.fromIDEX(&tempIDEX4)
 				issued[issuedCount] = true
-			} else {
-				issueBlocked = true
 			}
 			issuedInsts[issuedCount] = &tempIDEX4
 			issuedCount++
 		}
 
 		// Decode slot 5
-		if p.ifid5.Valid && !issueBlocked {
+		if p.ifid5.Valid {
 			decResult5 := p.decodeStage.Decode(p.ifid5.InstructionWord, p.ifid5.PC)
 			tempIDEX5 := IDEXRegister{
 				Valid:           true,
@@ -3583,15 +3567,13 @@ func (p *Pipeline) tickSextupleIssue() {
 			if canIssueWith(&tempIDEX5, &issuedInsts, issuedCount, &issued) {
 				nextIDEX5.fromIDEX(&tempIDEX5)
 				issued[issuedCount] = true
-			} else {
-				issueBlocked = true
 			}
 			issuedInsts[issuedCount] = &tempIDEX5
 			issuedCount++
 		}
 
 		// Decode slot 6
-		if p.ifid6.Valid && !issueBlocked {
+		if p.ifid6.Valid {
 			decResult6 := p.decodeStage.Decode(p.ifid6.InstructionWord, p.ifid6.PC)
 			tempIDEX6 := IDEXRegister{
 				Valid:           true,
@@ -5671,11 +5653,9 @@ func (p *Pipeline) tickOctupleIssue() {
 		ifid2ConsumedByFusion := fusedCMPBcond
 
 		// Decode slot 2 (IFID2) - skip if consumed by fusion
-		// In-order issue: once an instruction is blocked, all subsequent
-		// instructions must also be blocked to prevent WAR hazards from
-		// out-of-order writeback.
-		issueBlocked := false
-		if p.ifid2.Valid && !ifid2ConsumedByFusion && !issueBlocked {
+		// OoO-style issue: each slot independently checks canIssueWith().
+		// If a slot can't issue, later slots still get a chance.
+		if p.ifid2.Valid && !ifid2ConsumedByFusion {
 			decResult2 := p.decodeStage.Decode(p.ifid2.InstructionWord, p.ifid2.PC)
 			// During load-use bypass, check if this instruction also depends on the load.
 			// Unlike other hazards, load-use dependency does NOT block subsequent slots —
@@ -5705,8 +5685,6 @@ func (p *Pipeline) tickOctupleIssue() {
 				if !(p.ifid2.AfterBranch && decResult2.MemWrite) && canIssueWith(&tempIDEX2, &issuedInsts, issuedCount, &issued) {
 					nextIDEX2.fromIDEX(&tempIDEX2)
 					issued[issuedCount] = true
-				} else {
-					issueBlocked = true
 				}
 				issuedInsts[issuedCount] = &tempIDEX2
 				issuedCount++
@@ -5714,7 +5692,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 
 		// Decode slot 3
-		if p.ifid3.Valid && !issueBlocked {
+		if p.ifid3.Valid {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult3.Inst) {
 				issuedCount++
@@ -5740,8 +5718,6 @@ func (p *Pipeline) tickOctupleIssue() {
 				if !(p.ifid3.AfterBranch && decResult3.MemWrite) && canIssueWith(&tempIDEX3, &issuedInsts, issuedCount, &issued) {
 					nextIDEX3.fromIDEX(&tempIDEX3)
 					issued[issuedCount] = true
-				} else {
-					issueBlocked = true
 				}
 				issuedInsts[issuedCount] = &tempIDEX3
 				issuedCount++
@@ -5749,7 +5725,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 
 		// Decode slot 4
-		if p.ifid4.Valid && !issueBlocked {
+		if p.ifid4.Valid {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult4.Inst) {
 				issuedCount++
@@ -5775,8 +5751,6 @@ func (p *Pipeline) tickOctupleIssue() {
 				if !(p.ifid4.AfterBranch && decResult4.MemWrite) && canIssueWith(&tempIDEX4, &issuedInsts, issuedCount, &issued) {
 					nextIDEX4.fromIDEX(&tempIDEX4)
 					issued[issuedCount] = true
-				} else {
-					issueBlocked = true
 				}
 				issuedInsts[issuedCount] = &tempIDEX4
 				issuedCount++
@@ -5784,7 +5758,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 
 		// Decode slot 5
-		if p.ifid5.Valid && !issueBlocked {
+		if p.ifid5.Valid {
 			decResult5 := p.decodeStage.Decode(p.ifid5.InstructionWord, p.ifid5.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult5.Inst) {
 				issuedCount++
@@ -5810,8 +5784,6 @@ func (p *Pipeline) tickOctupleIssue() {
 				if !(p.ifid5.AfterBranch && decResult5.MemWrite) && canIssueWith(&tempIDEX5, &issuedInsts, issuedCount, &issued) {
 					nextIDEX5.fromIDEX(&tempIDEX5)
 					issued[issuedCount] = true
-				} else {
-					issueBlocked = true
 				}
 				issuedInsts[issuedCount] = &tempIDEX5
 				issuedCount++
@@ -5819,7 +5791,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 
 		// Decode slot 6
-		if p.ifid6.Valid && !issueBlocked {
+		if p.ifid6.Valid {
 			decResult6 := p.decodeStage.Decode(p.ifid6.InstructionWord, p.ifid6.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult6.Inst) {
 				issuedCount++
@@ -5845,8 +5817,6 @@ func (p *Pipeline) tickOctupleIssue() {
 				if !(p.ifid6.AfterBranch && decResult6.MemWrite) && canIssueWith(&tempIDEX6, &issuedInsts, issuedCount, &issued) {
 					nextIDEX6.fromIDEX(&tempIDEX6)
 					issued[issuedCount] = true
-				} else {
-					issueBlocked = true
 				}
 				issuedInsts[issuedCount] = &tempIDEX6
 				issuedCount++
@@ -5854,7 +5824,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 
 		// Decode slot 7
-		if p.ifid7.Valid && !issueBlocked {
+		if p.ifid7.Valid {
 			decResult7 := p.decodeStage.Decode(p.ifid7.InstructionWord, p.ifid7.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult7.Inst) {
 				issuedCount++
@@ -5880,8 +5850,6 @@ func (p *Pipeline) tickOctupleIssue() {
 				if !(p.ifid7.AfterBranch && decResult7.MemWrite) && canIssueWith(&tempIDEX7, &issuedInsts, issuedCount, &issued) {
 					nextIDEX7.fromIDEX(&tempIDEX7)
 					issued[issuedCount] = true
-				} else {
-					issueBlocked = true
 				}
 				issuedInsts[issuedCount] = &tempIDEX7
 				issuedCount++
@@ -5889,7 +5857,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 
 		// Decode slot 8
-		if p.ifid8.Valid && !issueBlocked {
+		if p.ifid8.Valid {
 			decResult8 := p.decodeStage.Decode(p.ifid8.InstructionWord, p.ifid8.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult8.Inst) {
 				// dependent — will be re-queued
