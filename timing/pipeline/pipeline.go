@@ -236,11 +236,13 @@ func WithDCache(config cache.Config) PipelineOption {
 	return func(p *Pipeline) {
 		backing := cache.NewMemoryBacking(p.memory)
 		dcache := cache.New(config, backing)
-		// Share one D-cache across all 3 memory ports (coherent).
+		// Share one D-cache across all 5 memory ports (coherent).
 		// Each CachedMemoryStage tracks its own pending/stall state.
 		p.cachedMemoryStage = NewCachedMemoryStage(dcache, p.memory)
 		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache, p.memory)
 		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage4 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage5 = NewCachedMemoryStage(dcache, p.memory)
 		p.useDCache = true
 	}
 }
@@ -254,11 +256,13 @@ func WithDefaultCaches() PipelineOption {
 		p.cachedFetchStage = NewCachedFetchStage(icache, p.memory)
 		p.useICache = true
 
-		// Initialize D-cache — single shared cache, 3 port stages (coherent)
+		// Initialize D-cache — single shared cache, 5 port stages (coherent)
 		dcache := cache.New(cache.DefaultL1DConfig(), backing)
 		p.cachedMemoryStage = NewCachedMemoryStage(dcache, p.memory)
 		p.cachedMemoryStage2 = NewCachedMemoryStage(dcache, p.memory)
 		p.cachedMemoryStage3 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage4 = NewCachedMemoryStage(dcache, p.memory)
+		p.cachedMemoryStage5 = NewCachedMemoryStage(dcache, p.memory)
 		p.useDCache = true
 	}
 }
@@ -363,17 +367,23 @@ type Pipeline struct {
 	exLatency7   uint64 // Remaining cycles for septenary execute slot
 	exLatency8   uint64 // Remaining cycles for octonary execute slot
 
-	// Non-cached memory latency tracking (up to 3 memory ports)
+	// Non-cached memory latency tracking (up to 5 memory ports)
 	memPending    bool   // True if waiting for memory operation to complete
 	memPendingPC  uint64 // PC of pending memory operation
 	memPending2   bool
 	memPendingPC2 uint64
 	memPending3   bool
 	memPendingPC3 uint64
+	memPending4   bool
+	memPendingPC4 uint64
+	memPending5   bool
+	memPendingPC5 uint64
 
-	// Cached memory stages for secondary/tertiary memory ports
+	// Cached memory stages for secondary through quinary memory ports
 	cachedMemoryStage2 *CachedMemoryStage
 	cachedMemoryStage3 *CachedMemoryStage
+	cachedMemoryStage4 *CachedMemoryStage
+	cachedMemoryStage5 *CachedMemoryStage
 
 	// Shared resources
 	regFile *emu.RegFile
@@ -535,6 +545,40 @@ func (p *Pipeline) accessTertiaryMem(slot MemorySlot) (MemoryResult, bool) {
 	// Without cache simulation, memory is a direct array lookup.
 	// Pipeline issue rules already enforce ordering constraints.
 	p.memPending3 = false
+	return p.memoryStage.MemorySlot(slot), false
+}
+
+// accessQuaternaryMem processes a memory operation for quaternary slot (slot 4).
+func (p *Pipeline) accessQuaternaryMem(slot MemorySlot) (MemoryResult, bool) {
+	if !slot.IsValid() || (!slot.GetMemRead() && !slot.GetMemWrite()) {
+		p.memPending4 = false
+		return MemoryResult{}, false
+	}
+	if p.useDCache && p.cachedMemoryStage4 != nil {
+		result, stall := p.cachedMemoryStage4.AccessSlot(slot)
+		return result, stall
+	}
+	// Non-cached path: immediate access (no stall).
+	// Without cache simulation, memory is a direct array lookup.
+	// Pipeline issue rules already enforce ordering constraints.
+	p.memPending4 = false
+	return p.memoryStage.MemorySlot(slot), false
+}
+
+// accessQuinaryMem processes a memory operation for quinary slot (slot 5).
+func (p *Pipeline) accessQuinaryMem(slot MemorySlot) (MemoryResult, bool) {
+	if !slot.IsValid() || (!slot.GetMemRead() && !slot.GetMemWrite()) {
+		p.memPending5 = false
+		return MemoryResult{}, false
+	}
+	if p.useDCache && p.cachedMemoryStage5 != nil {
+		result, stall := p.cachedMemoryStage5.AccessSlot(slot)
+		return result, stall
+	}
+	// Non-cached path: immediate access (no stall).
+	// Without cache simulation, memory is a direct array lookup.
+	// Pipeline issue rules already enforce ordering constraints.
+	p.memPending5 = false
 	return p.memoryStage.MemorySlot(slot), false
 }
 
@@ -1716,10 +1760,19 @@ func (p *Pipeline) tickQuadIssue() {
 		}
 	}
 
+	// Quaternary slot memory (memory port 4) — tick in parallel with ports 1-3
+	var memStall4 bool
+	var memResult4 MemoryResult
+	if p.exmem4.Valid {
+		if p.exmem4.MemRead || p.exmem4.MemWrite {
+			memResult4, memStall4 = p.accessQuaternaryMem(&p.exmem4)
+		}
+	}
+
 	// Combine stall signals: pipeline stalls if ANY memory port is stalling.
 	// Track whether primary port already counted this stall cycle.
 	primaryStalled := memStall
-	memStall = memStall || memStall2 || memStall3
+	memStall = memStall || memStall2 || memStall3 || memStall4
 	if memStall && !primaryStalled {
 		p.stats.MemStalls++
 	}
@@ -1750,17 +1803,17 @@ func (p *Pipeline) tickQuadIssue() {
 		}
 	}
 
-	// Quaternary slot memory (ALU results only, no memory port)
+	// Quaternary slot memory (memory port 4)
 	if p.exmem4.Valid && !memStall {
 		nextMEMWB4 = QuaternaryMEMWBRegister{
 			Valid:     true,
 			PC:        p.exmem4.PC,
 			Inst:      p.exmem4.Inst,
 			ALUResult: p.exmem4.ALUResult,
-			MemData:   0,
+			MemData:   memResult4.MemData,
 			Rd:        p.exmem4.Rd,
 			RegWrite:  p.exmem4.RegWrite,
-			MemToReg:  false,
+			MemToReg:  p.exmem4.MemToReg,
 		}
 	}
 
@@ -2744,10 +2797,28 @@ func (p *Pipeline) tickSextupleIssue() {
 		}
 	}
 
+	// Quaternary slot memory (memory port 4) — tick in parallel with ports 1-3
+	var memStall4 bool
+	var memResult4 MemoryResult
+	if p.exmem4.Valid {
+		if p.exmem4.MemRead || p.exmem4.MemWrite {
+			memResult4, memStall4 = p.accessQuaternaryMem(&p.exmem4)
+		}
+	}
+
+	// Quinary slot memory (memory port 5) — tick in parallel with ports 1-4
+	var memStall5 bool
+	var memResult5 MemoryResult
+	if p.exmem5.Valid {
+		if p.exmem5.MemRead || p.exmem5.MemWrite {
+			memResult5, memStall5 = p.accessQuinaryMem(&p.exmem5)
+		}
+	}
+
 	// Combine stall signals: pipeline stalls if ANY memory port is stalling.
 	// Track whether primary port already counted this stall cycle.
 	primaryStalled := memStall
-	memStall = memStall || memStall2 || memStall3
+	memStall = memStall || memStall2 || memStall3 || memStall4 || memStall5
 	if memStall && !primaryStalled {
 		p.stats.MemStalls++
 	}
@@ -2778,31 +2849,31 @@ func (p *Pipeline) tickSextupleIssue() {
 		}
 	}
 
-	// Quaternary slot memory (ALU results only, no memory port)
+	// Quaternary slot memory (memory port 4)
 	if p.exmem4.Valid && !memStall {
 		nextMEMWB4 = QuaternaryMEMWBRegister{
 			Valid:     true,
 			PC:        p.exmem4.PC,
 			Inst:      p.exmem4.Inst,
 			ALUResult: p.exmem4.ALUResult,
-			MemData:   0,
+			MemData:   memResult4.MemData,
 			Rd:        p.exmem4.Rd,
 			RegWrite:  p.exmem4.RegWrite,
-			MemToReg:  false,
+			MemToReg:  p.exmem4.MemToReg,
 		}
 	}
 
-	// Quinary slot memory (ALU results only, no memory port)
+	// Quinary slot memory (memory port 5)
 	if p.exmem5.Valid && !memStall {
 		nextMEMWB5 = QuinaryMEMWBRegister{
 			Valid:     true,
 			PC:        p.exmem5.PC,
 			Inst:      p.exmem5.Inst,
 			ALUResult: p.exmem5.ALUResult,
-			MemData:   0,
+			MemData:   memResult5.MemData,
 			Rd:        p.exmem5.Rd,
 			RegWrite:  p.exmem5.RegWrite,
-			MemToReg:  false,
+			MemToReg:  p.exmem5.MemToReg,
 		}
 	}
 
@@ -3857,11 +3928,21 @@ func (p *Pipeline) Reset() {
 	p.memPendingPC2 = 0
 	p.memPending3 = false
 	p.memPendingPC3 = 0
+	p.memPending4 = false
+	p.memPendingPC4 = 0
+	p.memPending5 = false
+	p.memPendingPC5 = 0
 	if p.cachedMemoryStage2 != nil {
 		p.cachedMemoryStage2.Reset()
 	}
 	if p.cachedMemoryStage3 != nil {
 		p.cachedMemoryStage3.Reset()
+	}
+	if p.cachedMemoryStage4 != nil {
+		p.cachedMemoryStage4.Reset()
+	}
+	if p.cachedMemoryStage5 != nil {
+		p.cachedMemoryStage5.Reset()
 	}
 	if p.branchPredictor != nil {
 		p.branchPredictor.Reset()
@@ -4001,10 +4082,28 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
+	// Quaternary slot memory (memory port 4) — tick in parallel with ports 1-3
+	var memStall4 bool
+	var memResult4 MemoryResult
+	if p.exmem4.Valid {
+		if p.exmem4.MemRead || p.exmem4.MemWrite {
+			memResult4, memStall4 = p.accessQuaternaryMem(&p.exmem4)
+		}
+	}
+
+	// Quinary slot memory (memory port 5) — tick in parallel with ports 1-4
+	var memStall5 bool
+	var memResult5 MemoryResult
+	if p.exmem5.Valid {
+		if p.exmem5.MemRead || p.exmem5.MemWrite {
+			memResult5, memStall5 = p.accessQuinaryMem(&p.exmem5)
+		}
+	}
+
 	// Combine stall signals: pipeline stalls if ANY memory port is stalling.
 	// Track whether primary port already counted this stall cycle.
 	primaryStalled := memStall
-	memStall = memStall || memStall2 || memStall3
+	memStall = memStall || memStall2 || memStall3 || memStall4 || memStall5
 	if memStall && !primaryStalled {
 		p.stats.MemStalls++
 	}
@@ -4035,31 +4134,31 @@ func (p *Pipeline) tickOctupleIssue() {
 		}
 	}
 
-	// Quaternary slot memory (ALU results only, no memory port)
+	// Quaternary slot memory (memory port 4)
 	if p.exmem4.Valid && !memStall {
 		nextMEMWB4 = QuaternaryMEMWBRegister{
 			Valid:     true,
 			PC:        p.exmem4.PC,
 			Inst:      p.exmem4.Inst,
 			ALUResult: p.exmem4.ALUResult,
-			MemData:   0,
+			MemData:   memResult4.MemData,
 			Rd:        p.exmem4.Rd,
 			RegWrite:  p.exmem4.RegWrite,
-			MemToReg:  false,
+			MemToReg:  p.exmem4.MemToReg,
 		}
 	}
 
-	// Quinary slot memory (ALU results only, no memory port)
+	// Quinary slot memory (memory port 5)
 	if p.exmem5.Valid && !memStall {
 		nextMEMWB5 = QuinaryMEMWBRegister{
 			Valid:     true,
 			PC:        p.exmem5.PC,
 			Inst:      p.exmem5.Inst,
 			ALUResult: p.exmem5.ALUResult,
-			MemData:   0,
+			MemData:   memResult5.MemData,
 			Rd:        p.exmem5.Rd,
 			RegWrite:  p.exmem5.RegWrite,
-			MemToReg:  false,
+			MemToReg:  p.exmem5.MemToReg,
 		}
 	}
 
