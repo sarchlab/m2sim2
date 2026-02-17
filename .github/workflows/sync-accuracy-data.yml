@@ -1,0 +1,33 @@
+name: Sync Accuracy Data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'h5_accuracy_results.json'
+
+jobs:
+  sync:
+    name: Sync accuracy data to results/final/
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync h5_accuracy_results.json to results/final/
+        run: |
+          if ! diff -q h5_accuracy_results.json results/final/h5_accuracy_results.json > /dev/null 2>&1; then
+            cp h5_accuracy_results.json results/final/h5_accuracy_results.json
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add results/final/h5_accuracy_results.json
+            git commit -m "[CI] Sync results/final/h5_accuracy_results.json from root"
+            git push
+          else
+            echo "Files already in sync, nothing to do."
+          fi
