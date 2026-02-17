@@ -244,6 +244,50 @@ func (p *Pipeline) collectPendingFetchInstructions(issueCount int) ([8]pendingFe
 	return allFetched, pendingCount
 }
 
+// sameCycleForward applies same-cycle register forwarding from an earlier
+// execute result. If the source produced a value for register rn or rm,
+// the forwarded value is returned.
+func sameCycleForward(
+	valid, regWrite bool, rd uint8, aluResult uint64,
+	rn, rm uint8, rnValue, rmValue uint64,
+) (uint64, uint64) {
+	if valid && regWrite && rd != 31 {
+		if rn == rd {
+			rnValue = aluResult
+		}
+		if rm == rd {
+			rmValue = aluResult
+		}
+	}
+	return rnValue, rmValue
+}
+
+// forwardPSTATEFromPrevCycleEXMEM checks all 8 previous-cycle EXMEM stages
+// for PSTATE flag forwarding to a B.cond instruction.
+func (p *Pipeline) forwardPSTATEFromPrevCycleEXMEM() (bool, bool, bool, bool, bool) {
+	type flagSource struct {
+		valid      bool
+		setsFlags  bool
+		n, z, c, v bool
+	}
+	sources := [8]flagSource{
+		{p.exmem.Valid, p.exmem.SetsFlags, p.exmem.FlagN, p.exmem.FlagZ, p.exmem.FlagC, p.exmem.FlagV},
+		{p.exmem2.Valid, p.exmem2.SetsFlags, p.exmem2.FlagN, p.exmem2.FlagZ, p.exmem2.FlagC, p.exmem2.FlagV},
+		{p.exmem3.Valid, p.exmem3.SetsFlags, p.exmem3.FlagN, p.exmem3.FlagZ, p.exmem3.FlagC, p.exmem3.FlagV},
+		{p.exmem4.Valid, p.exmem4.SetsFlags, p.exmem4.FlagN, p.exmem4.FlagZ, p.exmem4.FlagC, p.exmem4.FlagV},
+		{p.exmem5.Valid, p.exmem5.SetsFlags, p.exmem5.FlagN, p.exmem5.FlagZ, p.exmem5.FlagC, p.exmem5.FlagV},
+		{p.exmem6.Valid, p.exmem6.SetsFlags, p.exmem6.FlagN, p.exmem6.FlagZ, p.exmem6.FlagC, p.exmem6.FlagV},
+		{p.exmem7.Valid, p.exmem7.SetsFlags, p.exmem7.FlagN, p.exmem7.FlagZ, p.exmem7.FlagC, p.exmem7.FlagV},
+		{p.exmem8.Valid, p.exmem8.SetsFlags, p.exmem8.FlagN, p.exmem8.FlagZ, p.exmem8.FlagC, p.exmem8.FlagV},
+	}
+	for _, s := range sources {
+		if s.valid && s.setsFlags {
+			return true, s.n, s.z, s.c, s.v
+		}
+	}
+	return false, false, false, false, false
+}
+
 // forwardFromAllSlots checks all secondary pipeline stages for forwarding.
 //
 //nolint:unused // Scaffolding for 4-wide implementation (PR #114)

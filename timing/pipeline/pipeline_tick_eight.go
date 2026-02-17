@@ -257,55 +257,7 @@ func (p *Pipeline) tickOctupleIssue() {
 			forwardFlags := false
 			var fwdN, fwdZ, fwdC, fwdV bool
 			if p.idex.Inst != nil && p.idex.Inst.Op == insts.OpBCond && !p.idex.IsFused {
-				if p.exmem.Valid && p.exmem.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem.FlagN
-					fwdZ = p.exmem.FlagZ
-					fwdC = p.exmem.FlagC
-					fwdV = p.exmem.FlagV
-				} else if p.exmem2.Valid && p.exmem2.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem2.FlagN
-					fwdZ = p.exmem2.FlagZ
-					fwdC = p.exmem2.FlagC
-					fwdV = p.exmem2.FlagV
-				} else if p.exmem3.Valid && p.exmem3.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem3.FlagN
-					fwdZ = p.exmem3.FlagZ
-					fwdC = p.exmem3.FlagC
-					fwdV = p.exmem3.FlagV
-				} else if p.exmem4.Valid && p.exmem4.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem4.FlagN
-					fwdZ = p.exmem4.FlagZ
-					fwdC = p.exmem4.FlagC
-					fwdV = p.exmem4.FlagV
-				} else if p.exmem5.Valid && p.exmem5.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem5.FlagN
-					fwdZ = p.exmem5.FlagZ
-					fwdC = p.exmem5.FlagC
-					fwdV = p.exmem5.FlagV
-				} else if p.exmem6.Valid && p.exmem6.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem6.FlagN
-					fwdZ = p.exmem6.FlagZ
-					fwdC = p.exmem6.FlagC
-					fwdV = p.exmem6.FlagV
-				} else if p.exmem7.Valid && p.exmem7.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem7.FlagN
-					fwdZ = p.exmem7.FlagZ
-					fwdC = p.exmem7.FlagC
-					fwdV = p.exmem7.FlagV
-				} else if p.exmem8.Valid && p.exmem8.SetsFlags {
-					forwardFlags = true
-					fwdN = p.exmem8.FlagN
-					fwdZ = p.exmem8.FlagZ
-					fwdC = p.exmem8.FlagC
-					fwdV = p.exmem8.FlagV
-				}
+				forwardFlags, fwdN, fwdZ, fwdC, fwdV = p.forwardPSTATEFromPrevCycleEXMEM()
 			}
 
 			// Save register checkpoint before branch execution so we can
@@ -439,14 +391,7 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency2 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex2.Rn, p.idex2.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex2.Rm, p.idex2.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex2.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex2.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex2.Rn, p.idex2.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 2
 			forwardFlags2 := false
 			var fwdN2, fwdZ2, fwdC2, fwdV2 bool
@@ -567,22 +512,8 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency3 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex3.Rn, p.idex3.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex3.Rm, p.idex3.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex3.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex3.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
-			if nextEXMEM2.Valid && nextEXMEM2.RegWrite && nextEXMEM2.Rd != 31 {
-				if p.idex3.Rn == nextEXMEM2.Rd {
-					rnValue = nextEXMEM2.ALUResult
-				}
-				if p.idex3.Rm == nextEXMEM2.Rd {
-					rmValue = nextEXMEM2.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex3.Rn, p.idex3.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex3.Rn, p.idex3.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 3
 			forwardFlags3 := false
 			var fwdN3, fwdZ3, fwdC3, fwdV3 bool
@@ -709,30 +640,9 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency4 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex4.Rn, p.idex4.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex4.Rm, p.idex4.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex4.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex4.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
-			if nextEXMEM2.Valid && nextEXMEM2.RegWrite && nextEXMEM2.Rd != 31 {
-				if p.idex4.Rn == nextEXMEM2.Rd {
-					rnValue = nextEXMEM2.ALUResult
-				}
-				if p.idex4.Rm == nextEXMEM2.Rd {
-					rmValue = nextEXMEM2.ALUResult
-				}
-			}
-			if nextEXMEM3.Valid && nextEXMEM3.RegWrite && nextEXMEM3.Rd != 31 {
-				if p.idex4.Rn == nextEXMEM3.Rd {
-					rnValue = nextEXMEM3.ALUResult
-				}
-				if p.idex4.Rm == nextEXMEM3.Rd {
-					rmValue = nextEXMEM3.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex4.Rn, p.idex4.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex4.Rn, p.idex4.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex4.Rn, p.idex4.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 4
 			forwardFlags4 := false
 			var fwdN4, fwdZ4, fwdC4, fwdV4 bool
@@ -856,38 +766,10 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency5 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex5.Rn, p.idex5.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex5.Rm, p.idex5.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex5.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex5.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
-			if nextEXMEM2.Valid && nextEXMEM2.RegWrite && nextEXMEM2.Rd != 31 {
-				if p.idex5.Rn == nextEXMEM2.Rd {
-					rnValue = nextEXMEM2.ALUResult
-				}
-				if p.idex5.Rm == nextEXMEM2.Rd {
-					rmValue = nextEXMEM2.ALUResult
-				}
-			}
-			if nextEXMEM3.Valid && nextEXMEM3.RegWrite && nextEXMEM3.Rd != 31 {
-				if p.idex5.Rn == nextEXMEM3.Rd {
-					rnValue = nextEXMEM3.ALUResult
-				}
-				if p.idex5.Rm == nextEXMEM3.Rd {
-					rmValue = nextEXMEM3.ALUResult
-				}
-			}
-			if nextEXMEM4.Valid && nextEXMEM4.RegWrite && nextEXMEM4.Rd != 31 {
-				if p.idex5.Rn == nextEXMEM4.Rd {
-					rnValue = nextEXMEM4.ALUResult
-				}
-				if p.idex5.Rm == nextEXMEM4.Rd {
-					rmValue = nextEXMEM4.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM4.Valid, nextEXMEM4.RegWrite, nextEXMEM4.Rd, nextEXMEM4.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 5
 			forwardFlags5 := false
 			var fwdN5, fwdZ5, fwdC5, fwdV5 bool
@@ -1010,46 +892,11 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency6 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex6.Rn, p.idex6.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex6.Rm, p.idex6.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex6.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex6.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
-			if nextEXMEM2.Valid && nextEXMEM2.RegWrite && nextEXMEM2.Rd != 31 {
-				if p.idex6.Rn == nextEXMEM2.Rd {
-					rnValue = nextEXMEM2.ALUResult
-				}
-				if p.idex6.Rm == nextEXMEM2.Rd {
-					rmValue = nextEXMEM2.ALUResult
-				}
-			}
-			if nextEXMEM3.Valid && nextEXMEM3.RegWrite && nextEXMEM3.Rd != 31 {
-				if p.idex6.Rn == nextEXMEM3.Rd {
-					rnValue = nextEXMEM3.ALUResult
-				}
-				if p.idex6.Rm == nextEXMEM3.Rd {
-					rmValue = nextEXMEM3.ALUResult
-				}
-			}
-			if nextEXMEM4.Valid && nextEXMEM4.RegWrite && nextEXMEM4.Rd != 31 {
-				if p.idex6.Rn == nextEXMEM4.Rd {
-					rnValue = nextEXMEM4.ALUResult
-				}
-				if p.idex6.Rm == nextEXMEM4.Rd {
-					rmValue = nextEXMEM4.ALUResult
-				}
-			}
-			if nextEXMEM5.Valid && nextEXMEM5.RegWrite && nextEXMEM5.Rd != 31 {
-				if p.idex6.Rn == nextEXMEM5.Rd {
-					rnValue = nextEXMEM5.ALUResult
-				}
-				if p.idex6.Rm == nextEXMEM5.Rd {
-					rmValue = nextEXMEM5.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM4.Valid, nextEXMEM4.RegWrite, nextEXMEM4.Rd, nextEXMEM4.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM5.Valid, nextEXMEM5.RegWrite, nextEXMEM5.Rd, nextEXMEM5.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 6
 			forwardFlags6 := false
 			var fwdN6, fwdZ6, fwdC6, fwdV6 bool
@@ -1175,54 +1022,12 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency7 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex7.Rn, p.idex7.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex7.Rm, p.idex7.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex7.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex7.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
-			if nextEXMEM2.Valid && nextEXMEM2.RegWrite && nextEXMEM2.Rd != 31 {
-				if p.idex7.Rn == nextEXMEM2.Rd {
-					rnValue = nextEXMEM2.ALUResult
-				}
-				if p.idex7.Rm == nextEXMEM2.Rd {
-					rmValue = nextEXMEM2.ALUResult
-				}
-			}
-			if nextEXMEM3.Valid && nextEXMEM3.RegWrite && nextEXMEM3.Rd != 31 {
-				if p.idex7.Rn == nextEXMEM3.Rd {
-					rnValue = nextEXMEM3.ALUResult
-				}
-				if p.idex7.Rm == nextEXMEM3.Rd {
-					rmValue = nextEXMEM3.ALUResult
-				}
-			}
-			if nextEXMEM4.Valid && nextEXMEM4.RegWrite && nextEXMEM4.Rd != 31 {
-				if p.idex7.Rn == nextEXMEM4.Rd {
-					rnValue = nextEXMEM4.ALUResult
-				}
-				if p.idex7.Rm == nextEXMEM4.Rd {
-					rmValue = nextEXMEM4.ALUResult
-				}
-			}
-			if nextEXMEM5.Valid && nextEXMEM5.RegWrite && nextEXMEM5.Rd != 31 {
-				if p.idex7.Rn == nextEXMEM5.Rd {
-					rnValue = nextEXMEM5.ALUResult
-				}
-				if p.idex7.Rm == nextEXMEM5.Rd {
-					rmValue = nextEXMEM5.ALUResult
-				}
-			}
-			if nextEXMEM6.Valid && nextEXMEM6.RegWrite && nextEXMEM6.Rd != 31 {
-				if p.idex7.Rn == nextEXMEM6.Rd {
-					rnValue = nextEXMEM6.ALUResult
-				}
-				if p.idex7.Rm == nextEXMEM6.Rd {
-					rmValue = nextEXMEM6.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM4.Valid, nextEXMEM4.RegWrite, nextEXMEM4.Rd, nextEXMEM4.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM5.Valid, nextEXMEM5.RegWrite, nextEXMEM5.Rd, nextEXMEM5.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM6.Valid, nextEXMEM6.RegWrite, nextEXMEM6.Rd, nextEXMEM6.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 7
 			forwardFlags7 := false
 			var fwdN7, fwdZ7, fwdC7, fwdV7 bool
@@ -1351,62 +1156,13 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency8 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex8.Rn, p.idex8.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex8.Rm, p.idex8.RmValue)
-			if nextEXMEM.Valid && nextEXMEM.RegWrite && nextEXMEM.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM.Rd {
-					rnValue = nextEXMEM.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM.Rd {
-					rmValue = nextEXMEM.ALUResult
-				}
-			}
-			if nextEXMEM2.Valid && nextEXMEM2.RegWrite && nextEXMEM2.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM2.Rd {
-					rnValue = nextEXMEM2.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM2.Rd {
-					rmValue = nextEXMEM2.ALUResult
-				}
-			}
-			if nextEXMEM3.Valid && nextEXMEM3.RegWrite && nextEXMEM3.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM3.Rd {
-					rnValue = nextEXMEM3.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM3.Rd {
-					rmValue = nextEXMEM3.ALUResult
-				}
-			}
-			if nextEXMEM4.Valid && nextEXMEM4.RegWrite && nextEXMEM4.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM4.Rd {
-					rnValue = nextEXMEM4.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM4.Rd {
-					rmValue = nextEXMEM4.ALUResult
-				}
-			}
-			if nextEXMEM5.Valid && nextEXMEM5.RegWrite && nextEXMEM5.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM5.Rd {
-					rnValue = nextEXMEM5.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM5.Rd {
-					rmValue = nextEXMEM5.ALUResult
-				}
-			}
-			if nextEXMEM6.Valid && nextEXMEM6.RegWrite && nextEXMEM6.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM6.Rd {
-					rnValue = nextEXMEM6.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM6.Rd {
-					rmValue = nextEXMEM6.ALUResult
-				}
-			}
-			if nextEXMEM7.Valid && nextEXMEM7.RegWrite && nextEXMEM7.Rd != 31 {
-				if p.idex8.Rn == nextEXMEM7.Rd {
-					rnValue = nextEXMEM7.ALUResult
-				}
-				if p.idex8.Rm == nextEXMEM7.Rd {
-					rmValue = nextEXMEM7.ALUResult
-				}
-			}
+			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM4.Valid, nextEXMEM4.RegWrite, nextEXMEM4.Rd, nextEXMEM4.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM5.Valid, nextEXMEM5.RegWrite, nextEXMEM5.Rd, nextEXMEM5.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM6.Valid, nextEXMEM6.RegWrite, nextEXMEM6.Rd, nextEXMEM6.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
+			rnValue, rmValue = sameCycleForward(nextEXMEM7.Valid, nextEXMEM7.RegWrite, nextEXMEM7.Rd, nextEXMEM7.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 8
 			forwardFlags8 := false
 			var fwdN8, fwdZ8, fwdC8, fwdV8 bool

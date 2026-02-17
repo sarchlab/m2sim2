@@ -33,7 +33,6 @@ type instrWindowEntry struct {
 	AfterBranch     bool // instruction was fetched after a predicted-taken branch
 }
 
-
 // Statistics holds pipeline performance statistics.
 type Statistics struct {
 	// Cycles is the total number of cycles simulated.
@@ -386,7 +385,6 @@ func (p *Pipeline) RunCycles(cycles uint64) bool {
 	return !p.halted
 }
 
-
 // getExLatency returns the execute-stage latency for an instruction.
 // Load instructions always use minCacheLoadLatency (1 cycle) for the address
 // calculation in EX. The remaining load-to-use latency comes from the pipeline
@@ -448,7 +446,6 @@ func (p *Pipeline) Tick() {
 	// Single-issue tick (original implementation)
 	p.tickSingleIssue()
 }
-
 
 // Reset clears all pipeline state.
 func (p *Pipeline) Reset() {
