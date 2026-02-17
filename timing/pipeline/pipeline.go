@@ -15,11 +15,11 @@ const (
 	minCacheLoadLatency = 1
 
 	// instrWindowSize is the capacity of the instruction window buffer.
-	// A 48-entry window allows the issue logic to look across ~4-6 loop
+	// A 192-entry window allows the issue logic to look across many loop
 	// iterations, finding independent instructions for OoO-style dispatch.
-	// Apple M2 has a 330+ entry ROB; 48 entries is a conservative
-	// approximation that improves overlap for compute-heavy kernels.
-	instrWindowSize = 48
+	// Apple M2 has a 330+ entry ROB; 192 entries provides good overlap
+	// for compute-heavy and memory-intensive PolyBench kernels.
+	instrWindowSize = 192
 )
 
 // instrWindowEntry holds a pre-fetched instruction in the instruction window.
@@ -5677,10 +5677,11 @@ func (p *Pipeline) tickOctupleIssue() {
 		issueBlocked := false
 		if p.ifid2.Valid && !ifid2ConsumedByFusion && !issueBlocked {
 			decResult2 := p.decodeStage.Decode(p.ifid2.InstructionWord, p.ifid2.PC)
-			// During load-use bypass, check if this instruction also depends on the load
+			// During load-use bypass, check if this instruction also depends on the load.
+			// Unlike other hazards, load-use dependency does NOT block subsequent slots —
+			// independent instructions can still issue (OoO-style bypass).
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult2.Inst) {
 				// Dependent on load — don't issue, re-queue to IFID next cycle
-				issueBlocked = true
 				issuedCount++
 			} else {
 				tempIDEX2 := IDEXRegister{
@@ -5716,7 +5717,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.ifid3.Valid && !issueBlocked {
 			decResult3 := p.decodeStage.Decode(p.ifid3.InstructionWord, p.ifid3.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult3.Inst) {
-				issueBlocked = true
 				issuedCount++
 			} else {
 				tempIDEX3 := IDEXRegister{
@@ -5752,7 +5752,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.ifid4.Valid && !issueBlocked {
 			decResult4 := p.decodeStage.Decode(p.ifid4.InstructionWord, p.ifid4.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult4.Inst) {
-				issueBlocked = true
 				issuedCount++
 			} else {
 				tempIDEX4 := IDEXRegister{
@@ -5788,7 +5787,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.ifid5.Valid && !issueBlocked {
 			decResult5 := p.decodeStage.Decode(p.ifid5.InstructionWord, p.ifid5.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult5.Inst) {
-				issueBlocked = true
 				issuedCount++
 			} else {
 				tempIDEX5 := IDEXRegister{
@@ -5824,7 +5822,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.ifid6.Valid && !issueBlocked {
 			decResult6 := p.decodeStage.Decode(p.ifid6.InstructionWord, p.ifid6.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult6.Inst) {
-				issueBlocked = true
 				issuedCount++
 			} else {
 				tempIDEX6 := IDEXRegister{
@@ -5860,7 +5857,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.ifid7.Valid && !issueBlocked {
 			decResult7 := p.decodeStage.Decode(p.ifid7.InstructionWord, p.ifid7.PC)
 			if loadUseHazard && p.hazardUnit.DetectLoadUseHazardForInst(loadRdForBypass, decResult7.Inst) {
-				issueBlocked = true
 				issuedCount++
 			} else {
 				tempIDEX7 := IDEXRegister{
