@@ -49,12 +49,19 @@ func (p *Pipeline) tickOctupleIssue() {
 				p.stats.MemStalls++
 			}
 		} else {
-			// Non-cached path: immediate access (no stall).
-			// Without cache simulation, memory is a direct array lookup.
-			// Pipeline issue rules already enforce ordering constraints.
 			if p.exmem.MemRead || p.exmem.MemWrite {
-				p.memPending = false
-				memResult = p.memoryStage.Access(&p.exmem)
+				if p.memPending && p.memPendingPC != p.exmem.PC {
+					p.memPending = false
+				}
+				if !p.memPending {
+					p.memPending = true
+					p.memPendingPC = p.exmem.PC
+					memStall = true
+					p.stats.MemStalls++
+				} else {
+					p.memPending = false
+					memResult = p.memoryStage.Access(&p.exmem)
+				}
 			} else {
 				p.memPending = false
 			}
