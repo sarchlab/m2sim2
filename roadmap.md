@@ -53,44 +53,44 @@ Cache verification tests written and passed (PR #88, issue #183 closed). Akita c
 **Changes attempted:** OoO issue within fetch group (PR #85 - memory ports), instruction window 48→192, load-use stall bypass (PR #87).
 **Key insight:** The in-order pipeline fundamentally overestimates CPI for loop-heavy PolyBench kernels. The M2's 330+ ROB enables massive loop-level parallelism that our pipeline doesn't model.
 
-## Current State (February 18, 2026, post-Milestone 14)
+## Current State (February 18, 2026, post-PR#94 + PR#95)
 
-**Accuracy (latest CI-verified, pre-livelock fix):**
-- **Microbenchmarks:** 54.78% average — driven by memorystrided (285%+ error pre-livelock-fix)
-- **PolyBench:** 26.68% average (3 CI-verified: atax 5.7%, bicg 18.9%, jacobi-1d 52.9%)
-- **Overall:** ~38% average (pre-livelock data)
+**Accuracy (CI-verified, post-PR#94 from run 22141495151, memorystrided from run 22142753352):**
+- **Microbenchmarks:** 51.14% average (11 benchmarks) — memorystrided (253.1%) dominates; excl. memorystrided: 30.94%
+- **PolyBench:** 105.22% average (3 benchmarks: atax, bicg, mvt from run 22139825134) — significant regression from PR#94
+- **Overall:** 62.72% average (14 benchmarks)
 
-**Expected after CI run 22144669883 completes:**
-- memorystrided should improve significantly (livelock fixed in PR #95)
-- Micro avg expected to drop toward ~13.5% (meets <20% target) if memorystrided is fixed
-- Overall avg should drop below 25%
+**Key regression from PR#94 (fix memory stall propagation in tickOctupleIssue):**
+- 6 microbenchmarks show 25-84% CPI increase: loadheavy, storeheavy, vectoradd, vectorsum, reductiontree, strideindirect
+- PolyBench: atax regressed (5.7%→59.7%), bicg regressed (18.9%→144.9%), jacobi-1d now infeasible (timeout)
+- mvt now completes (previously infeasible) with 111.0% error
 
-**PolyBench breakdown (4 completing):**
+**PolyBench breakdown (3 completing, post-PR#94):**
 | Benchmark | Sim CPI | HW CPI | Error | Status |
 |-----------|---------|--------|-------|--------|
-| atax      | 0.231   | 0.219  | 5.7%  | ✅ Good |
-| bicg      | 0.273   | 0.230  | 18.9% | ✅ Good |
-| gemm      | 0.301   | 0.233  | 29.1% | CI pending verification |
-| jacobi-1d | 0.231   | 0.151  | 52.9% | ⚠️ Needs improvement |
-| mvt       | infeasible | 0.216 | — | ⛔ Too slow |
+| atax      | 0.349   | 0.219  | 59.7% | ⚠️ Regressed from 5.7% |
+| bicg      | 0.562   | 0.230  | 144.9%| ❌ Regressed from 18.9% |
+| mvt       | 0.455   | 0.216  | 111.0%| ⚠️ New (was infeasible) |
+| jacobi-1d | infeasible | 0.151 | — | ⛔ Timeout (was 52.9%) |
+| gemm      | infeasible | 0.233 | — | ⛔ Too slow |
 | 2mm/3mm   | infeasible | —    | — | ⛔ Too slow |
 
-**Microbenchmark breakdown:**
+**Microbenchmark breakdown (post-PR#94):**
 | Benchmark | Sim CPI | HW CPI | Error | Status |
 |-----------|---------|--------|-------|--------|
-| arithmetic    | 0.219 | 0.296 | 35.2% | ⚠️ Needs work |
-| dependency    | 1.015 | 1.088 | 7.2%  | ✅ Good |
-| branch        | 1.311 | 1.303 | 0.6%  | ✅ Good |
-| memorystrided | 0.500 | 2.648 | 429%  | ❌ Broken |
-| loadheavy     | 0.349 | 0.429 | 22.9% | ⚠️ Slightly high |
-| storeheavy    | 0.522 | 0.612 | 17.2% | ✅ Good |
-| branchheavy   | 0.941 | 0.714 | 31.8% | ⚠️ Needs work |
-| vectorsum     | 0.362 | 0.402 | 11.1% | ✅ Good |
-| vectoradd     | 0.290 | 0.329 | 13.5% | ✅ Good |
-| reductiontree | 0.406 | 0.480 | 18.2% | ✅ Good |
-| strideindirect| 0.609 | 0.528 | 15.3% | ✅ Good |
+| arithmetic    | 0.219 | 0.296 | 35.2% | ⚠️ Unchanged |
+| dependency    | 1.015 | 1.088 | 7.2%  | ✅ Unchanged |
+| branch        | 1.311 | 1.303 | 0.6%  | ✅ Unchanged |
+| memorystrided | 0.750 | 2.648 | 253.1%| ❌ Improved from 429% (livelock fix) |
+| loadheavy     | 0.643 | 0.429 | 49.9% | ⚠️ Regressed from 22.9% |
+| storeheavy    | 0.957 | 0.612 | 56.4% | ⚠️ Regressed from 17.2% |
+| branchheavy   | 0.941 | 0.714 | 31.8% | ⚠️ Unchanged |
+| vectorsum     | 0.500 | 0.402 | 24.4% | ⚠️ Regressed from 11.1% |
+| vectoradd     | 0.448 | 0.329 | 36.2% | ⚠️ Regressed from 13.5% |
+| reductiontree | 0.594 | 0.480 | 23.8% | ⚠️ Regressed from 18.2% |
+| strideindirect| 0.761 | 0.528 | 44.1% | ⚠️ Regressed from 15.3% |
 
-**Root cause of memorystrided regression:** memorystrided does stride-4 store/load pairs. The HW CPI is 2.648 (memory-bound, cache misses dominate). Simulator CPI is 0.5 — the simulator dramatically underestimates memory stalls for strided access. This was likely caused by the pipeline changes in PRs #65-74.
+**Root cause of regressions:** PR#94 fixed memory stall propagation in tickOctupleIssue, which correctly added stalls that were previously missing. This increased CPI for all memory-heavy benchmarks. The stalls are arguably more correct (closer to real hardware behavior for memory latency) but the overall error increased because the simulator now overestimates CPI for these benchmarks.
 
 ### Lessons Learned (cumulative)
 1. **Break big problems into small ones.** Milestone 11 failed by targeting all 7 PolyBench kernels. Target 1-2 at a time.
@@ -131,10 +131,11 @@ Cache verification tests written and passed (PR #88, issue #183 closed). Akita c
 5. ✅ Root cause analysis complete: issues #226 (memorystrided) and #227 (jacobi-1d) filed
 6. ✅ Investigated jacobi-1d root cause (sim 0.231 vs HW 0.151 — see issue #227)
 
-**Current micro average: 38.74%** (11 benchmarks, as of CI run 22142753352)
+**Current micro average: 51.14%** (11 benchmarks, post-PR#94 from CI run 22141495151)
 - memorystrided: 253.1% error (dominant blocker — store-to-load forwarding latency issue)
-- Without memorystrided: 17.30% average (meets H5 <20% target)
-- **H5 micro goal NOT met** — memorystrided fix is required
+- Without memorystrided: 30.94% average (does NOT meet H5 <20% target)
+- PR#94 regressed 6 microbenchmarks by 25-84% CPI increase
+- **H5 micro goal NOT met** — both memorystrided and PR#94 regressions need addressing
 
 **Budget: 10 cycles** (CI wait + verification + diagnosis)
 
