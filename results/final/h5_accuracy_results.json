@@ -6,11 +6,11 @@
     "polybench_with_error": 7,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 6,
-    "average_error": 0.4856,
+    "average_error": 0.3450,
     "micro_average_error": 0.1700,
-    "polybench_average_error": 0.9815,
+    "polybench_average_error": 0.6200,
     "h5_target_met": false,
-    "note": "18 benchmarks with error data (11 micro + 7 polybench). Microbench unchanged. PolyBench updated from CI run 22115496325 (post PR #87 pipeline improvements, commit 71b3c75). bicg 0.342->0.343, mvt 0.366->0.364, gemm 0.303->0.301. Error formula: |sim-hw|/min(sim,hw)."
+    "note": "18 benchmarks with error data (11 micro + 7 polybench). Partial update from CI run 22123056416 (octuple ALU forwarding fix, commit 22cc0fe). Group 1 results: atax 0.396->0.231, bicg 0.343->0.273, jacobi-1d 0.453->0.231. Groups 2/3 (mvt, gemm, 2mm, 3mm) still running — values unchanged pending results. PolyBench avg 98.15%->62.00%. Target: bicg<40% MET (18.95%), PolyBench avg<70% MET (62.00%). Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -104,17 +104,17 @@
     {
       "name": "atax",
       "category": "polybench",
-      "simulated_cpi": 0.396,
+      "simulated_cpi": 0.231,
       "hardware_cpi": 0.2185,
-      "error": 0.8124,
+      "error": 0.0572,
       "ci_verified": true
     },
     {
       "name": "bicg",
       "category": "polybench",
-      "simulated_cpi": 0.343,
+      "simulated_cpi": 0.273,
       "hardware_cpi": 0.2295,
-      "error": 0.4946,
+      "error": 0.1895,
       "ci_verified": true
     },
     {
@@ -128,9 +128,9 @@
     {
       "name": "jacobi-1d",
       "category": "polybench",
-      "simulated_cpi": 0.453,
+      "simulated_cpi": 0.231,
       "hardware_cpi": 0.151,
-      "error": 2.0,
+      "error": 0.5298,
       "ci_verified": true
     },
     {
