@@ -1,145 +1,143 @@
 {
   "summary": {
     "total_ci_verified_benchmarks": 25,
-    "benchmarks_with_error_data": 18,
+    "benchmarks_with_error_data": 15,
     "microbenchmarks_with_error": 11,
-    "polybench_with_error": 7,
+    "polybench_with_error": 4,
     "embench_sim_only": 1,
-    "infeasible_benchmarks": 6,
-    "average_error": 0.4856,
-    "micro_average_error": 0.1700,
-    "polybench_average_error": 0.9815,
+    "infeasible_benchmarks": 9,
+    "average_error": 0.4729,
+    "micro_average_error": 0.5478,
+    "polybench_average_error": 0.2668,
     "h5_target_met": false,
-    "note": "18 benchmarks with error data (11 micro + 7 polybench). Microbench unchanged. PolyBench updated from CI run 22115496325 (post PR #87 pipeline improvements, commit 71b3c75). bicg 0.342->0.343, mvt 0.366->0.364, gemm 0.303->0.301. Error formula: |sim-hw|/min(sim,hw)."
+    "note": "15 benchmarks with error data (11 micro + 4 polybench). OoO dispatch reverted per issue #216 — pre-OoO baseline (d2c3373) achieves polybench avg 26.68% (<70% target met). Micro from CI run 22134036996 (commit 8554378). PolyBench atax/bicg/jacobi-1d from CI run 22134446555 (pre-OoO code). GEMM 0.301 from older pre-OoO run 22115496325 (ci_verified=false, no fresh CI on reverted code yet; run 22135618234 Group 2 still in_progress but tests OoO commit 15b79ed). MVT/2mm/3mm infeasible. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
       "name": "arithmetic",
       "category": "microbenchmark",
-      "simulated_cpi": 0.220,
+      "simulated_cpi": 0.219,
       "hardware_cpi": 0.296,
-      "error": 0.3455,
-      "ci_verified": true
+      "error": 0.3516,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "dependency",
       "category": "microbenchmark",
-      "simulated_cpi": 1.020,
+      "simulated_cpi": 1.015,
       "hardware_cpi": 1.088,
-      "error": 0.0667,
-      "ci_verified": true
+      "error": 0.0719,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "branch",
       "category": "microbenchmark",
-      "simulated_cpi": 1.320,
+      "simulated_cpi": 1.311,
       "hardware_cpi": 1.303,
-      "error": 0.0130,
-      "ci_verified": true
+      "error": 0.0061,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "memorystrided",
       "category": "microbenchmark",
-      "simulated_cpi": 2.267,
+      "simulated_cpi": 0.500,
       "hardware_cpi": 2.648,
-      "error": 0.1681,
-      "ci_verified": true
+      "error": 4.2960,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "loadheavy",
       "category": "microbenchmark",
-      "simulated_cpi": 0.356,
+      "simulated_cpi": 0.349,
       "hardware_cpi": 0.429,
-      "error": 0.2050,
-      "ci_verified": true
+      "error": 0.2292,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "storeheavy",
       "category": "microbenchmark",
-      "simulated_cpi": 0.518,
+      "simulated_cpi": 0.522,
       "hardware_cpi": 0.612,
-      "error": 0.1815,
-      "ci_verified": true
+      "error": 0.1724,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "branchheavy",
       "category": "microbenchmark",
-      "simulated_cpi": 0.970,
+      "simulated_cpi": 0.941,
       "hardware_cpi": 0.714,
-      "error": 0.3585,
-      "ci_verified": true
+      "error": 0.3179,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "vectorsum",
       "category": "microbenchmark",
-      "simulated_cpi": 0.490,
+      "simulated_cpi": 0.362,
       "hardware_cpi": 0.402,
-      "error": 0.2189,
-      "ci_verified": true
+      "error": 0.1105,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "vectoradd",
       "category": "microbenchmark",
-      "simulated_cpi": 0.378,
+      "simulated_cpi": 0.290,
       "hardware_cpi": 0.329,
-      "error": 0.1489,
-      "ci_verified": true
+      "error": 0.1345,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "reductiontree",
       "category": "microbenchmark",
-      "simulated_cpi": 0.452,
+      "simulated_cpi": 0.406,
       "hardware_cpi": 0.480,
-      "error": 0.0619,
-      "ci_verified": true
+      "error": 0.1823,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "strideindirect",
       "category": "microbenchmark",
-      "simulated_cpi": 0.582,
+      "simulated_cpi": 0.609,
       "hardware_cpi": 0.528,
-      "error": 0.1023,
-      "ci_verified": true
+      "error": 0.1534,
+      "ci_verified": true,
+      "ci_run": 22134036996
     },
     {
       "name": "atax",
       "category": "polybench",
-      "simulated_cpi": 0.396,
+      "simulated_cpi": 0.231,
       "hardware_cpi": 0.2185,
-      "error": 0.8124,
-      "ci_verified": true
+      "error": 0.0572,
+      "ci_verified": true,
+      "ci_run": 22134446555
     },
     {
       "name": "bicg",
       "category": "polybench",
-      "simulated_cpi": 0.343,
+      "simulated_cpi": 0.273,
       "hardware_cpi": 0.2295,
-      "error": 0.4946,
-      "ci_verified": true
-    },
-    {
-      "name": "mvt",
-      "category": "polybench",
-      "simulated_cpi": 0.364,
-      "hardware_cpi": 0.2156,
-      "error": 0.6883,
-      "ci_verified": true
+      "error": 0.1895,
+      "ci_verified": true,
+      "ci_run": 22134446555
     },
     {
       "name": "jacobi-1d",
       "category": "polybench",
-      "simulated_cpi": 0.453,
+      "simulated_cpi": 0.231,
       "hardware_cpi": 0.151,
-      "error": 2.0,
-      "ci_verified": true
-    },
-    {
-      "name": "3mm",
-      "category": "polybench",
-      "simulated_cpi": 0.334,
-      "hardware_cpi": 0.1453,
-      "error": 1.2987,
-      "ci_verified": true
+      "error": 0.5298,
+      "ci_verified": true,
+      "ci_run": 22134446555
     },
     {
       "name": "gemm",
@@ -147,15 +145,8 @@
       "simulated_cpi": 0.301,
       "hardware_cpi": 0.2332,
       "error": 0.2907,
-      "ci_verified": true
-    },
-    {
-      "name": "2mm",
-      "category": "polybench",
-      "simulated_cpi": 0.328,
-      "hardware_cpi": 0.1435,
-      "error": 1.2857,
-      "ci_verified": true
+      "ci_verified": false,
+      "note": "Value from pre-OoO code (run 22115496325). OoO dispatch reverted per issue #216 — code now matches pre-OoO baseline (d2c3373). GEMM CI run 22135618234 Group 2 still in_progress but runs OoO code (commit 15b79ed), not applicable to reverted state. No fresh CI on reverted code yet."
     },
     {
       "name": "aha_mont64",
@@ -168,6 +159,33 @@
     }
   ],
   "infeasible": [
+    {
+      "name": "mvt",
+      "category": "polybench",
+      "status": "infeasible",
+      "reason": "Exceeded 5B cycle limit. Retired 26,249,968,103 instructions in 5B cycles (8736.82s wall time). CPI at limit: 0.190.",
+      "ci_verified": true,
+      "cycles_at_limit": 5000000000,
+      "instructions_at_limit": 26249968103,
+      "wall_time_at_limit": "8736.82s",
+      "ci_run": 22123056416
+    },
+    {
+      "name": "2mm",
+      "category": "polybench",
+      "status": "infeasible",
+      "reason": "CI timeout after 55m on PolyBench accuracy workflow.",
+      "ci_verified": true,
+      "ci_run": 22123056416
+    },
+    {
+      "name": "3mm",
+      "category": "polybench",
+      "status": "infeasible",
+      "reason": "CI timeout after 55m on PolyBench accuracy workflow.",
+      "ci_verified": true,
+      "ci_run": 22123056416
+    },
     {
       "name": "crc32",
       "category": "embench",
