@@ -11,7 +11,7 @@
     "micro_average_error_excl_memorystrided": 0.2291,
     "polybench_average_error": 1.0522,
     "h5_target_met": false,
-    "note": "Corrected post-PR#99 data from CI Accuracy-Microbenchmarks run 22151656429 (main after PR#99 merge). PR#99 partially reverted PR#94 regressions: loadheavy 0.643→0.600, storeheavy unchanged 0.957, vectorsum 0.500→0.394, vectoradd 0.448→0.385, reductiontree 0.594 (unchanged), strideindirect 0.761→0.609. memorystrided=0.875 from PR#96 branch CI runs (22148182599, 22147994732). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "All 11 microbenchmarks verified on main (post-PR#96 merge) from CI run 22155902064. memorystrided=0.875 confirmed on main (previously from PR#96 branch runs). All values match run 22151656429 except memorystrided which is now verified on main. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -48,8 +48,8 @@
       "hardware_cpi": 2.648,
       "error": 2.0263,
       "ci_verified": true,
-      "ci_run": 22148182599,
-      "note": "PR#96 increased StoreForwardLatency 1→3 cycles, improving CPI from 0.750 to 0.875. Verified in 2 CI runs (22148182599, 22147994732) on leo/memorystrided-store-forward-latency branch. D-cache path only."
+      "ci_run": 22155902064,
+      "note": "PR#96 increased StoreForwardLatency 1→3 cycles, improving CPI from 0.750 to 0.875. Confirmed on main via CI run 22155902064 (post-PR#96 merge). D-cache path only."
     },
     {
       "name": "loadheavy",
