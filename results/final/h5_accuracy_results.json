@@ -6,11 +6,11 @@
     "polybench_with_error": 4,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 9,
-    "average_error": 0.4729,
-    "micro_average_error": 0.5478,
+    "average_error": 0.3764,
+    "micro_average_error": 0.4163,
     "polybench_average_error": 0.2668,
     "h5_target_met": false,
-    "note": "15 benchmarks with error data (11 micro + 4 polybench). OoO dispatch reverted per issue #216 — pre-OoO baseline (d2c3373) achieves polybench avg 26.68% (<70% target met). Micro from CI run 22134036996 (commit 8554378). PolyBench atax/bicg/jacobi-1d from CI run 22134446555 (pre-OoO code). GEMM 0.301 from older pre-OoO run 22115496325 (ci_verified=false, no fresh CI on reverted code yet; run 22135618234 Group 2 still in_progress but tests OoO commit 15b79ed). MVT/2mm/3mm infeasible. Error formula: |sim-hw|/min(sim,hw)."
+    "note": "15 benchmarks with error data (11 micro + 4 polybench). memorystrided updated from 4.296 to 2.849 after PR #94 no-cache path fix. GEMM still ci_verified=false pending CI run 22136356830 Group 2. Micro from CI run 22134036996. PolyBench atax/bicg/jacobi-1d from CI run 22134446555. MVT/2mm/3mm infeasible. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -43,11 +43,11 @@
     {
       "name": "memorystrided",
       "category": "microbenchmark",
-      "simulated_cpi": 0.500,
+      "simulated_cpi": 0.688,
       "hardware_cpi": 2.648,
-      "error": 4.2960,
-      "ci_verified": true,
-      "ci_run": 22134036996
+      "error": 2.8490,
+      "ci_verified": false,
+      "note": "no-cache path fix from PR #94; DCache path has separate infinite stall bug"
     },
     {
       "name": "loadheavy",
