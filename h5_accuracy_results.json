@@ -10,7 +10,7 @@
     "micro_average_error": 0.5478,
     "polybench_average_error": 0.2668,
     "h5_target_met": false,
-    "note": "15 benchmarks with error data (11 micro + 4 polybench). Micro updated from CI run 22134036996 (Leo dcache fix, commit 8554378). PolyBench atax/bicg/jacobi-1d updated from consolidated run 22134446555. gemm value is STALE (0.301 from pre-OoO code) — awaiting PolyBench run 22134444881 on current code. MVT moved to infeasible (exceeded 5B cycle limit). 2mm/3mm infeasible. Error formula: |sim-hw|/min(sim,hw)."
+    "note": "15 benchmarks with error data (11 micro + 4 polybench). OoO dispatch reverted (issue #216): GEMM CI (run 22135618234 Group 2) was still in_progress, so Scenario B applied — reverted to pre-OoO baseline (d2c3373). Pre-OoO polybench avg = 26.68% already meets <70% target. Micro from CI run 22134036996. PolyBench atax/bicg/jacobi-1d from pre-OoO CI run 22134446555. gemm STALE (0.301 from older pre-OoO run). MVT/2mm/3mm infeasible. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -146,7 +146,7 @@
       "hardware_cpi": 0.2332,
       "error": 0.2907,
       "ci_verified": false,
-      "note": "STALE: value from pre-OoO code (run 22115496325). Awaiting PolyBench run 22134444881 on current code (commit 8554378)."
+      "note": "STALE: value from pre-OoO code (run 22115496325). OoO dispatch reverted per issue #216 — code now matches pre-OoO baseline. Awaiting fresh GEMM CI on reverted code."
     },
     {
       "name": "aha_mont64",
