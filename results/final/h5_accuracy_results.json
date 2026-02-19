@@ -6,12 +6,12 @@
     "polybench_with_error": 4,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 9,
-    "average_error": 0.2794,
+    "average_error": 0.2586,
     "micro_average_error": 0.1686,
     "micro_average_error_excl_memorystrided": 0.1687,
-    "polybench_average_error": 0.5839,
+    "polybench_average_error": 0.5061,
     "h5_target_met": false,
-    "note": "DataProc3Src-only forwarding gate (commit 11aa8ce). Microbenchmarks from CI run 22194997028. PolyBench still from older CI runs (22190131432 for atax/bicg/jacobi-1d, 22187796851 for mvt) — PolyBench CI run 22194997040 pending (no runner available). reductiontree and strideindirect regressions from 6e80856 are FIXED (reverted to baseline). memorystrided ≤30% PASS (16.81%). jacobi-1d <70% FAIL (131.13%). bicg <50% FAIL (71.24%). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "DataProc3Src-only forwarding gate (commit 11aa8ce). Microbenchmarks from CI run 22194997028. PolyBench Group 1 (atax/bicg/jacobi-1d) from CI run 22195291854. mvt still from older CI run 22187796851. Groups 2/3 still running. jacobi-1d improved 0.349→0.302 (131.13%→100.00%). memorystrided ≤30% PASS (16.81%). jacobi-1d <70% FAIL (100.00%). bicg <50% FAIL (71.24%). Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -120,8 +120,7 @@
       "hardware_cpi": 0.2185,
       "error": 0.194,
       "ci_verified": true,
-      "ci_run": 22190131432,
-      "note": "From older CI run (commit 43fca10). PolyBench CI run 22194997040 for commit 11aa8ce pending (no runner available)."
+      "ci_run": 22195291854
     },
     {
       "name": "bicg",
@@ -130,8 +129,7 @@
       "hardware_cpi": 0.2295,
       "error": 0.7124,
       "ci_verified": true,
-      "ci_run": 22190131432,
-      "note": "From older CI run (commit 43fca10). PolyBench CI run 22194997040 for commit 11aa8ce pending (no runner available)."
+      "ci_run": 22195291854
     },
     {
       "name": "mvt",
@@ -146,12 +144,11 @@
     {
       "name": "jacobi-1d",
       "category": "polybench",
-      "simulated_cpi": 0.349,
+      "simulated_cpi": 0.302,
       "hardware_cpi": 0.151,
-      "error": 1.3113,
+      "error": 1.0,
       "ci_verified": true,
-      "ci_run": 22190131432,
-      "note": "From older CI run (commit 43fca10). PolyBench CI run 22194997040 for commit 11aa8ce pending (no runner available)."
+      "ci_run": 22195291854
     },
     {
       "name": "aha_mont64",
