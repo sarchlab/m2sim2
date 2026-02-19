@@ -4,6 +4,10 @@
 Strategic plan for achieving H5: <20% average CPI error across 15+ benchmarks.
 Last updated: February 19, 2026.
 
+## Active Milestone
+
+**M17: Fix memorystrided regression — IN PROGRESS**
+
 ## Completed High-Level Milestones
 
 - **H1: Core Simulator** — ARM64 decode, pipeline, caches, branch prediction, 8-wide superscalar
