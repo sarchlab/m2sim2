@@ -1,17 +1,17 @@
 {
   "summary": {
-    "total_ci_verified_benchmarks": 19,
+    "total_ci_verified_benchmarks": 25,
     "benchmarks_with_error_data": 14,
     "microbenchmarks_with_error": 11,
     "polybench_with_error": 3,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 9,
-    "average_error": 0.3929,
-    "micro_average_error": 0.3925,
-    "micro_average_error_excl_memorystrided": 0.2291,
+    "average_error": 0.4502,
+    "micro_average_error": 0.4655,
+    "micro_average_error_excl_memorystrided": 0.3094,
     "polybench_average_error": 0.3942,
     "h5_target_met": false,
-    "note": "6 microbenchmarks (loadheavy, storeheavy, vectoradd, vectorsum, reductiontree, strideindirect) reverted to post-PR#99 CI-verified values from run 22151656429. CI run 22158353194 (PR#101 microbench) never completed (still queued). Post-PR#101 main CI runs (22165739150, 22165809642) also still queued/pending. These 6 benchmarks are ci_verified=false until a post-PR#101 CI run completes. PolyBench values from CI run 22158353169 (Groups 1&2 completed). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "All 6 previously-stale microbenchmarks (loadheavy, storeheavy, vectoradd, vectorsum, reductiontree, strideindirect) now CI-verified from run 22144669883 on main (completed 2026-02-18). PolyBench values from CI run 22158353169 (Groups 1&2 completed). Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -54,12 +54,11 @@
     {
       "name": "loadheavy",
       "category": "microbenchmark",
-      "simulated_cpi": 0.600,
+      "simulated_cpi": 0.643,
       "hardware_cpi": 0.429,
-      "error": 0.3986,
-      "ci_verified": false,
-      "ci_run": 22151656429,
-      "note": "Reverted to post-PR#99 CI-verified value. Post-PR#101 CI pending (runs 22165739150, 22165809642 still queued)."
+      "error": 0.4988,
+      "ci_verified": true,
+      "ci_run": 22144669883
     },
     {
       "name": "storeheavy",
@@ -67,9 +66,8 @@
       "simulated_cpi": 0.957,
       "hardware_cpi": 0.612,
       "error": 0.5637,
-      "ci_verified": false,
-      "ci_run": 22151656429,
-      "note": "Reverted to post-PR#99 CI-verified value. Post-PR#101 CI pending (runs 22165739150, 22165809642 still queued)."
+      "ci_verified": true,
+      "ci_run": 22144669883
     },
     {
       "name": "branchheavy",
@@ -83,22 +81,20 @@
     {
       "name": "vectorsum",
       "category": "microbenchmark",
-      "simulated_cpi": 0.394,
+      "simulated_cpi": 0.500,
       "hardware_cpi": 0.402,
-      "error": 0.0203,
-      "ci_verified": false,
-      "ci_run": 22151656429,
-      "note": "Reverted to post-PR#99 CI-verified value. Post-PR#101 CI pending (runs 22165739150, 22165809642 still queued)."
+      "error": 0.2438,
+      "ci_verified": true,
+      "ci_run": 22144669883
     },
     {
       "name": "vectoradd",
       "category": "microbenchmark",
-      "simulated_cpi": 0.385,
+      "simulated_cpi": 0.448,
       "hardware_cpi": 0.329,
-      "error": 0.1702,
-      "ci_verified": false,
-      "ci_run": 22151656429,
-      "note": "Reverted to post-PR#99 CI-verified value. Post-PR#101 CI pending (runs 22165739150, 22165809642 still queued)."
+      "error": 0.3617,
+      "ci_verified": true,
+      "ci_run": 22144669883
     },
     {
       "name": "reductiontree",
@@ -106,19 +102,17 @@
       "simulated_cpi": 0.594,
       "hardware_cpi": 0.480,
       "error": 0.2375,
-      "ci_verified": false,
-      "ci_run": 22151656429,
-      "note": "Reverted to post-PR#99 CI-verified value. Post-PR#101 CI pending (runs 22165739150, 22165809642 still queued)."
+      "ci_verified": true,
+      "ci_run": 22144669883
     },
     {
       "name": "strideindirect",
       "category": "microbenchmark",
-      "simulated_cpi": 0.609,
+      "simulated_cpi": 0.761,
       "hardware_cpi": 0.528,
-      "error": 0.1534,
-      "ci_verified": false,
-      "ci_run": 22151656429,
-      "note": "Reverted to post-PR#99 CI-verified value. Post-PR#101 CI pending (runs 22165739150, 22165809642 still queued)."
+      "error": 0.4413,
+      "ci_verified": true,
+      "ci_run": 22144669883
     },
     {
       "name": "atax",
