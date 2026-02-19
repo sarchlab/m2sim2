@@ -1144,19 +1144,18 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 				if producerIsALU && consumerIsLoad {
 					usesForwarding = true
 				} else if forwarded != nil && producerIsALU {
-					// Gate ALU→ALU forwarding on instruction format:
-					// Block when either side is immediate-form ALU
-					// (FormatDPImm: ADD/SUB #imm). Serial chains of these
-					// run at 1/cycle on M2 and must not co-issue.
-					// Register-form and multi-source ops (MADD, shifts,
-					// ADD reg) have independent operands that benefit from
-					// same-cycle forwarding.
-					producerNotDPImm := prev.Inst != nil &&
-						prev.Inst.Format != insts.FormatDPImm
-					consumerNotDPImm := newInst.Inst != nil &&
-						newInst.Inst.Format != insts.FormatDPImm
+					// Gate ALU→ALU forwarding: only allow when the
+					// producer is a 3-source data-processing instruction
+					// (FormatDataProc3Src: MADD, MSUB, SMULL, UMADDL).
+					// These multiply-accumulate chains benefit from
+					// same-cycle forwarding (jacobi-1d, bicg).
+					// Block for FormatDPImm (ADD/SUB #imm), FormatDPReg
+					// (ADD/SUB reg), and all other formats — serial
+					// chains of these run at 1/cycle on M2.
+					producerIsDataProc3Src := prev.Inst != nil &&
+						prev.Inst.Format == insts.FormatDataProc3Src
 					producerNotForwarded := !forwarded[i]
-					if producerNotDPImm && consumerNotDPImm && producerNotForwarded {
+					if producerIsDataProc3Src && producerNotForwarded {
 						usesForwarding = true
 					} else {
 						return false, false
