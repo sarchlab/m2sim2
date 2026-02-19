@@ -1144,18 +1144,32 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 				if producerIsALU && consumerIsLoad {
 					usesForwarding = true
 				} else if forwarded != nil && producerIsALU {
-					// Gate ALU→ALU forwarding: only allow when the
-					// producer is a 3-source data-processing instruction
-					// (FormatDataProc3Src: MADD, MSUB, SMULL, UMADDL).
-					// These multiply-accumulate chains benefit from
-					// same-cycle forwarding (jacobi-1d, bicg).
-					// Block for FormatDPImm (ADD/SUB #imm), FormatDPReg
-					// (ADD/SUB reg), and all other formats — serial
-					// chains of these run at 1/cycle on M2.
-					producerIsDataProc3Src := prev.Inst != nil &&
-						prev.Inst.Format == insts.FormatDataProc3Src
+					// Gate ALU→ALU forwarding to specific format
+					// combinations that benefit from same-cycle
+					// forwarding without regressing integer benchmarks.
+					//
+					// Allowed (producer → consumer):
+					//   FormatDataProc3Src → any  (MADD/SMULL chains)
+					//   FormatBitfield → any      (LSR/LSL in div-by-const)
+					//   any → FormatDataProc3Src   (feed into MADD/SMULL)
+					//
+					// Blocked (serial integer chains at 1/cycle on M2):
+					//   FormatDPReg → FormatDPReg  (ADD reg chains)
+					//   FormatDPImm → FormatDPImm  (ADD imm chains)
+					producerFmt := insts.FormatUnknown
+					if prev.Inst != nil {
+						producerFmt = prev.Inst.Format
+					}
+					consumerFmt := insts.FormatUnknown
+					if newInst.Inst != nil {
+						consumerFmt = newInst.Inst.Format
+					}
 					producerNotForwarded := !forwarded[i]
-					if producerIsDataProc3Src && producerNotForwarded {
+					canForward := producerNotForwarded &&
+						(producerFmt == insts.FormatDataProc3Src ||
+							producerFmt == insts.FormatBitfield ||
+							consumerFmt == insts.FormatDataProc3Src)
+					if canForward {
 						usesForwarding = true
 					} else {
 						return false, false
