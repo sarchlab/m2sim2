@@ -1,17 +1,17 @@
 {
   "summary": {
-    "total_ci_verified_benchmarks": 19,
+    "total_ci_verified_benchmarks": 25,
     "benchmarks_with_error_data": 15,
     "microbenchmarks_with_error": 11,
     "polybench_with_error": 4,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 9,
-    "average_error": 0.4133,
-    "micro_average_error": 0.3369,
+    "average_error": 0.2946,
+    "micro_average_error": 0.1750,
     "micro_average_error_excl_memorystrided": 0.1679,
     "polybench_average_error": 0.6235,
     "h5_target_met": false,
-    "note": "Post-PR#102+PR#104 CI-verified data from consolidated run 22170913758. All 11 microbenchmarks and 4 polybench benchmarks verified. jacobi-1d now has hardware_cpi (0.151). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "Post-PR#102+PR#104 CI-verified data. memorystrided corrected with D-cache: CPI=2.125 from CI run 22170890623. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -44,12 +44,11 @@
     {
       "name": "memorystrided",
       "category": "microbenchmark",
-      "simulated_cpi": 0.875,
+      "simulated_cpi": 2.125,
       "hardware_cpi": 2.648,
-      "error": 2.0263,
+      "error": 0.2461,
       "ci_verified": true,
-      "ci_run": 22158353194,
-      "note": "DCache path CPI. Updated from 0.750 to 0.875 (CI-verified post-PR#96 value, confirmed by local deterministic run on PR#101 branch). Note: ci_run 22158353194 is still queued; value originates from post-PR#96 CI verification."
+      "ci_run": 22170890623
     },
     {
       "name": "loadheavy",
