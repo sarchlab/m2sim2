@@ -1121,6 +1121,12 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 					hasRAW = true
 				}
 			}
+			// Check Rt2 (Ra) for DataProc3Src consumers (MADD/MSUB):
+			// Ra is the accumulator input read via Inst.Rt2.
+			if newInst.Inst != nil && newInst.Inst.Format == insts.FormatDataProc3Src &&
+				newInst.Inst.Rt2 == prev.Rd {
+				hasRAW = true
+			}
 			// For stores, the value register (Inst.Rd) is read through a
 			// separate path that does NOT support same-cycle forwarding.
 			// Always block co-issue for this dependency.
@@ -1164,7 +1170,7 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 					if newInst.Inst != nil {
 						consumerFmt = newInst.Inst.Format
 					}
-						producerNotForwarded := !forwarded[i]
+					producerNotForwarded := !forwarded[i]
 
 					// Also allow DPImm→DPImm when the consumer writes
 					// only flags (Rd==31, i.e. CMP/CMN). These flag-only
