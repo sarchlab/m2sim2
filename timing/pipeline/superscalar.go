@@ -1164,11 +1164,19 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 					if newInst.Inst != nil {
 						consumerFmt = newInst.Inst.Format
 					}
-					producerNotForwarded := !forwarded[i]
+						producerNotForwarded := !forwarded[i]
+
+					// Also allow DPImm→DPImm when the consumer writes
+					// only flags (Rd==31, i.e. CMP/CMN). These flag-only
+					// ops don't produce a register result so they can't
+					// create integer forwarding chains.
+					consumerIsFlagOnly := consumerFmt == insts.FormatDPImm &&
+						newInst.Inst != nil && newInst.Inst.Rd == 31
 					canForward := producerNotForwarded &&
 						(producerFmt == insts.FormatDataProc3Src ||
 							producerFmt == insts.FormatBitfield ||
-							consumerFmt == insts.FormatDataProc3Src)
+							consumerFmt == insts.FormatDataProc3Src ||
+							(producerFmt == insts.FormatDPImm && consumerIsFlagOnly))
 					if canForward {
 						usesForwarding = true
 					} else {
