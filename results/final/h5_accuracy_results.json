@@ -11,7 +11,7 @@
     "micro_average_error_excl_memorystrided": 0.1679,
     "polybench_average_error": 0.6235,
     "h5_target_met": false,
-    "note": "Post-PR#102+PR#104 CI-verified data. memorystrided corrected with D-cache: CPI=2.125 from CI run 22170890623. Error formula: |sim-hw|/min(sim,hw)."
+    "note": "Post-PR#106 CI-verified data. PR#106 fixed bicg regression (store-to-load ordering). PolyBench CPI values confirmed unchanged by CI run 22173989869. memorystrided: CPI=2.125 from CI run 22170890623. Fresh main run 22182409791 in progress for additional verification. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -120,7 +120,7 @@
       "hardware_cpi": 0.2185,
       "error": 0.194,
       "ci_verified": true,
-      "ci_run": 22170913758
+      "ci_run": 22173989869
     },
     {
       "name": "bicg",
@@ -129,7 +129,7 @@
       "hardware_cpi": 0.2295,
       "error": 0.7037,
       "ci_verified": true,
-      "ci_run": 22170913758
+      "ci_run": 22173989869
     },
     {
       "name": "mvt",
@@ -138,7 +138,7 @@
       "hardware_cpi": 0.2156,
       "error": 0.2848,
       "ci_verified": true,
-      "ci_run": 22170913758
+      "ci_run": 22173989869
     },
     {
       "name": "jacobi-1d",
@@ -147,7 +147,7 @@
       "hardware_cpi": 0.151,
       "error": 1.3113,
       "ci_verified": true,
-      "ci_run": 22170913758
+      "ci_run": 22173989869
     },
     {
       "name": "aha_mont64",
