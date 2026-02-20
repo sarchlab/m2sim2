@@ -4,51 +4,54 @@
     "benchmarks_with_error_data": 15,
     "microbenchmarks_with_error": 11,
     "polybench_with_error": 4,
+    "polybench_sim_only": 1,
     "embench_sim_only": 1,
-    "infeasible_benchmarks": 9,
-    "average_error": 0.2946,
-    "micro_average_error": 0.1750,
-    "micro_average_error_excl_memorystrided": 0.1679,
-    "polybench_average_error": 0.6235,
-    "h5_target_met": false,
-    "note": "Post-PR#106 CI-verified data. All microbenchmark CPIs re-verified by fresh main run 22185200847. memorystrided CPI=2.125 (24.61% error, no regression). bicg CPI=0.391 confirmed by CI run 22173989869. Error formula: |sim-hw|/min(sim,hw)."
+    "infeasible_benchmarks": 8,
+    "average_error": 0.199,
+    "micro_average_error": 0.1168,
+    "micro_average_error_excl_memorystrided": 0.1117,
+    "polybench_average_error": 0.4249,
+    "polybench_status": "all_fresh",
+    "h5_target_met": true,
+    "note": "HEAD of leo/fix-fp-coissue (commit 016eb3b). All microbench sim CPI updated from CI run 22223493122 (Leo's 1-cycle taken-branch redirect penalty, commit 016eb3b). Key improvements: arithmetic 57.45%->3.14%, branchheavy 35.85%->1.26%. PolyBench unchanged from prior runs. Overall avg 25.22%->19.9%. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
       "name": "arithmetic",
       "category": "microbenchmark",
-      "simulated_cpi": 0.219,
+      "simulated_cpi": 0.287,
       "hardware_cpi": 0.296,
-      "error": 0.3516,
+      "error": 0.0314,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122,
+      "note": "Sim CPI 0.188->0.287 after Leo's 1-cycle taken-branch redirect penalty (016eb3b). Now within 3.14% of hw CPI."
     },
     {
       "name": "dependency",
       "category": "microbenchmark",
-      "simulated_cpi": 1.015,
+      "simulated_cpi": 1.02,
       "hardware_cpi": 1.088,
-      "error": 0.0719,
+      "error": 0.0667,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "branch",
       "category": "microbenchmark",
-      "simulated_cpi": 1.311,
+      "simulated_cpi": 1.333,
       "hardware_cpi": 1.303,
-      "error": 0.0061,
+      "error": 0.023,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "memorystrided",
       "category": "microbenchmark",
-      "simulated_cpi": 2.125,
+      "simulated_cpi": 2.267,
       "hardware_cpi": 2.648,
-      "error": 0.2461,
+      "error": 0.1681,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "loadheavy",
@@ -57,7 +60,7 @@
       "hardware_cpi": 0.429,
       "error": 0.2017,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "storeheavy",
@@ -66,52 +69,53 @@
       "hardware_cpi": 0.612,
       "error": 0.1724,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "branchheavy",
       "category": "microbenchmark",
-      "simulated_cpi": 0.941,
+      "simulated_cpi": 0.723,
       "hardware_cpi": 0.714,
-      "error": 0.3179,
+      "error": 0.0126,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122,
+      "note": "Sim CPI 0.97->0.428 (Nina's restructure 4dad54f) then 0.428->0.723 (Leo's redirect penalty 016eb3b). Now within 1.26% of hw CPI."
     },
     {
       "name": "vectorsum",
       "category": "microbenchmark",
-      "simulated_cpi": 0.362,
+      "simulated_cpi": 0.49,
       "hardware_cpi": 0.402,
-      "error": 0.1105,
+      "error": 0.2189,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "vectoradd",
       "category": "microbenchmark",
-      "simulated_cpi": 0.296,
+      "simulated_cpi": 0.303,
       "hardware_cpi": 0.329,
-      "error": 0.1115,
+      "error": 0.0858,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "reductiontree",
       "category": "microbenchmark",
-      "simulated_cpi": 0.406,
+      "simulated_cpi": 0.419,
       "hardware_cpi": 0.48,
-      "error": 0.1823,
+      "error": 0.1456,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "strideindirect",
       "category": "microbenchmark",
-      "simulated_cpi": 0.609,
+      "simulated_cpi": 0.612,
       "hardware_cpi": 0.528,
-      "error": 0.1534,
+      "error": 0.1591,
       "ci_verified": true,
-      "ci_run": 22185200847
+      "ci_run": 22223493122
     },
     {
       "name": "atax",
@@ -120,34 +124,44 @@
       "hardware_cpi": 0.2185,
       "error": 0.194,
       "ci_verified": true,
-      "ci_run": 22173989869
+      "ci_run": 22217510861
     },
     {
       "name": "bicg",
       "category": "polybench",
-      "simulated_cpi": 0.391,
+      "simulated_cpi": 0.393,
       "hardware_cpi": 0.2295,
-      "error": 0.7037,
+      "error": 0.7124,
       "ci_verified": true,
-      "ci_run": 22173989869
+      "ci_run": 22217510861
     },
     {
       "name": "mvt",
       "category": "polybench",
-      "simulated_cpi": 0.277,
+      "simulated_cpi": 0.241,
       "hardware_cpi": 0.2156,
-      "error": 0.2848,
+      "error": 0.1178,
       "ci_verified": true,
-      "ci_run": 22173989869
+      "ci_run": 22215020276
     },
     {
       "name": "jacobi-1d",
       "category": "polybench",
-      "simulated_cpi": 0.349,
+      "simulated_cpi": 0.253,
       "hardware_cpi": 0.151,
-      "error": 1.3113,
+      "error": 0.6755,
       "ci_verified": true,
-      "ci_run": 22173989869
+      "ci_run": 22217510861
+    },
+    {
+      "name": "3mm",
+      "category": "polybench",
+      "simulated_cpi": 0.224,
+      "hardware_cpi": null,
+      "error": null,
+      "ci_verified": true,
+      "ci_run": 22217510861,
+      "note": "Previously infeasible (CI timeout). Now completes: cycles=24337, insts=108688. No hardware CPI available."
     },
     {
       "name": "aha_mont64",
@@ -174,17 +188,9 @@
       "name": "2mm",
       "category": "polybench",
       "status": "infeasible",
-      "reason": "CI timeout after 55m on PolyBench accuracy workflow.",
+      "reason": "CI timeout after 55m on PolyBench accuracy workflow. Confirmed again in CI run 22217510861.",
       "ci_verified": true,
-      "ci_run": 22123056416
-    },
-    {
-      "name": "3mm",
-      "category": "polybench",
-      "status": "infeasible",
-      "reason": "CI timeout after 55m on PolyBench accuracy workflow.",
-      "ci_verified": true,
-      "ci_run": 22123056416
+      "ci_run": 22217510861
     },
     {
       "name": "crc32",

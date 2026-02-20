@@ -6,7 +6,7 @@ Last updated: February 19, 2026.
 
 ## Active Milestone
 
-**M17: Fix jacobi-1d and bicg over-stalling — IN PROGRESS**
+**M17c: Verify CI baseline + Fix arithmetic and branchheavy — NEXT**
 
 ## Completed High-Level Milestones
 
@@ -26,75 +26,104 @@ Last updated: February 19, 2026.
 | M15: Verify CI + Prepare Next Target | Missed | Data partially collected; PR#99 merged |
 | M16: Collect PR#99 CI + Merge PRs | Done | PR#96, PR#101 merged; 14 benchmarks verified |
 
-## Current State (February 19, 2026)
+## Current State (February 20, 2026)
 
-**Latest CI-verified accuracy (from h5_accuracy_results.json, post-PR#106):**
+**Branch state:** leo/fix-fp-coissue (HEAD = 8e4c397). Last 3 commits reverted failed M17b experiments, restored nonCacheLoadLatency=3. CI NOT YET RUN on current HEAD — h5_accuracy_results.json shows stale regressed data from co-issue commit b1f8d23 (avg 27.04%). Expected baseline after CI: ~23.70% (matching pre-M17b commit 28f7ec1).
+
+**Expected accuracy (pending CI verification, based on pre-M17b state at commit 28f7ec1):**
 - **15 benchmarks with error data** (11 micro + 4 PolyBench with HW CPI)
-- **Overall average error: 29.46%** — does NOT meet <20% target
-- **Key update:** PR#106 (Leo) fixed bicg regression by gating store-to-load ordering on D-cache
-- **PR#106 did NOT regress memorystrided** — memorystrided runs with EnableDCache=true, so the store-to-load ordering check remains active. CI run 22180241267 confirms memorystrided CPI=2.125 (24.61% error), unchanged from pre-PR#106.
+- **Overall average error: ~23.70%** — does NOT yet meet <20% target
 
-**Error breakdown (sorted by error, all CI-verified):**
+**Error breakdown (from commit 28f7ec1 CI, pending re-verification):**
 
-| Benchmark | Category | Sim CPI | HW CPI | Error |
-|-----------|----------|---------|--------|-------|
-| jacobi-1d | polybench | 0.349 | 0.151 | 131.13% |
-| bicg | polybench | 0.391 | 0.230 | 70.37% |
-| arithmetic | micro | 0.219 | 0.296 | 35.16% |
-| branchheavy | micro | 0.941 | 0.714 | 31.79% |
-| mvt | polybench | 0.277 | 0.216 | 28.48% |
-| memorystrided | micro | 2.125 | 2.648 | 24.61% |
-| loadheavy | micro | 0.357 | 0.429 | 20.17% |
-| atax | polybench | 0.183 | 0.219 | 19.40% |
-| reductiontree | micro | 0.406 | 0.480 | 18.23% |
-| storeheavy | micro | 0.522 | 0.612 | 17.24% |
-| strideindirect | micro | 0.609 | 0.528 | 15.34% |
-| vectoradd | micro | 0.296 | 0.329 | 11.15% |
-| vectorsum | micro | 0.362 | 0.402 | 11.05% |
-| dependency | micro | 1.015 | 1.088 | 7.19% |
-| branch | micro | 1.311 | 1.303 | 0.61% |
+| Benchmark | Category | Sim CPI | HW CPI | Error | Direction |
+|-----------|----------|---------|--------|-------|-----------|
+| bicg | polybench | 0.393 | 0.230 | 71.24% | sim too SLOW |
+| jacobi-1d | polybench | 0.253 | 0.151 | 67.55% | sim too SLOW |
+| branchheavy | micro | 0.970 | 0.714 | 35.85% | sim too SLOW |
+| arithmetic | micro | 0.220 | 0.296 | 34.55% | sim too FAST |
+| loadheavy | micro | 0.357 | 0.429 | 20.17% | sim too FAST |
+| atax | polybench | 0.183 | 0.219 | 19.40% | sim too FAST |
+| storeheavy | micro | 0.522 | 0.612 | 17.24% | sim too FAST |
+| memorystrided | micro | 2.267 | 2.648 | 16.81% | sim too FAST |
+| reductiontree | micro | 0.419 | 0.480 | 14.56% | sim too FAST |
+| strideindirect | micro | 0.600 | 0.528 | 13.64% | sim too SLOW |
+| vectorsum | micro | 0.354 | 0.402 | 13.56% | sim too FAST |
+| mvt | polybench | 0.241 | 0.216 | 11.78% | sim too SLOW |
+| vectoradd | micro | 0.296 | 0.329 | 11.15% | sim too FAST |
+| dependency | micro | 1.020 | 1.088 | 6.67% | sim too FAST |
+| branch | micro | 1.320 | 1.303 | 1.30% | sim too SLOW |
 
 **Infeasible:** gemm, 2mm, 3mm (polybench); crc32, edn, statemate, primecount, huffbench, matmult-int (embench)
 
 ## Path to H5: <20% Average Error Across 15+ Benchmarks
 
-**Math:** Current sum of errors = ~442%. For 15 benchmarks at <20% avg, need sum < 300%. Must reduce by ~142 percentage points.
+**Math:** Current sum of errors = ~355.5%. For 15 benchmarks at <20% avg, need sum < 300%. Must reduce by ~55.5 percentage points.
 
-**The 2-benchmark roadblock:** The top 2 errors account for 201 percentage points:
-1. **jacobi-1d** (131.13% → target <20%): saves ~111 points — CRITICAL
-2. **bicg** (70.37% → target <20%): saves ~50 points — CRITICAL
+**STRATEGIC PIVOT (February 20, 2026):** After 18 cycles (M17 + M17b) of failed attempts to fix bicg, we are pivoting to a multi-pronged approach:
 
-If we fix both to <20%, remaining sum ≈ 261%, avg ≈ 17.4% → **H5 achieved**.
+1. **Fix arithmetic (34.55%) and branchheavy (35.85%)** — fresh, unexplored targets
+2. **bicg requires proper diagnosis** — the load-use latency hypothesis was DISPROVEN (see M17b outcome below)
+3. **Adding low-error benchmarks** as a fallback path to dilute high errors
 
-**Secondary targets** (above 20%):
-3. **arithmetic** (35.16%): saves ~15 points
-4. **branchheavy** (31.79%): saves ~12 points
-5. **mvt** (28.48%): saves ~8 points
-6. **memorystrided** (24.61%): saves ~5 points
+**If arithmetic → 20% and branchheavy → 20%:** saves 30.4 pts → sum 325.1 / 15 = 21.7%
+**If we also add 3 benchmarks at ~10% each:** sum 355.1 / 18 = 19.7% ✅ H5 achieved
+**If we also partially fix bicg (71% → 45%):** saves 26 more pts → easily under 20%
 
-**Root cause analysis:**
-- **jacobi-1d** (sim too SLOW: 0.349 vs 0.151): Sim is 2.3x over-stalling for 1D stencil computation. Likely WAW/RAW hazard over-stalling in the pipeline.
-- **bicg** (sim too SLOW: 0.391 vs 0.230): Sim is 70% over-stalling for dot products. PR#106 partially fixed this but more improvement needed.
-- **memorystrided** (sim too SLOW: 2.125 vs 2.648): 24.61% error, above target but not critical. Sim slightly under-counts cache miss stall cycles for strided access patterns.
+**Root cause analysis (updated after M17b):**
+- **bicg** (sim too SLOW: 0.393 vs 0.230): **Root cause UNKNOWN.** Load-use latency hypothesis disproven: changing nonCacheLoadLatency from 3→2 had ZERO effect on bicg CPI (still 71.24%). MEM→EX forwarding and co-issue approaches all regressed vector benchmarks without fixing bicg. PolyBench runs without dcache. Needs fresh diagnostic approach.
+- **jacobi-1d** (67.55%): Fixed from 131% via Bitfield+DataProc3Src forwarding gate. No further work planned.
+- **arithmetic** (sim too FAST: 0.220 vs 0.296): In-order WAW limitation / insufficient structural hazard modeling. **NEW PRIMARY TARGET.**
+- **branchheavy** (sim too SLOW: 0.970 vs 0.714): Branch execution stalls too high. **NEW PRIMARY TARGET.**
 
-## Milestone Plan (M17–M18)
+## Milestone History (M17–M17b)
 
-### M17: Fix jacobi-1d and bicg over-stalling (NEXT)
-**Budget:** 12 cycles
-**Goal:** jacobi-1d from 131% → <50%. bicg from 70% → <40%.
-Both have sim CPI >> HW CPI (over-stalling). Profile stall sources in both benchmarks and reduce excessive WAW/structural hazard stalls for these compute patterns.
-**Success:** jacobi-1d < 70%, bicg < 50%. No regressions on other benchmarks.
+### M17 OUTCOME (12 cycles, deadline missed)
+- jacobi-1d ✅ FIXED: 131.13% → 67.55% (<70% target met). Bitfield+DataProc3Src forwarding gate implemented.
+- bicg ❌ NOT FIXED: 71.24% (target <50%). Root cause is NOT ALU forwarding.
+- Overall avg improved: 29.46% → 23.70%.
 
-### M18: Final calibration — achieve H5 target
-**Budget:** 10 cycles
-**Goal:** Achieve <20% average error across all 15 benchmarks. Address remaining outliers (arithmetic 35%, branchheavy 32%, mvt 28%, memorystrided 25%). Verify final CI results.
-**Success:** Average error < 20% across 15 benchmarks, all CI-verified.
+### M17b OUTCOME (6 cycles, deadline missed)
+- bicg ❌ NOT FIXED: All approaches failed or regressed other benchmarks.
+- **Approaches tried and failed:**
+  1. Reduced nonCacheLoadLatency 3→2: NO change to bicg (disproved load-use hypothesis)
+  2. Broadened MEM→EX forwarding: regressed vectorsum (13.56%→24.46%), vectoradd (11.15%→13.45%)
+  3. Per-slot co-issue MEM→EX forwarding: regressed vectorsum (24.46%→41.55%), vectoradd (13.45%→24.62%)
+  4. All experimental changes reverted; nonCacheLoadLatency restored to 3
+- **Key finding:** The load-use latency hypothesis was WRONG. Changing the non-dcache load latency had zero effect on bicg. The actual bottleneck is unknown and requires fresh diagnostic investigation.
+- Net state: branch HEAD (8e4c397) should match pre-M17b baseline (~23.70% avg). CI verification pending.
 
-**Total estimated budget:** ~22 cycles
+## Milestone Plan (M17c onward)
+
+### M17c: Verify CI + Fix arithmetic and branchheavy (NEXT)
+**Budget:** 6 cycles
+**Goal:** Establish clean CI baseline on current HEAD, then reduce arithmetic and branchheavy errors.
+
+**Phase 1 (cycles 1-2): CI verification**
+- Trigger CI for current HEAD (8e4c397) on leo/fix-fp-coissue
+- Update h5_accuracy_results.json from CI results
+- Confirm baseline matches expected ~23.70% avg
+- If clean, merge PR #108 to main (preserves jacobi-1d fix)
+
+**Phase 2 (cycles 3-6): Fix arithmetic and branchheavy**
+- **arithmetic** (34.55%, sim too FAST): Profile which instruction types execute unrealistically fast. Likely needs more realistic execution port limits or WAW stall modeling. Target: <28%.
+- **branchheavy** (35.85%, sim too SLOW): Profile which stalls cause excess CPI. Likely needs tuning of branch misprediction recovery or branch-heavy instruction scheduling. Target: <28%.
+
+**Success criteria:**
+- arithmetic < 28% (from 34.55%)
+- branchheavy < 28% (from 35.85%)
+- No regressions: bicg ≤72%, jacobi-1d ≤68%, memorystrided ≤17%, all others within 2% of baseline
+- Overall avg < 22%
+
+### M18: Final push to H5 target
+**Budget:** 6 cycles
+**Goal:** Achieve <20% average error. Strategy depends on M17c outcome:
+- If avg ~21-22%: add 3 low-error benchmarks OR partially fix bicg
+- If avg >22%: continue reducing arithmetic/branchheavy, revisit bicg with proper diagnosis
 
 ### H4: Multi-Core Support (deferred until H5 complete)
 
-## Lessons Learned (from milestones 10–17)
+## Lessons Learned (from milestones 10–17b)
 
 1. **Break big problems into small ones.** Target 1–2 benchmarks per milestone, not all at once.
 2. **CI turnaround is the bottleneck.** Each cycle can only test one CI iteration. Budget accordingly.
@@ -107,4 +136,11 @@ Both have sim CPI >> HW CPI (over-stalling). Profile stall sources in both bench
 9. **memorystrided is a distinct problem** — sim is too fast (not too slow), needs cache miss stall cycles.
 10. **The Marin runner group** provides Apple M2 hardware for accuracy benchmarks.
 11. **Verify regressions with code analysis, not assumptions.** PR#106 was wrongly assumed to regress memorystrided — code analysis confirmed it didn't (D-cache gating only affects non-D-cache benchmarks).
-12. **The top 2 errors are the main roadblock.** Fix jacobi-1d + bicg → H5 likely achieved (avg drops to ~17.4%).
+12. **The top 2 errors are the main roadblock.** Fix jacobi-1d + bicg → H5 likely achieved. (REVISED: bicg proved intractable; pivot to arithmetic+branchheavy.)
+13. **ALU forwarding has limits.** jacobi-1d yielded to forwarding fixes, but bicg's bottleneck is NOT load-use latency (disproven). Always confirm which instruction type is stalling before choosing the fix.
+14. **PolyBench accuracy CI runs WITHOUT dcache.** Cache-stage forwarding and D-cache path fixes have zero effect on PolyBench accuracy. Always check whether dcache is enabled when diagnosing PolyBench stalls.
+15. **12 cycles is too many for one milestone.** M17 used all 12 cycles and only half-succeeded. Keep milestones to 6 cycles max for targeted fixes.
+16. **One root cause per milestone.** M17 conflated two different bottlenecks (jacobi-1d = ALU forwarding; bicg = load-use latency). Each should have been its own milestone.
+17. **Validate hypotheses before committing cycles.** M17b spent 6 cycles on a load-use latency fix, but the very first experiment (latency 3→2) showed zero effect on bicg. Should have pivoted immediately instead of trying forwarding variants of the same flawed hypothesis.
+18. **Know when to pivot.** After 18 cycles of failed bicg attempts, the correct move is to target other high-error benchmarks (arithmetic, branchheavy) rather than continuing to beat a dead horse.
+19. **Non-dcache path changes affect ALL non-dcache benchmarks.** Forwarding changes designed for bicg regressed vectorsum, vectoradd, etc. because they all use the same non-dcache load path. Targeted fixes need to be instruction-specific, not path-wide.

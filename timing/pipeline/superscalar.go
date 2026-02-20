@@ -1121,6 +1121,12 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 					hasRAW = true
 				}
 			}
+			// Check Rt2 (Ra) for DataProc3Src consumers (MADD/MSUB):
+			// Ra is the accumulator input read via Inst.Rt2.
+			if newInst.Inst != nil && newInst.Inst.Format == insts.FormatDataProc3Src &&
+				newInst.Inst.Rt2 == prev.Rd {
+				hasRAW = true
+			}
 			// For stores, the value register (Inst.Rd) is read through a
 			// separate path that does NOT support same-cycle forwarding.
 			// Always block co-issue for this dependency.
@@ -1144,12 +1150,40 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 				if producerIsALU && consumerIsLoad {
 					usesForwarding = true
 				} else if forwarded != nil && producerIsALU {
-					// General ALU→ALU forwarding with 1-hop depth limit:
-					// the producer must not itself be a forwarding consumer
-					// (to prevent unrealistic deep chaining like A→B→C in
-					// one cycle).
+					// Gate ALU→ALU forwarding to specific format
+					// combinations that benefit from same-cycle
+					// forwarding without regressing integer benchmarks.
+					//
+					// Allowed (producer → consumer):
+					//   FormatDataProc3Src → any  (MADD/SMULL chains)
+					//   FormatBitfield → any      (LSR/LSL in div-by-const)
+					//   any → FormatDataProc3Src   (feed into MADD/SMULL)
+					//
+					// Blocked (serial integer chains at 1/cycle on M2):
+					//   FormatDPReg → FormatDPReg  (ADD reg chains)
+					//   FormatDPImm → FormatDPImm  (ADD imm chains)
+					producerFmt := insts.FormatUnknown
+					if prev.Inst != nil {
+						producerFmt = prev.Inst.Format
+					}
+					consumerFmt := insts.FormatUnknown
+					if newInst.Inst != nil {
+						consumerFmt = newInst.Inst.Format
+					}
 					producerNotForwarded := !forwarded[i]
-					if producerNotForwarded {
+
+					// Also allow DPImm→DPImm when the consumer writes
+					// only flags (Rd==31, i.e. CMP/CMN). These flag-only
+					// ops don't produce a register result so they can't
+					// create integer forwarding chains.
+					consumerIsFlagOnly := consumerFmt == insts.FormatDPImm &&
+						newInst.Inst != nil && newInst.Inst.Rd == 31
+					canForward := producerNotForwarded &&
+						(producerFmt == insts.FormatDataProc3Src ||
+							producerFmt == insts.FormatBitfield ||
+							consumerFmt == insts.FormatDataProc3Src ||
+							(producerFmt == insts.FormatDPImm && consumerIsFlagOnly))
+					if canForward {
 						usesForwarding = true
 					} else {
 						return false, false
