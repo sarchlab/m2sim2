@@ -251,13 +251,6 @@ type Pipeline struct {
 	// completing load's MemData. Cleared after the forwarding is consumed.
 	loadFwdPendingInIDEX bool
 
-	// Load co-issue forwarding: per-slot flags for consumers that co-issued
-	// with a non-dcache load in the same IFID group. When the consumer's EX
-	// completes, MEM→EX forwarding from nextMEMWB provides the load data.
-	// This works because load EX(2)+MEM(1) = consumer EX(3) cycles align,
-	// and MEM runs before EX in each tick.
-	loadCoIssuePending [8]bool
-
 	// Hazard detection
 	hazardUnit *HazardUnit
 

@@ -514,17 +514,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency2 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex2.Rn, p.idex2.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex2.Rm, p.idex2.RmValue)
-			if p.loadCoIssuePending[1] {
-				p.loadCoIssuePending[1] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex2.Rn, p.idex2.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex2.Rn, p.idex2.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 2
 			forwardFlags2 := false
@@ -647,17 +636,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency3 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex3.Rn, p.idex3.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex3.Rm, p.idex3.RmValue)
-			if p.loadCoIssuePending[2] {
-				p.loadCoIssuePending[2] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex3.Rn, p.idex3.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex3.Rn, p.idex3.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex3.Rn, p.idex3.Rm, rnValue, rmValue)
 			// Same-cycle PSTATE flag forwarding for B.cond in slot 3
@@ -787,17 +765,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency4 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex4.Rn, p.idex4.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex4.Rm, p.idex4.RmValue)
-			if p.loadCoIssuePending[3] {
-				p.loadCoIssuePending[3] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex4.Rn, p.idex4.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex4.Rn, p.idex4.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex4.Rn, p.idex4.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex4.Rn, p.idex4.Rm, rnValue, rmValue)
@@ -925,17 +892,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency5 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex5.Rn, p.idex5.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex5.Rm, p.idex5.RmValue)
-			if p.loadCoIssuePending[4] {
-				p.loadCoIssuePending[4] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex5.Rn, p.idex5.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex5.Rn, p.idex5.Rm, rnValue, rmValue)
@@ -1063,17 +1019,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency6 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex6.Rn, p.idex6.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex6.Rm, p.idex6.RmValue)
-			if p.loadCoIssuePending[5] {
-				p.loadCoIssuePending[5] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex6.Rn, p.idex6.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex6.Rn, p.idex6.Rm, rnValue, rmValue)
@@ -1205,17 +1150,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency7 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex7.Rn, p.idex7.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex7.Rm, p.idex7.RmValue)
-			if p.loadCoIssuePending[6] {
-				p.loadCoIssuePending[6] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex7.Rn, p.idex7.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex7.Rn, p.idex7.Rm, rnValue, rmValue)
@@ -1351,17 +1285,6 @@ func (p *Pipeline) tickOctupleIssue() {
 		if p.exLatency8 == 0 {
 			rnValue := p.forwardFromAllSlots(p.idex8.Rn, p.idex8.RnValue)
 			rmValue := p.forwardFromAllSlots(p.idex8.Rm, p.idex8.RmValue)
-			if p.loadCoIssuePending[7] {
-				p.loadCoIssuePending[7] = false
-				rnValue, rmValue = forwardFromNextMEMWBSlots(
-					p.idex8.Rn, p.idex8.Rm, rnValue, rmValue,
-					nextMEMWB.Valid, nextMEMWB.MemToReg, nextMEMWB.RegWrite, nextMEMWB.Rd, nextMEMWB.MemData,
-					nextMEMWB2.Valid, nextMEMWB2.MemToReg, nextMEMWB2.RegWrite, nextMEMWB2.Rd, nextMEMWB2.MemData,
-					nextMEMWB3.Valid, nextMEMWB3.MemToReg, nextMEMWB3.RegWrite, nextMEMWB3.Rd, nextMEMWB3.MemData,
-					nextMEMWB4.Valid, nextMEMWB4.MemToReg, nextMEMWB4.RegWrite, nextMEMWB4.Rd, nextMEMWB4.MemData,
-					nextMEMWB5.Valid, nextMEMWB5.MemToReg, nextMEMWB5.RegWrite, nextMEMWB5.Rd, nextMEMWB5.MemData,
-				)
-			}
 			rnValue, rmValue = sameCycleForward(nextEXMEM.Valid, nextEXMEM.RegWrite, nextEXMEM.Rd, nextEXMEM.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM2.Valid, nextEXMEM2.RegWrite, nextEXMEM2.Rd, nextEXMEM2.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
 			rnValue, rmValue = sameCycleForward(nextEXMEM3.Valid, nextEXMEM3.RegWrite, nextEXMEM3.Rd, nextEXMEM3.ALUResult, p.idex8.Rn, p.idex8.Rm, rnValue, rmValue)
@@ -1725,9 +1648,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					issued[issuedCount] = true
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[1] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++
@@ -1766,9 +1686,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					issued[issuedCount] = true
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[2] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++
@@ -1807,9 +1724,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					issued[issuedCount] = true
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[3] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++
@@ -1848,9 +1762,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					issued[issuedCount] = true
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[4] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++
@@ -1889,9 +1800,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					issued[issuedCount] = true
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[5] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++
@@ -1930,9 +1838,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					issued[issuedCount] = true
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[6] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++
@@ -1970,9 +1875,6 @@ func (p *Pipeline) tickOctupleIssue() {
 					nextIDEX8.fromIDEX(&tempIDEX8)
 					if fwd {
 						forwarded[issuedCount] = true
-						if !p.useDCache {
-							p.loadCoIssuePending[7] = true
-						}
 					}
 				} else {
 					p.stats.StructuralHazardStalls++

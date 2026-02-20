@@ -1188,23 +1188,6 @@ func canIssueWithFwd(newInst *IDEXRegister, earlier *[8]*IDEXRegister, earlierCo
 					} else {
 						return false, false
 					}
-				} else if !hasDCache && isIssued && prev.MemRead && !prev.MemWrite {
-					// Non-dcache load→consumer co-issue: when D-cache is
-					// disabled, non-dcache loads complete MEM immediately.
-					// Load EX latency (2) + MEM (1) = 3 cycles from IDEX,
-					// which aligns with 3-cycle consumer EX latency (MADD).
-					// Since MEM runs before EX in tick processing order,
-					// the load result is available via MEM→EX forwarding
-					// in the same tick the consumer's EX completes.
-					//
-					// Block if dependency is on Rt2 (MADD/MSUB accumulator)
-					// which has no MEM→EX forwarding path.
-					if newInst.Inst != nil &&
-						newInst.Inst.Format == insts.FormatDataProc3Src &&
-						newInst.Inst.Rt2 == prev.Rd {
-						return false, false
-					}
-					usesForwarding = true
 				} else {
 					return false, false
 				}
