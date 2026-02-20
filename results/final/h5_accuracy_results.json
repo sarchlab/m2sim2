@@ -7,13 +7,13 @@
     "polybench_sim_only": 1,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 8,
-    "average_error": 0.2367,
+    "average_error": 0.237,
     "micro_average_error": 0.1686,
     "micro_average_error_excl_memorystrided": 0.1687,
-    "polybench_average_error": 0.4238,
-    "polybench_status": "partial_fresh",
+    "polybench_average_error": 0.4249,
+    "polybench_status": "all_fresh",
     "h5_target_met": false,
-    "note": "Commit 55663fc (HEAD of leo/fix-fp-coissue). Microbenchmarks from CI run 22215020258 (verified). PolyBench partially updated from CI run 22215020276: atax, bicg, jacobi-1d FRESH; mvt still pending (Group 2 blocked by GEMM timeout, expected ~2.5h). 3mm now completable (was infeasible), moved to benchmarks (sim-only, no hw CPI). 2mm still infeasible (timed out again). BiCG CPI shifted 0.390→0.393 vs stale data; atax and jacobi-1d unchanged. Overall avg 23.67% (was 23.58%). memorystrided <=30% PASS (16.81%). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "Commit 55663fc (HEAD of leo/fix-fp-coissue). Microbenchmarks from CI run 22215020258 (verified). All PolyBench benchmarks now FRESH from CI run 22215020276 (completed): atax, bicg, jacobi-1d, mvt all verified. 3mm completable (sim-only, no hw CPI). 2mm still infeasible (CI timeout). Overall avg 23.70%. memorystrided <=30% PASS (16.81%). Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -136,12 +136,11 @@
     {
       "name": "mvt",
       "category": "polybench",
-      "simulated_cpi": 0.24,
+      "simulated_cpi": 0.241,
       "hardware_cpi": 0.2156,
-      "error": 0.1132,
+      "error": 0.1178,
       "ci_verified": true,
-      "ci_run": 22211620842,
-      "note": "STALE: awaiting Group 2 completion in CI run 22215020276 (blocked by GEMM timeout, ~90min remaining)."
+      "ci_run": 22215020276
     },
     {
       "name": "jacobi-1d",
