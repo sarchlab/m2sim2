@@ -51,26 +51,43 @@ func GetCoreBenchmarks() []Benchmark {
 }
 
 // 1. Arithmetic Sequential - Tests ALU throughput with independent operations
+// Uses a loop structure to match native compiled code (a C loop adding to 5 variables).
+// Each iteration: 5 ADDs + SUB counter + CBNZ = 7 instructions.
+// 40 iterations × 5 ADDs = 200 total ADD operations.
 func arithmeticSequential() Benchmark {
-	const numInstructions = 200
+	const numIterations = 40
 	const numRegisters = 5
 	return Benchmark{
 		Name:        "arithmetic_sequential",
-		Description: "200 independent ADDs (5 registers) - measures ALU throughput",
+		Description: "200 ADDs in 40-iteration loop (5 registers) - measures ALU throughput",
 		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
-			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
+			regFile.WriteReg(8, 93)            // X8 = 93 (exit syscall)
+			regFile.WriteReg(9, numIterations) // X9 = loop counter
 		},
-		Program:      buildArithmeticSequential(numInstructions, numRegisters),
-		ExpectedExit: int64(numInstructions / numRegisters), // X0 incremented once per register cycle
+		Program:      buildArithmeticSequential(numRegisters),
+		ExpectedExit: int64(numIterations), // X0 incremented once per iteration
 	}
 }
 
-func buildArithmeticSequential(n, numRegs int) []byte {
-	instrs := make([]uint32, 0, n+1)
-	for i := 0; i < n; i++ {
-		reg := uint8(i % numRegs)
+func buildArithmeticSequential(numRegs int) []byte {
+	// Loop body: 5 ADDs + SUB X9 + CBNZ X9 = 7 instructions
+	// loop:
+	//   ADD X0, X0, #1
+	//   ADD X1, X1, #1
+	//   ADD X2, X2, #1
+	//   ADD X3, X3, #1
+	//   ADD X4, X4, #1
+	//   SUB X9, X9, #1
+	//   CBNZ X9, loop
+	instrs := make([]uint32, 0, numRegs+3)
+	for i := 0; i < numRegs; i++ {
+		reg := uint8(i)
 		instrs = append(instrs, EncodeADDImm(reg, reg, 1, false))
 	}
+	instrs = append(instrs, EncodeSUBImm(9, 9, 1, false))
+	// CBNZ offset: -(numRegs+2) instructions * 4 bytes = -(numRegs+2)*4
+	branchOffset := int32(-(numRegs + 2) * 4)
+	instrs = append(instrs, EncodeCBNZ(9, branchOffset))
 	instrs = append(instrs, EncodeSVC(0))
 	return BuildProgram(instrs...)
 }
