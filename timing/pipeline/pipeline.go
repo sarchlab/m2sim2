@@ -17,9 +17,11 @@ const (
 	// nonCacheLoadLatency is the execute-stage latency for load instructions
 	// when D-cache is disabled (non-cached path with immediate memory access).
 	// The non-cached MEM stage provides data instantly, so total load-to-use
-	// is: EX latency + 1 (MEM stage) + 1 (load-use bubble) = 4 cycles,
+	// is: nonCacheLoadLatency + 1 (forwarding from MEMWB) = 4 cycles,
 	// matching Apple M2's ~4-cycle L1 load-to-use latency.
-	nonCacheLoadLatency = 2
+	// The load-use bubble overlaps with the last EX cycle (both hold the
+	// consumer in IFID), so it does not add an extra cycle.
+	nonCacheLoadLatency = 3
 
 	// instrWindowSize is the capacity of the instruction window buffer.
 	// A 192-entry window allows the issue logic to look across many loop
