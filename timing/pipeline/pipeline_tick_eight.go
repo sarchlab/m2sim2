@@ -1895,9 +1895,17 @@ func (p *Pipeline) tickOctupleIssue() {
 		p.pushUnconsumedToWindow(consumed[:])
 
 		// Step 2: Fetch new instructions into the window buffer.
+		// If a taken-branch redirect is pending from the previous cycle,
+		// skip fetching this cycle (1-cycle redirect bubble). The window
+		// still pops in step 3 so buffered instructions can issue.
+		skipFetch := false
+		if p.takenBranchRedirectPending {
+			p.takenBranchRedirectPending = false
+			skipFetch = true
+		}
 		fetchPC := p.pc
 		fetchedAfterBranch := false
-		for p.instrWindowLen < instrWindowSize {
+		for !skipFetch && p.instrWindowLen < instrWindowSize {
 			var word uint32
 			var ok bool
 
@@ -1948,7 +1956,11 @@ func (p *Pipeline) tickOctupleIssue() {
 
 			if pred.Taken && pred.TargetKnown {
 				fetchPC = pred.Target
-				fetchedAfterBranch = true
+				// Model 1-cycle fetch redirect penalty for taken branches.
+				// Eliminated branches (pure B) bypass this — they never
+				// enter the window or prediction logic.
+				p.takenBranchRedirectPending = true
+				break
 			} else {
 				fetchPC += 4
 			}

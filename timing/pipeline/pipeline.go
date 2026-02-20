@@ -315,6 +315,13 @@ type Pipeline struct {
 	// Register checkpoint for branch misprediction rollback
 	branchCheckpoint RegisterCheckpoint
 
+	// Taken-branch redirect penalty: models the 1-cycle fetch bubble
+	// when the fetch unit redirects to a predicted-taken branch target.
+	// Set when fetch encounters a taken branch; cleared next cycle after
+	// skipping one fetch (the redirect bubble). Zero-cycle folded branches
+	// (pure B) bypass this since they are eliminated before prediction.
+	takenBranchRedirectPending bool
+
 	// Statistics
 	stats Statistics
 

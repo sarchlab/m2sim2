@@ -389,7 +389,8 @@ func (p *Pipeline) flushAllIFID() {
 	p.ifid6.Clear()
 	p.ifid7.Clear()
 	p.ifid8.Clear()
-	p.instrWindowLen = 0 // flush instruction window on misprediction
+	p.instrWindowLen = 0                 // flush instruction window on misprediction
+	p.takenBranchRedirectPending = false // cancel any pending redirect bubble
 }
 
 // flushAllIDEX clears all ID/EX pipeline registers.

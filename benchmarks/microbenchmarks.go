@@ -871,8 +871,8 @@ func buildBranchHeavy() []byte {
 
 	// 10 conditional branches: first 5 taken (X0 < 5), last 5 not taken (X0 >= 5)
 	for i := 0; i < 10; i++ {
-		instrs = append(instrs, EncodeCMPReg(0, 1))  // CMP X0, X1
-		instrs = append(instrs, EncodeBCond(8, 11))   // B.LT +8 (CondLT = 11)
+		instrs = append(instrs, EncodeCMPReg(0, 1)) // CMP X0, X1
+		instrs = append(instrs, EncodeBCond(8, 11)) // B.LT +8 (CondLT = 11)
 		if i < 5 {
 			instrs = append(instrs, EncodeADDImm(1, 1, 99, false)) // skipped (would corrupt X1)
 		} else {
