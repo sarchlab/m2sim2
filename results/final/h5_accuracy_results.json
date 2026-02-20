@@ -4,15 +4,16 @@
     "benchmarks_with_error_data": 15,
     "microbenchmarks_with_error": 11,
     "polybench_with_error": 4,
+    "polybench_sim_only": 1,
     "embench_sim_only": 1,
-    "infeasible_benchmarks": 9,
-    "average_error": 0.2358,
+    "infeasible_benchmarks": 8,
+    "average_error": 0.2367,
     "micro_average_error": 0.1686,
     "micro_average_error_excl_memorystrided": 0.1687,
-    "polybench_average_error": 0.4205,
-    "polybench_status": "pending_new_ci",
+    "polybench_average_error": 0.4238,
+    "polybench_status": "partial_fresh",
     "h5_target_met": false,
-    "note": "Commit 55663fc (HEAD of leo/fix-fp-coissue). Code changes: reverted co-issue (b1f8d23) + increased nonCacheLoadLatency to 3 (8e4c397). Microbenchmarks from CI run 22215020258 (verified). PolyBench data is STALE from CI run 22211620842 (commit b1f8d23) — PolyBench CI run 22215020276 is pending (waiting for runner); stuck run 22212941350 was cancelled. Micro avg improved 21.59% -> 16.86% due to co-issue revert recovering vectorsum (41.55->13.56%), vectoradd (24.62->11.15%), strideindirect (21.38->13.64%). Overall avg 23.58% uses stale polybench data. memorystrided <=30% PASS (16.81%). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "Commit 55663fc (HEAD of leo/fix-fp-coissue). Microbenchmarks from CI run 22215020258 (verified). PolyBench partially updated from CI run 22215020276: atax, bicg, jacobi-1d FRESH; mvt still pending (Group 2 blocked by GEMM timeout, expected ~2.5h). 3mm now completable (was infeasible), moved to benchmarks (sim-only, no hw CPI). 2mm still infeasible (timed out again). BiCG CPI shifted 0.390→0.393 vs stale data; atax and jacobi-1d unchanged. Overall avg 23.67% (was 23.58%). memorystrided <=30% PASS (16.81%). Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
@@ -121,18 +122,16 @@
       "hardware_cpi": 0.2185,
       "error": 0.194,
       "ci_verified": true,
-      "ci_run": 22211620842,
-      "note": "STALE: from commit b1f8d23 (co-issue). Pending re-verification on current HEAD via CI run 22215020276."
+      "ci_run": 22215020276
     },
     {
       "name": "bicg",
       "category": "polybench",
-      "simulated_cpi": 0.39,
+      "simulated_cpi": 0.393,
       "hardware_cpi": 0.2295,
-      "error": 0.6993,
+      "error": 0.7124,
       "ci_verified": true,
-      "ci_run": 22211620842,
-      "note": "STALE: from commit b1f8d23 (co-issue). Pending re-verification on current HEAD via CI run 22215020276."
+      "ci_run": 22215020276
     },
     {
       "name": "mvt",
@@ -142,7 +141,7 @@
       "error": 0.1132,
       "ci_verified": true,
       "ci_run": 22211620842,
-      "note": "STALE: from commit b1f8d23 (co-issue). Pending re-verification on current HEAD via CI run 22215020276."
+      "note": "STALE: awaiting Group 2 completion in CI run 22215020276 (blocked by GEMM timeout, ~90min remaining)."
     },
     {
       "name": "jacobi-1d",
@@ -151,8 +150,17 @@
       "hardware_cpi": 0.151,
       "error": 0.6755,
       "ci_verified": true,
-      "ci_run": 22211620842,
-      "note": "STALE: from commit b1f8d23 (co-issue). Pending re-verification on current HEAD via CI run 22215020276."
+      "ci_run": 22215020276
+    },
+    {
+      "name": "3mm",
+      "category": "polybench",
+      "simulated_cpi": 0.224,
+      "hardware_cpi": null,
+      "error": null,
+      "ci_verified": true,
+      "ci_run": 22215020276,
+      "note": "Previously infeasible (CI timeout). Now completes: cycles=24337, insts=108688. No hardware CPI available."
     },
     {
       "name": "aha_mont64",
@@ -179,17 +187,9 @@
       "name": "2mm",
       "category": "polybench",
       "status": "infeasible",
-      "reason": "CI timeout after 55m on PolyBench accuracy workflow.",
+      "reason": "CI timeout after 55m on PolyBench accuracy workflow. Confirmed again in CI run 22215020276.",
       "ci_verified": true,
-      "ci_run": 22123056416
-    },
-    {
-      "name": "3mm",
-      "category": "polybench",
-      "status": "infeasible",
-      "reason": "CI timeout after 55m on PolyBench accuracy workflow.",
-      "ci_verified": true,
-      "ci_run": 22123056416
+      "ci_run": 22215020276
     },
     {
       "name": "crc32",
