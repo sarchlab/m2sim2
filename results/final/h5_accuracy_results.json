@@ -7,23 +7,24 @@
     "polybench_sim_only": 1,
     "embench_sim_only": 1,
     "infeasible_benchmarks": 8,
-    "average_error": 0.237,
-    "micro_average_error": 0.1686,
-    "micro_average_error_excl_memorystrided": 0.1687,
+    "average_error": 0.2522,
+    "micro_average_error": 0.1895,
+    "micro_average_error_excl_memorystrided": 0.1916,
     "polybench_average_error": 0.4249,
     "polybench_status": "all_fresh",
     "h5_target_met": false,
-    "note": "Commit 55663fc (HEAD of leo/fix-fp-coissue). Microbenchmarks from CI run 22215020258 (verified). All PolyBench benchmarks now FRESH from CI run 22215020276 (completed): atax, bicg, jacobi-1d, mvt all verified. 3mm completable (sim-only, no hw CPI). 2mm still infeasible (CI timeout). Overall avg 23.70%. memorystrided <=30% PASS (16.81%). Error formula: |sim-hw|/min(sim,hw)."
+    "note": "HEAD of leo/fix-fp-coissue (commit 4dad54f). Arithmetic sim CPI updated to 0.188 from CI run 22219381657 (Nina's benchmark restructure df005d5). Arithmetic hw CPI (0.296) may need re-measurement on restructured benchmark. PolyBench verified from CI run 22217510861: atax, bicg, jacobi-1d, 3mm all unchanged. bicg 71.24% <=72% PASS. jacobi-1d 67.55% <=68% PASS. mvt unchanged (Group 2 still running, no simulator code changed). 2mm still infeasible. memorystrided 16.81% <=17% PASS. Error formula: |sim-hw|/min(sim,hw)."
   },
   "benchmarks": [
     {
       "name": "arithmetic",
       "category": "microbenchmark",
-      "simulated_cpi": 0.22,
+      "simulated_cpi": 0.188,
       "hardware_cpi": 0.296,
-      "error": 0.3455,
+      "error": 0.5745,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657,
+      "note": "Sim CPI changed 0.220->0.188 after benchmark restructure (Nina, df005d5). HW CPI may need re-measurement on restructured benchmark."
     },
     {
       "name": "dependency",
@@ -32,7 +33,7 @@
       "hardware_cpi": 1.088,
       "error": 0.0667,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "branch",
@@ -41,7 +42,7 @@
       "hardware_cpi": 1.303,
       "error": 0.013,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "memorystrided",
@@ -50,7 +51,7 @@
       "hardware_cpi": 2.648,
       "error": 0.1681,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "loadheavy",
@@ -59,7 +60,7 @@
       "hardware_cpi": 0.429,
       "error": 0.2017,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "storeheavy",
@@ -68,7 +69,7 @@
       "hardware_cpi": 0.612,
       "error": 0.1724,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "branchheavy",
@@ -77,7 +78,7 @@
       "hardware_cpi": 0.714,
       "error": 0.3585,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "vectorsum",
@@ -86,7 +87,7 @@
       "hardware_cpi": 0.402,
       "error": 0.1356,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "vectoradd",
@@ -95,7 +96,7 @@
       "hardware_cpi": 0.329,
       "error": 0.1115,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "reductiontree",
@@ -104,7 +105,7 @@
       "hardware_cpi": 0.48,
       "error": 0.1456,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "strideindirect",
@@ -113,7 +114,7 @@
       "hardware_cpi": 0.528,
       "error": 0.1364,
       "ci_verified": true,
-      "ci_run": 22215020258
+      "ci_run": 22219381657
     },
     {
       "name": "atax",
@@ -122,7 +123,7 @@
       "hardware_cpi": 0.2185,
       "error": 0.194,
       "ci_verified": true,
-      "ci_run": 22215020276
+      "ci_run": 22217510861
     },
     {
       "name": "bicg",
@@ -131,7 +132,7 @@
       "hardware_cpi": 0.2295,
       "error": 0.7124,
       "ci_verified": true,
-      "ci_run": 22215020276
+      "ci_run": 22217510861
     },
     {
       "name": "mvt",
@@ -149,7 +150,7 @@
       "hardware_cpi": 0.151,
       "error": 0.6755,
       "ci_verified": true,
-      "ci_run": 22215020276
+      "ci_run": 22217510861
     },
     {
       "name": "3mm",
@@ -158,7 +159,7 @@
       "hardware_cpi": null,
       "error": null,
       "ci_verified": true,
-      "ci_run": 22215020276,
+      "ci_run": 22217510861,
       "note": "Previously infeasible (CI timeout). Now completes: cycles=24337, insts=108688. No hardware CPI available."
     },
     {
@@ -186,9 +187,9 @@
       "name": "2mm",
       "category": "polybench",
       "status": "infeasible",
-      "reason": "CI timeout after 55m on PolyBench accuracy workflow. Confirmed again in CI run 22215020276.",
+      "reason": "CI timeout after 55m on PolyBench accuracy workflow. Confirmed again in CI run 22217510861.",
       "ci_verified": true,
-      "ci_run": 22215020276
+      "ci_run": 22217510861
     },
     {
       "name": "crc32",
