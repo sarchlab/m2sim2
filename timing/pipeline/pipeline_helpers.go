@@ -256,6 +256,44 @@ func sameCycleForward(
 	return rnValue, rmValue
 }
 
+// forwardFromNextMEMWBSlots applies MEM→EX forwarding from this tick's MEM
+// output (nextMEMWB registers) for non-dcache load co-issue. When a consumer
+// co-issued with a load in the same IFID group, the load completes MEM in the
+// same tick the consumer completes EX (load EX(2)+MEM(1) = consumer EX(3)).
+// Since MEM runs before EX in tick processing, nextMEMWB has the load data.
+func forwardFromNextMEMWBSlots(
+	rn, rm uint8, rnValue, rmValue uint64,
+	mw1Valid bool, mw1MemToReg bool, mw1RegWrite bool, mw1Rd uint8, mw1MemData uint64,
+	mw2Valid bool, mw2MemToReg bool, mw2RegWrite bool, mw2Rd uint8, mw2MemData uint64,
+	mw3Valid bool, mw3MemToReg bool, mw3RegWrite bool, mw3Rd uint8, mw3MemData uint64,
+	mw4Valid bool, mw4MemToReg bool, mw4RegWrite bool, mw4Rd uint8, mw4MemData uint64,
+	mw5Valid bool, mw5MemToReg bool, mw5RegWrite bool, mw5Rd uint8, mw5MemData uint64,
+) (uint64, uint64) {
+	type mwSlot struct {
+		valid, memToReg, regWrite bool
+		rd                        uint8
+		memData                   uint64
+	}
+	slots := [5]mwSlot{
+		{mw1Valid, mw1MemToReg, mw1RegWrite, mw1Rd, mw1MemData},
+		{mw2Valid, mw2MemToReg, mw2RegWrite, mw2Rd, mw2MemData},
+		{mw3Valid, mw3MemToReg, mw3RegWrite, mw3Rd, mw3MemData},
+		{mw4Valid, mw4MemToReg, mw4RegWrite, mw4Rd, mw4MemData},
+		{mw5Valid, mw5MemToReg, mw5RegWrite, mw5Rd, mw5MemData},
+	}
+	for _, s := range slots {
+		if s.valid && s.memToReg && s.regWrite && s.rd != 31 {
+			if rn == s.rd {
+				rnValue = s.memData
+			}
+			if rm == s.rd {
+				rmValue = s.memData
+			}
+		}
+	}
+	return rnValue, rmValue
+}
+
 // forwardPSTATEFromPrevCycleEXMEM checks all 8 previous-cycle EXMEM stages
 // for PSTATE flag forwarding to a B.cond instruction.
 func (p *Pipeline) forwardPSTATEFromPrevCycleEXMEM() (bool, bool, bool, bool, bool) {
@@ -405,6 +443,7 @@ func (p *Pipeline) flushAllIDEX() {
 	p.idex7.Clear()
 	p.idex8.Clear()
 	p.loadFwdPendingInIDEX = false
+	p.loadCoIssuePending = [8]bool{}
 }
 
 // collectPendingFetchInstructionsSelective returns unissued IFID instructions,
