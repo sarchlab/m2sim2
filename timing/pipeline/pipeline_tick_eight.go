@@ -40,6 +40,43 @@ func isLoadFwdEligible(loadInst *insts.Instruction, loadRd uint8, consumerInst *
 	return true
 }
 
+// isNonCacheLoadFwdEligible checks if a load-use hazard can be resolved by
+// MEM→EX forwarding when dcache is DISABLED. Without dcache, memory access
+// is immediate (no stall), so the MEM stage result is always available for
+// forwarding in the same cycle. This is broader than isLoadFwdEligible:
+// it allows ALL consumer instruction formats where the dependency is via
+// Rn or Rm (which the MEM→EX forwarding path handles), not just DataProc3Src.
+//
+// Excluded cases (must still stall):
+//   - Store instructions where the store DATA register (Rd) depends on the
+//     load (MEM→EX forwarding only covers Rn/Rm, not the store data path)
+//   - DataProc3Src consumers where Ra/Rt2 reads the load result
+//     (no MEM→EX forwarding path for the third source operand)
+func isNonCacheLoadFwdEligible(loadInst *insts.Instruction, loadRd uint8, consumerInst *insts.Instruction) bool {
+	if loadInst == nil || consumerInst == nil {
+		return false
+	}
+	// Producer must be an integer load
+	switch loadInst.Op {
+	case insts.OpLDR, insts.OpLDRB, insts.OpLDRSB, insts.OpLDRH, insts.OpLDRSH, insts.OpLDRSW:
+	default:
+		return false
+	}
+	// Don't suppress for store instructions where store data depends on load.
+	// The MEM→EX forwarding handles Rn/Rm but not the store data path (Rd).
+	switch consumerInst.Op {
+	case insts.OpSTR, insts.OpSTRQ:
+		if consumerInst.Rd == loadRd {
+			return false
+		}
+	}
+	// Don't suppress if consumer reads load result via Rt2 (Ra for MADD/MSUB)
+	if consumerInst.Format == insts.FormatDataProc3Src && consumerInst.Rt2 == loadRd {
+		return false
+	}
+	return true
+}
+
 // tickOctupleIssue executes one cycle with 8-wide superscalar support.
 // This extends 6-wide to match the Apple M2's 8-wide decode bandwidth.
 func (p *Pipeline) tickOctupleIssue() {
@@ -1408,7 +1445,8 @@ func (p *Pipeline) tickOctupleIssue() {
 					p.idex.Rd, nextInst.Rn, sourceRm, usesRn, usesRm)
 				if hazard {
 					loadHazardRd = p.idex.Rd
-					if isLoadFwdEligible(p.idex.Inst, p.idex.Rd, nextInst) {
+					if isLoadFwdEligible(p.idex.Inst, p.idex.Rd, nextInst) ||
+						(!p.useDCache && isNonCacheLoadFwdEligible(p.idex.Inst, p.idex.Rd, nextInst)) {
 						loadFwdActive = true
 					} else {
 						loadUseHazard = true
@@ -1423,7 +1461,8 @@ func (p *Pipeline) tickOctupleIssue() {
 					p.idex2.Rd, nextInst.Rn, sourceRm, usesRn, usesRm)
 				if hazard {
 					loadHazardRd = p.idex2.Rd
-					if isLoadFwdEligible(p.idex2.Inst, p.idex2.Rd, nextInst) {
+					if isLoadFwdEligible(p.idex2.Inst, p.idex2.Rd, nextInst) ||
+						(!p.useDCache && isNonCacheLoadFwdEligible(p.idex2.Inst, p.idex2.Rd, nextInst)) {
 						loadFwdActive = true
 					} else {
 						loadUseHazard = true
