@@ -557,6 +557,20 @@ func EncodeSVC(imm uint16) uint32 {
 	return inst
 }
 
+// EncodeCBNZ encodes CBNZ (64-bit): CBNZ Xt, offset
+// Format: sf=1 | 011010 | op=1 | imm19 | Rt
+// offset is in bytes and must be a multiple of 4.
+func EncodeCBNZ(rt uint8, offset int32) uint32 {
+	var inst uint32 = 0
+	inst |= 1 << 31        // sf = 1 (64-bit)
+	inst |= 0b011010 << 25 // fixed bits
+	inst |= 1 << 24        // op = 1 (CBNZ)
+	imm19 := uint32(offset/4) & 0x7FFFF
+	inst |= imm19 << 5
+	inst |= uint32(rt & 0x1F)
+	return inst
+}
+
 // EncodeSTR64 encodes STR (64-bit) with unsigned immediate offset
 func EncodeSTR64(rt, rn uint8, imm12 uint16) uint32 {
 	var inst uint32 = 0

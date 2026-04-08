@@ -14,6 +14,15 @@ const (
 	// avoid double-counting latency.
 	minCacheLoadLatency = 1
 
+	// nonCacheLoadLatency is the execute-stage latency for load instructions
+	// when D-cache is disabled (non-cached path with immediate memory access).
+	// The non-cached MEM stage provides data instantly, so total load-to-use
+	// is: nonCacheLoadLatency + 1 (forwarding from MEMWB) = 4 cycles,
+	// matching Apple M2's ~4-cycle L1 load-to-use latency.
+	// The load-use bubble overlaps with the last EX cycle (both hold the
+	// consumer in IFID), so it does not add an extra cycle.
+	nonCacheLoadLatency = 3
+
 	// instrWindowSize is the capacity of the instruction window buffer.
 	// A 192-entry window allows the issue logic to look across many loop
 	// iterations, finding independent instructions for OoO-style dispatch.
@@ -239,6 +248,11 @@ type Pipeline struct {
 	useICache         bool
 	useDCache         bool
 
+	// Load-use forwarding: when loadFwdActive places a consumer into IDEX,
+	// this flag tells the execute stage to apply MEM→EX forwarding from the
+	// completing load's MemData. Cleared after the forwarding is consumed.
+	loadFwdPendingInIDEX bool
+
 	// Hazard detection
 	hazardUnit *HazardUnit
 
@@ -300,6 +314,13 @@ type Pipeline struct {
 
 	// Register checkpoint for branch misprediction rollback
 	branchCheckpoint RegisterCheckpoint
+
+	// Taken-branch redirect penalty: models the 1-cycle fetch bubble
+	// when the fetch unit redirects to a predicted-taken branch target.
+	// Set when fetch encounters a taken branch; cleared next cycle after
+	// skipping one fetch (the redirect bubble). Zero-cycle folded branches
+	// (pure B) bypass this since they are eliminated before prediction.
+	takenBranchRedirectPending bool
 
 	// Statistics
 	stats Statistics
@@ -403,17 +424,20 @@ func (p *Pipeline) RunCycles(cycles uint64) bool {
 }
 
 // getExLatency returns the execute-stage latency for an instruction.
-// Load instructions always use minCacheLoadLatency (1 cycle) for the address
-// calculation in EX. The remaining load-to-use latency comes from the pipeline
-// stages (MEM→WB) and the load-use hazard bubble, totaling 3 cycles — matching
-// the Apple M2's L1 load-to-use latency. When D-cache is enabled, the actual
-// memory access time is handled by the cache in the MEM stage.
+// For load instructions, the EX latency depends on cache configuration:
+//   - D-cache enabled: minCacheLoadLatency (1 cycle) — cache handles the rest
+//   - D-cache disabled: nonCacheLoadLatency (2 cycles) — memory is instant in
+//     MEM stage, so total load-to-use = 2 (EX) + 1 (MEM) + 1 (bubble) = 4,
+//     matching Apple M2's ~4-cycle L1 load-to-use latency.
 func (p *Pipeline) getExLatency(inst *insts.Instruction) uint64 {
 	if p.latencyTable == nil {
 		return 1
 	}
-	if p.useDCache && p.latencyTable.IsLoadOp(inst) {
-		return minCacheLoadLatency
+	if p.latencyTable.IsLoadOp(inst) {
+		if p.useDCache {
+			return minCacheLoadLatency
+		}
+		return nonCacheLoadLatency
 	}
 	return p.latencyTable.GetLatency(inst)
 }

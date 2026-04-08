@@ -51,26 +51,43 @@ func GetCoreBenchmarks() []Benchmark {
 }
 
 // 1. Arithmetic Sequential - Tests ALU throughput with independent operations
+// Uses a loop structure to match native compiled code (a C loop adding to 5 variables).
+// Each iteration: 5 ADDs + SUB counter + CBNZ = 7 instructions.
+// 40 iterations × 5 ADDs = 200 total ADD operations.
 func arithmeticSequential() Benchmark {
-	const numInstructions = 200
+	const numIterations = 40
 	const numRegisters = 5
 	return Benchmark{
 		Name:        "arithmetic_sequential",
-		Description: "200 independent ADDs (5 registers) - measures ALU throughput",
+		Description: "200 ADDs in 40-iteration loop (5 registers) - measures ALU throughput",
 		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
-			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
+			regFile.WriteReg(8, 93)            // X8 = 93 (exit syscall)
+			regFile.WriteReg(9, numIterations) // X9 = loop counter
 		},
-		Program:      buildArithmeticSequential(numInstructions, numRegisters),
-		ExpectedExit: int64(numInstructions / numRegisters), // X0 incremented once per register cycle
+		Program:      buildArithmeticSequential(numRegisters),
+		ExpectedExit: int64(numIterations), // X0 incremented once per iteration
 	}
 }
 
-func buildArithmeticSequential(n, numRegs int) []byte {
-	instrs := make([]uint32, 0, n+1)
-	for i := 0; i < n; i++ {
-		reg := uint8(i % numRegs)
+func buildArithmeticSequential(numRegs int) []byte {
+	// Loop body: 5 ADDs + SUB X9 + CBNZ X9 = 7 instructions
+	// loop:
+	//   ADD X0, X0, #1
+	//   ADD X1, X1, #1
+	//   ADD X2, X2, #1
+	//   ADD X3, X3, #1
+	//   ADD X4, X4, #1
+	//   SUB X9, X9, #1
+	//   CBNZ X9, loop
+	instrs := make([]uint32, 0, numRegs+3)
+	for i := 0; i < numRegs; i++ {
+		reg := uint8(i)
 		instrs = append(instrs, EncodeADDImm(reg, reg, 1, false))
 	}
+	instrs = append(instrs, EncodeSUBImm(9, 9, 1, false))
+	// CBNZ offset: -(numRegs+2) instructions * 4 bytes = -(numRegs+2)*4
+	branchOffset := int32(-(numRegs + 2) * 4)
+	instrs = append(instrs, EncodeCBNZ(9, branchOffset))
 	instrs = append(instrs, EncodeSVC(0))
 	return BuildProgram(instrs...)
 }
@@ -825,84 +842,55 @@ func buildStoreHeavyScaled(n int) []byte {
 }
 
 // 12. Branch Heavy - High branch density to stress branch prediction
-// Alternating taken/not-taken conditional branches.
+// Alternating taken/not-taken conditional branches wrapped in a loop so the
+// branch predictor can learn from repeated encounters.
+// Each iteration: reset X0, then 10 conditional branches (5 taken, 5 not-taken).
+// Loop structure: SUB X0 reset + 10×(CMP+B.LT+skip/exec+ADD) + SUB X9 + CBNZ = 43 instrs/iter.
 func branchHeavy() Benchmark {
+	const numIterations = 25
 	return Benchmark{
 		Name:        "branch_heavy",
-		Description: "10 conditional branches (alternating taken/not-taken) - stresses branch predictor",
+		Description: "10 conditional branches in 25-iteration loop - stresses branch predictor",
 		Setup: func(regFile *emu.RegFile, memory *emu.Memory) {
-			regFile.WriteReg(8, 93) // X8 = 93 (exit syscall)
-			regFile.WriteReg(0, 0)  // X0 = 0 (result counter)
-			regFile.WriteReg(1, 5)  // X1 = 5 (comparison value)
+			regFile.WriteReg(8, 93)            // X8 = 93 (exit syscall)
+			regFile.WriteReg(0, 0)             // X0 = 0 (result counter)
+			regFile.WriteReg(1, 5)             // X1 = 5 (comparison value)
+			regFile.WriteReg(9, numIterations) // X9 = loop counter
 		},
-		Program: BuildProgram(
-			// Pattern: CMP X0, X1; B.LT +8 (taken while X0 < 5)
-			// Then increment X0, so first 5 branches taken, last 5 not taken
-
-			// Branch 1: X0=0 < 5, taken (skip ADD X1)
-			EncodeCMPReg(0, 1),            // CMP X0, X1
-			EncodeBCond(8, 11),            // B.LT +8 (CondLT = 11)
-			EncodeADDImm(1, 1, 99, false), // skipped (would corrupt X1)
-			EncodeADDImm(0, 0, 1, false),  // X0 += 1
-
-			// Branch 2: X0=1 < 5, taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(1, 1, 99, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 3: X0=2 < 5, taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(1, 1, 99, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 4: X0=3 < 5, taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(1, 1, 99, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 5: X0=4 < 5, taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(1, 1, 99, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 6: X0=5 >= 5, NOT taken (falls through to corrupt + add)
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(3, 3, 1, false), // X3 += 1 (not-taken counter)
-			EncodeADDImm(0, 0, 1, false), // X0 += 1
-
-			// Branch 7: X0=6 >= 5, NOT taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(3, 3, 1, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 8: X0=7 >= 5, NOT taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(3, 3, 1, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 9: X0=8 >= 5, NOT taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(3, 3, 1, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			// Branch 10: X0=9 >= 5, NOT taken
-			EncodeCMPReg(0, 1),
-			EncodeBCond(8, 11),
-			EncodeADDImm(3, 3, 1, false),
-			EncodeADDImm(0, 0, 1, false),
-
-			EncodeSVC(0), // exit with X0 = 10
-		),
-		ExpectedExit: 10,
+		Program:      buildBranchHeavy(),
+		ExpectedExit: 10, // X0 = 10 after last iteration
 	}
+}
+
+func buildBranchHeavy() []byte {
+	// Loop body: 1 (reset) + 40 (10 branches × 4 instrs) + 1 (SUB) + 1 (CBNZ) = 43
+	instrs := make([]uint32, 0, 44)
+
+	// Reset X0 = 0 at start of each iteration
+	instrs = append(instrs, EncodeSUBReg(0, 0, 0, false)) // X0 = X0 - X0 = 0
+
+	// 10 conditional branches: first 5 taken (X0 < 5), last 5 not taken (X0 >= 5)
+	for i := 0; i < 10; i++ {
+		instrs = append(instrs, EncodeCMPReg(0, 1)) // CMP X0, X1
+		instrs = append(instrs, EncodeBCond(8, 11)) // B.LT +8 (CondLT = 11)
+		if i < 5 {
+			instrs = append(instrs, EncodeADDImm(1, 1, 99, false)) // skipped (would corrupt X1)
+		} else {
+			instrs = append(instrs, EncodeADDImm(3, 3, 1, false)) // X3 += 1 (not-taken counter)
+		}
+		instrs = append(instrs, EncodeADDImm(0, 0, 1, false)) // X0 += 1
+	}
+
+	// Loop control
+	instrs = append(instrs, EncodeSUBImm(9, 9, 1, false)) // X9 -= 1
+	// CBNZ offset: CBNZ at index 42, target at index 0
+	// offset = (0 - 42) * 4 = -168 bytes
+	branchOffset := int32(-42 * 4)
+	instrs = append(instrs, EncodeCBNZ(9, branchOffset))
+
+	instrs = append(instrs, EncodeSVC(0)) // exit with X0 = 10
+
+	return BuildProgram(instrs...)
 }
 
 // 13. Vector Sum - Loop summing array elements
